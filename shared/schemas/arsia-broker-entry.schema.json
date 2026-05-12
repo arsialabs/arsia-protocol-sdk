@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/broker-entry/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Broker Entry",
+  "description": "One entry in the response from the broker discovery endpoint (GET /.well-known/arsia/brokers?residency={zone}). Describes a single eligible Compliance Broker for a given data residency zone. The full response is a JSON array of BrokerEntry objects. Defined in ARSIA-Routing.md \u00a77.2.",
+  "type": "object",
+  "required": [
+    "agent_id",
+    "inbox",
+    "jurisdiction",
+    "residency_zones",
+    "health",
+    "last_health_check"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "agent_id": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "The broker's agent identifier (ARSIA-Core.md \u00a73). Per ARSIA-Routing.md \u00a77.2."
+    },
+    "inbox": {
+      "type": "string",
+      "format": "uri",
+      "description": "Absolute URL of the broker's inbox endpoint. Senders POST ARSIA envelopes to this URL when routing through the broker. Per ARSIA-Routing.md \u00a77.2."
+    },
+    "jurisdiction": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/iso-3166-1-alpha-2"
+        },
+        {
+          "description": "ISO 3166-1 alpha-2 code of the broker's physical location. For EU zone routing, this MUST be an EU/EEA member state (per broker relay Rule 2, ARSIA-Routing.md \u00a77.3). Per ARSIA-Routing.md \u00a77.2."
+        }
+      ]
+    },
+    "residency_zones": {
+      "type": "array",
+      "items": {
+        "$ref": "arsia-common.schema.json#/$defs/iso-3166-1-alpha-2"
+      },
+      "minItems": 1,
+      "description": "Array of zone codes this broker serves (e.g. ['EU'], ['PT', 'EU']). Each code is ISO 3166-1 alpha-2 or a supranational identifier such as 'EU'. Per ARSIA-Routing.md \u00a77.2."
+    },
+    "capacity": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "description": "Capacity information for load-based broker selection. OPTIONAL. Per ARSIA-Routing.md \u00a77.2.",
+      "properties": {
+        "requests_per_minute": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum relay capacity per minute. Per ARSIA-Routing.md \u00a77.2 'capacity.requests_per_minute'."
+        },
+        "current_load_pct": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Current load as a percentage (0-100). Per ARSIA-Routing.md \u00a77.2 'capacity.current_load_pct'."
+        }
+      }
+    },
+    "health": {
+      "type": "string",
+      "enum": [
+        "healthy",
+        "degraded",
+        "unhealthy"
+      ],
+      "description": "Broker health status reported by the most recent health check. Per ARSIA-Routing.md \u00a77.2."
+    },
+    "last_health_check": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?Z$",
+      "description": "RFC 3339 timestamp with UTC designator and optional fractional seconds (up to microsecond precision). Per ARSIA-Routing.md \u00a77.2."
+    }
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$schema": "https://arsiaprotocol.org/schemas/compliance-profiles/v1.0.json",
+  "version": "1.0.0",
+  "generated": "2026-03-24T00:00:00.000Z",
+  "profiles": {
+    "GDPR-STANDARD": {
+      "name": "GDPR-STANDARD",
+      "description": "Baseline GDPR compliance \u2014 default profile when no profile is explicitly declared",
+      "status": "active",
+      "regulatory_references": [
+        "GDPR 2016/679 Art. 5",
+        "GDPR 2016/679 Art. 5(2)",
+        "GDPR 2016/679 Art. 6",
+        "GDPR 2016/679 Art. 9",
+        "GDPR 2016/679 Art. 17",
+        "GDPR 2016/679 Art. 30",
+        "GDPR 2016/679 Art. 33",
+        "GDPR 2016/679 Art. 34"
+      ],
+      "defaults": {
+        "audit_required": false,
+        "retention_days": null,
+        "human_oversight": "not_required",
+        "explainability_required": false,
+        "pii_involved": false,
+        "data_residency": null
+      }
+    },
+    "EU-AI-ACT-HIGH-RISK": {
+      "name": "EU-AI-ACT-HIGH-RISK",
+      "description": "EU AI Act compliance for high-risk AI systems per Annex III",
+      "status": "active",
+      "regulatory_references": [
+        "EU AI Act 2024/1689 Art. 12",
+        "EU AI Act 2024/1689 Art. 13",
+        "EU AI Act 2024/1689 Art. 14",
+        "EU AI Act 2024/1689 Art. 17",
+        "EU AI Act 2024/1689 Art. 26(6)",
+        "EU AI Act 2024/1689 Annex III",
+        "EU AI Act 2024/1689 Art. 9",
+        "EU AI Act 2024/1689 Art. 15",
+        "EU AI Act 2024/1689 Art. 18",
+        "EU AI Act 2024/1689 Art. 19"
+      ],
+      "defaults": {
+        "audit_required": true,
+        "retention_days": 180,
+        "human_oversight": "required_before_execution",
+        "explainability_required": true,
+        "pii_involved": false,
+        "data_residency": null,
+        "clock_skew_seconds": 120
+      }
+    },
+    "EU-AI-ACT-LIMITED-RISK": {
+      "name": "EU-AI-ACT-LIMITED-RISK",
+      "description": "EU AI Act compliance for limited-risk AI systems per Art. 50 \u2014 transparency obligations for chatbot disclosure, synthetic content marking, emotion recognition notification, and deepfake labeling.",
+      "status": "active",
+      "regulatory_references": [
+        "EU AI Act 2024/1689 Art. 50(1)",
+        "EU AI Act 2024/1689 Art. 50(2)",
+        "EU AI Act 2024/1689 Art. 50(3)",
+        "EU AI Act 2024/1689 Art. 50(4)"
+      ],
+      "defaults": {
+        "audit_required": true,
+        "retention_days": 90,
+        "human_oversight": "not_required",
+        "explainability_required": true,
+        "pii_involved": false,
+        "data_residency": null
+      }
+    },
+    "MIFID-II": {
+      "name": "MIFID-II",
+      "description": "MiFID II compliance for agent-assisted financial services",
+      "status": "active",
+      "regulatory_references": [
+        "MiFID II 2014/65/EU Art. 16(7)",
+        "EU 2017/565 Art. 72 (MiFID II Organisational Regulation)",
+        "DORA 2022/2554/EU Art. 17",
+        "DORA 2022/2554/EU Art. 19",
+        "PSD2 2015/2366/EU Art. 97",
+        "GDPR 2016/679 Art. 6(1)(b)",
+        "EU 2017/565 Art. 74 (Record keeping of client orders)",
+        "EU 2017/565 Art. 75 (Record keeping of transactions)"
+      ],
+      "defaults": {
+        "audit_required": true,
+        "retention_days": 1827,
+        "human_oversight": "required_before_execution",
+        "explainability_required": true,
+        "pii_involved": true,
+        "legal_basis": "contract",
+        "data_residency": "EU",
+        "clock_skew_seconds": 60
+      }
+    },
+    "PAC-AGRICULTURE": {
+      "name": "PAC-AGRICULTURE",
+      "description": "EU Common Agricultural Policy compliance for agent-assisted CAP operations \u2014 subsidy management, paying agency interactions, and conditionality verification.",
+      "status": "active",
+      "regulatory_references": [
+        "EU Regulation 2021/2116 Art. 47",
+        "EU Regulation 2021/2116 Art. 54",
+        "EU Regulation 2021/2116 Art. 59",
+        "EU Regulation 2021/2116 Art. 60"
+      ],
+      "defaults": {
+        "audit_required": true,
+        "retention_days": 1096,
+        "human_oversight": "required_post_execution",
+        "explainability_required": true,
+        "pii_involved": false,
+        "data_residency": "EU"
+      }
+    },
+    "DSA-VLOP": {
+      "name": "DSA-VLOP",
+      "description": "Digital Services Act compliance for Very Large Online Platforms \u2014 systemic risk assessment, content moderation oversight, independent audits, and transparency reporting.",
+      "status": "active",
+      "regulatory_references": [
+        "DSA 2022/2065 Art. 15",
+        "DSA 2022/2065 Art. 34",
+        "DSA 2022/2065 Art. 35",
+        "DSA 2022/2065 Art. 37",
+        "DSA 2022/2065 Art. 38",
+        "DSA 2022/2065 Art. 40",
+        "DSA 2022/2065 Art. 42"
+      ],
+      "defaults": {
+        "audit_required": true,
+        "retention_days": 730,
+        "human_oversight": "required_within_24h",
+        "explainability_required": true,
+        "pii_involved": true,
+        "legal_basis": "legal_obligation",
+        "data_residency": null
+      }
+    },
+    "DORA": {
+      "name": "DORA",
+      "description": "DORA (Digital Operational Resilience Act) compliance for ICT-related incident management in the financial sector \u2014 incident recording, classification, reporting, and third-party risk oversight.",
+      "status": "active",
+      "regulatory_references": [
+        "DORA 2022/2554/EU Art. 5",
+        "DORA 2022/2554/EU Art. 6",
+        "DORA 2022/2554/EU Art. 11",
+        "DORA 2022/2554/EU Art. 17",
+        "DORA 2022/2554/EU Art. 18",
+        "DORA 2022/2554/EU Art. 19",
+        "DORA 2022/2554/EU Art. 28"
+      ],
+      "defaults": {
+        "audit_required": true,
+        "retention_days": 1827,
+        "human_oversight": "required_within_24h",
+        "explainability_required": false,
+        "pii_involved": false,
+        "data_residency": "EU",
+        "clock_skew_seconds": 60
+      }
+    }
+  }
+}

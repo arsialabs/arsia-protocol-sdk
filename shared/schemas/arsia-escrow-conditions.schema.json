@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/escrow-conditions/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Escrow Conditions",
+  "description": "Embedded in the escrow_conditions field of an AssetTransferRequest (ARSIA-Assets.md \u00a73.1.1). Signals that the transfer should be held in escrow rather than completed immediately, and declares the condition, trigger, release agent, and timeout. Defined in ARSIA-Assets.md \u00a74.1. ARSIA does not hold funds \u2014 the actual escrow is managed by the payment provider; ARSIA defines only the signaling so that all parties and auditors can observe escrow state transitions through protocol-level messages. Note: timeout_at MUST be strictly greater than the enclosing message's 'ts' timestamp \u2014 this cross-field invariant is enforced programmatically.",
+  "type": "object",
+  "required": [
+    "release_condition",
+    "release_trigger",
+    "release_agent",
+    "timeout_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "release_condition": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "description": "Human-readable description of the condition that must be satisfied for the escrowed value to be released to the payee. Logged in the audit trail and visible to all parties and oversight agents. SHOULD be specific enough for a human auditor to evaluate whether the condition was actually met when the release trigger was received. Per ARSIA-Assets.md \u00a74.1 'release_condition'."
+    },
+    "release_trigger": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/payload-type"
+        },
+        {
+          "maxLength": 128,
+          "description": "The ARSIA message payload.type value that triggers the release of the escrowed value when received by the escrow holder from the authorised release_agent. Conforms to the payload.type pattern defined in ARSIA-Core.md \u00a74.4.1. When received, the escrow transitions from ESCROWED to RELEASED (\u00a74.2). Per ARSIA-Assets.md \u00a74.1 'release_trigger'."
+        }
+      ]
+    },
+    "release_agent": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "Agent-id of the agent authorised to send the release trigger message. ONLY this agent can release the escrow \u2014 release trigger messages from any other agent MUST be rejected with error code 'forbidden'. MUST possess the arsiaprotocol.assets.escrow.release capability. SHOULD be a different agent from from_agent (payer) and to_agent (payee) to ensure third-party verification. Per ARSIA-Assets.md \u00a74.1 'release_agent'."
+    },
+    "timeout_at": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+        },
+        {
+          "description": "RFC 3339 timestamp with millisecond precision and UTC designator. Absolute deadline for the escrow. If not released by this time, the value MUST be returned to the sender automatically (\u00a74.2 ESCROWED \u2192 RETURNED). MUST be strictly greater than the enclosing message's 'ts' value (enforced programmatically). RECOMMENDED minimum 1 hour; RECOMMENDED maximum 90 days. Per ARSIA-Assets.md \u00a74.1 'timeout_at'."
+        }
+      ]
+    },
+    "arbitration_agent": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "Agent-id of an agent that can be invoked if the escrow is disputed by either party. The arbitration process itself is OUT OF SCOPE for ARSIA. ARSIA defines only the signaling: either party can send a message to this agent to initiate a dispute, and the escrow transitions to DISPUTED (\u00a74.2). When absent, no dispute mechanism exists and the escrow MUST timeout normally at timeout_at. Per ARSIA-Assets.md \u00a74.1 'arbitration_agent'."
+    }
+  }
+}

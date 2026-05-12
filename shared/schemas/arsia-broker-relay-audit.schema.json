@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/broker-relay-audit/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Broker Relay Audit Record",
+  "description": "Audit record produced by a Compliance Broker for every message it relays. Captures relay metadata for compliance and audit purposes without storing the message payload. Defined in ARSIA-Routing.md \u00a77.4; normative field requirements in \u00a77.3 Rule 7.",
+  "type": "object",
+  "required": [
+    "audit_type",
+    "relay_id",
+    "message_id",
+    "from_agent",
+    "to_agent",
+    "broker_agent_id",
+    "residency_zone",
+    "relayed_at",
+    "payload_hash",
+    "relay_latency_ms",
+    "forwarding_result"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "audit_type": {
+      "type": "string",
+      "const": "broker_relay",
+      "description": "Fixed value identifying this as a broker relay audit record. Per ARSIA-Routing.md \u00a77.4."
+    },
+    "relay_id": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+        },
+        {
+          "description": "UUID v4 unique to this relay operation. Per ARSIA-Routing.md \u00a77.4 and \u00a77.3 Rule 7."
+        }
+      ]
+    },
+    "message_id": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+        },
+        {
+          "description": "The id field of the relayed ARSIA message (UUID v4). Per ARSIA-Routing.md \u00a77.4 and \u00a77.3 Rule 7."
+        }
+      ]
+    },
+    "from_agent": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "The from field of the relayed message. Per ARSIA-Routing.md \u00a77.4 and \u00a77.3 Rule 7."
+    },
+    "to_agent": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "The to field of the relayed message. Per ARSIA-Routing.md \u00a77.4 and \u00a77.3 Rule 7."
+    },
+    "broker_agent_id": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "The broker's own agent-id. Per ARSIA-Routing.md \u00a77.4 and \u00a77.3 Rule 7."
+    },
+    "residency_zone": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/iso-3166-1-alpha-2"
+        },
+        {
+          "description": "ISO 3166-1 alpha-2 country code or supranational identifier (e.g. 'EU') for the data residency zone this relay satisfies. Per ARSIA-Routing.md \u00a77.4."
+        }
+      ]
+    },
+    "relayed_at": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+        },
+        {
+          "description": "RFC 3339 timestamp with millisecond precision and UTC designator, recording when the relay occurred. Per ARSIA-Routing.md \u00a77.4 and \u00a77.3 Rule 7."
+        }
+      ]
+    },
+    "payload_hash": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/sha256-hex"
+        },
+        {
+          "description": "SHA-256 hash (lowercase hex) of the relayed message payload. When the message is encrypted (security.encrypted=true), this is the hash of the JWE Compact Serialization string (UTF-8 bytes). When unencrypted, this is the hash of the RFC 8785 canonicalized payload object. The broker stores only the hash, never the payload contents (\u00a77.3 Rule 4). Per ARSIA-Routing.md \u00a77.4 and \u00a77.3 Rule 7."
+        }
+      ]
+    },
+    "relay_latency_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Time in milliseconds from message receipt to forward initiation. Per ARSIA-Routing.md \u00a77.4."
+    },
+    "forwarding_result": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failure",
+        "timeout"
+      ],
+      "description": "Outcome of the relay operation. Per ARSIA-Routing.md \u00a77.4."
+    }
+  }
+}

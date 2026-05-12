@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/compliance-field/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Compliance Field",
+  "description": "Compliance envelope field for ARSIA Protocol messages. Declares the regulatory requirements applicable to the processing of a specific message, including the compliance profile, data residency zone, audit obligations, human oversight mode, and GDPR processing basis. additionalProperties is enabled by design (ARSIA-Core.md \u00a71.2) to allow compliance profiles to define profile-specific fields without schema changes; implementations should validate known field names at the application layer to detect typos.",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "type": "string",
+      "description": "Name of the compliance profile to apply. Known profiles: GDPR-STANDARD, EU-AI-ACT-HIGH-RISK, EU-AI-ACT-LIMITED-RISK, MIFID-II, PAC-AGRICULTURE, DSA-VLOP, DORA. Unknown profile names SHOULD trigger a warning; in strict mode, unknown profiles MUST be rejected.",
+      "examples": [
+        "GDPR-STANDARD",
+        "EU-AI-ACT-HIGH-RISK",
+        "EU-AI-ACT-LIMITED-RISK",
+        "MIFID-II",
+        "PAC-AGRICULTURE",
+        "DSA-VLOP",
+        "DORA"
+      ]
+    },
+    "data_residency": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/iso-3166-1-alpha-2"
+        },
+        {
+          "description": "Geographic zone where message processing and storage MUST occur. ISO 3166-1 alpha-2 country code or supranational identifier. When set, triggers brokered routing (ARSIA-Routing.md \u00a71.2.2)."
+        }
+      ]
+    },
+    "audit_required": {
+      "type": "boolean",
+      "description": "Whether this message MUST generate an ArsiaAuditRecord. Default: per profile. When pii_involved is true, the effective value is always true regardless of this field's declared value (Core \u00a74.3.8, Rule 7)."
+    },
+    "retention_days": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of days the audit record for this message must be retained. Overrides profile default. MUST NOT be less than the profile's minimum."
+    },
+    "human_oversight": {
+      "type": "string",
+      "enum": [
+        "not_required",
+        "required_before_execution",
+        "required_within_24h",
+        "required_post_execution"
+      ],
+      "description": "Human oversight mode. not_required: no oversight needed. required_before_execution: action MUST NOT execute until a human approves. required_within_24h: action MAY execute but human MUST review within 24 hours. required_post_execution: action executes immediately, results audited for human review."
+    },
+    "explainability_required": {
+      "type": "boolean",
+      "description": "Whether the response MUST include a payload.explanation object (ARSIA-Actions.md \u00a75.2). Default: per profile."
+    },
+    "pii_involved": {
+      "type": "boolean",
+      "description": "Whether this message contains or processes personal data as defined by GDPR Art. 4(1). When true, legal_basis MUST be set.",
+      "default": false
+    },
+    "legal_basis": {
+      "type": "string",
+      "enum": [
+        "consent",
+        "contract",
+        "legal_obligation",
+        "vital_interests",
+        "public_task",
+        "legitimate_interests",
+        "explicit_consent",
+        "employment_social_security",
+        "vital_interests_incapacity",
+        "legitimate_activities",
+        "manifestly_public",
+        "legal_claims",
+        "substantial_public_interest",
+        "health_medicine",
+        "public_health",
+        "archiving_research"
+      ],
+      "description": "GDPR legal basis for processing. Art. 6(1) grounds: consent, contract, legal_obligation, vital_interests, public_task, legitimate_interests. Art. 9(2) grounds (for sensitive data): explicit_consent, employment_social_security, vital_interests_incapacity, legitimate_activities, manifestly_public, legal_claims, substantial_public_interest, health_medicine, public_health, archiving_research. REQUIRED when pii_involved is true."
+    },
+    "ai_system_classification": {
+      "type": "string",
+      "enum": [
+        "minimal-risk",
+        "limited-risk",
+        "high-risk",
+        "unacceptable-risk"
+      ],
+      "description": "Per-message EU AI Act classification. MAY differ from agent-level classification (ARSIA-Identity.md \u00a71.2) but MUST NOT exceed it."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "pii_involved": {
+            "const": true
+          }
+        },
+        "required": [
+          "pii_involved"
+        ]
+      },
+      "then": {
+        "required": [
+          "legal_basis"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "ai_system_classification": {
+            "const": "high-risk"
+          }
+        },
+        "required": [
+          "ai_system_classification"
+        ]
+      },
+      "then": {
+        "required": [
+          "human_oversight"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "profile": {
+            "const": "MIFID-II"
+          }
+        },
+        "required": [
+          "profile"
+        ]
+      },
+      "then": {
+        "properties": {
+          "retention_days": {
+            "minimum": 1827
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "profile": {
+            "const": "PAC-AGRICULTURE"
+          }
+        },
+        "required": [
+          "profile"
+        ]
+      },
+      "then": {
+        "properties": {
+          "retention_days": {
+            "minimum": 1096
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "profile": {
+            "const": "DSA-VLOP"
+          }
+        },
+        "required": [
+          "profile"
+        ]
+      },
+      "then": {
+        "properties": {
+          "retention_days": {
+            "minimum": 730
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "profile": {
+            "const": "DORA"
+          }
+        },
+        "required": [
+          "profile"
+        ]
+      },
+      "then": {
+        "properties": {
+          "retention_days": {
+            "minimum": 1827
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": true,
+  "examples": [
+    {
+      "profile": "GDPR-STANDARD",
+      "audit_required": false
+    },
+    {
+      "profile": "EU-AI-ACT-HIGH-RISK",
+      "audit_required": true,
+      "retention_days": 180,
+      "human_oversight": "required_before_execution",
+      "explainability_required": true,
+      "ai_system_classification": "high-risk",
+      "pii_involved": false
+    },
+    {
+      "profile": "MIFID-II",
+      "audit_required": true,
+      "retention_days": 1827,
+      "human_oversight": "required_before_execution",
+      "explainability_required": true,
+      "pii_involved": true,
+      "legal_basis": "contract",
+      "data_residency": "EU",
+      "ai_system_classification": "high-risk"
+    },
+    {
+      "profile": "EU-AI-ACT-LIMITED-RISK",
+      "audit_required": true,
+      "retention_days": 90,
+      "human_oversight": "not_required",
+      "explainability_required": true,
+      "pii_involved": false
+    },
+    {
+      "profile": "PAC-AGRICULTURE",
+      "audit_required": true,
+      "retention_days": 1096,
+      "human_oversight": "required_post_execution",
+      "explainability_required": true,
+      "pii_involved": false,
+      "data_residency": "EU"
+    },
+    {
+      "profile": "DSA-VLOP",
+      "audit_required": true,
+      "retention_days": 730,
+      "human_oversight": "required_within_24h",
+      "explainability_required": true,
+      "pii_involved": true,
+      "legal_basis": "legal_obligation"
+    },
+    {
+      "profile": "DORA",
+      "audit_required": true,
+      "retention_days": 1827,
+      "human_oversight": "required_within_24h",
+      "explainability_required": false,
+      "pii_involved": false,
+      "data_residency": "EU"
+    }
+  ]
+}

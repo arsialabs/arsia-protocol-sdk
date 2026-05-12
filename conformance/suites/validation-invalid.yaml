@@ -1,0 +1,111 @@
+# SPDX-License-Identifier: BUSL-1.1
+# L1+L2 rejection of invalid ARSIA envelopes
+# Generated from shared/test-vectors/arsia-test-vectors.json.
+# Language-agnostic — any ARSIA runner consumes this file.
+name: validation-invalid
+description: 'L1+L2 rejection of invalid ARSIA envelopes'
+level: core
+cases:
+  - id: CORE-VALIDATION-INVALID-INV-01
+    description: "INV-01 is rejected — INVALID — Missing required field 'from'. The envelope o"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4, §4.3.8"
+    input:
+      vector_id: "INV-01"
+    expected:
+      valid: false
+      error_contains: "from"
+  - id: CORE-VALIDATION-INVALID-INV-02
+    description: "INV-02 is rejected — INVALID — 'id' field is not a UUID v4. The envelope is "
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4, §4.3.8"
+    input:
+      vector_id: "INV-02"
+    expected:
+      valid: false
+      error_contains: "id"
+  - id: CORE-VALIDATION-INVALID-INV-03
+    description: "INV-03 is rejected — INVALID — 'ts' field omits the millisecond component. C"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4, §4.3.8"
+    input:
+      vector_id: "INV-03"
+    expected:
+      valid: false
+      error_contains: "ts"
+  - id: CORE-VALIDATION-INVALID-INV-04
+    description: "INV-04 is rejected — INVALID — 'from' field does not match the agent-id form"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4, §4.3.8"
+    input:
+      vector_id: "INV-04"
+    expected:
+      valid: false
+      error_contains: "from"
+  - id: CORE-VALIDATION-INVALID-INV-05
+    description: "INV-05 is rejected — INVALID — intent is 'request' but 'expires_at' is absen"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4, §4.3.8"
+    input:
+      vector_id: "INV-05"
+    expected:
+      valid: false
+      error_contains: "expires_at"
+  - id: CORE-VALIDATION-INVALID-INV-06
+    description: "INV-06 is rejected — INVALID — compliance.pii_involved is true but complianc"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4, §4.3.8"
+    input:
+      vector_id: "INV-06"
+    expected:
+      valid: false
+      error_contains: "legal_basis"
+  - id: CORE-VALIDATION-INVALID-INV-07
+    description: "INV-07 is rejected — INVALID — Sender is declared as a high-risk AI system ("
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Identity §4.2"
+    input:
+      vector_id: "INV-07"
+    expected:
+      valid: false
+      error_contains: "profile"
+  - id: CORE-VALIDATION-INVALID-INV-08
+    description: "INV-08 is rejected — INVALID — compliance.profile='MIFID-II' requires retent"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4, §4.3.8"
+    input:
+      vector_id: "INV-08"
+    expected:
+      valid: false
+      error_contains: "retention_days"
+  - id: CORE-VALIDATION-INVALID-INV-10
+    description: "INV-10 is rejected — INVALID — capabilities array contains 'notes', a single"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Actions §1.1"
+    rtm_ids:
+      - "ACT-§1.1-01"
+      - "ACT-§1.1-02"
+    input:
+      vector_id: "INV-10"
+    expected:
+      valid: false
+      error_contains: "capabilit"
+  - id: CORE-VALIDATION-INVALID-INV-11
+    description: "INV-11 is rejected — INVALID — kid prefix does not match envelope 'from' fie"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4, §4.3.8"
+    input:
+      vector_id: "INV-11"
+    expected:
+      valid: false
+      error_contains: "kid"

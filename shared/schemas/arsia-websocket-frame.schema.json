@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/websocket-frame/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA WebSocket Frame",
+  "description": "WebSocket control frames for the ARSIA Protocol v1.0. Covers the five frame types defined in ARSIA-Core.md \u00a78.2 (auth, auth_ok, auth_error, ping, pong) and extended by ARSIA-Routing.md \u00a72.2 (dpop_proof on auth, session_id on auth_ok). Discriminated on the type field.",
+  "type": "object",
+  "oneOf": [
+    {
+      "type": "object",
+      "description": "Authentication request frame \u2014 Core \u00a78.2, Routing \u00a72.2.2 Phase 2. The token field contains the full authorization value including the scheme prefix (Bearer or DPoP). For DPoP-bound tokens, dpop_proof contains the DPoP proof JWT (Routing \u00a72.2.2).",
+      "properties": {
+        "type": {
+          "const": "auth",
+          "description": "Frame type discriminator \u2014 Core \u00a78.2."
+        },
+        "token": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Full authorization value including scheme prefix (Bearer or DPoP) \u2014 Core \u00a78.2."
+        },
+        "dpop_proof": {
+          "type": "string",
+          "minLength": 1,
+          "description": "DPoP proof JWT for DPoP-bound tokens \u2014 Routing \u00a72.2.2."
+        }
+      },
+      "required": [
+        "type",
+        "token"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "description": "Authentication success frame \u2014 Core \u00a78.2, Routing \u00a72.2.2 Phase 2. The agent_id identifies the server. The session_id is a UUID v4 that uniquely identifies this WebSocket session (Routing \u00a72.2.2).",
+      "properties": {
+        "type": {
+          "const": "auth_ok",
+          "description": "Frame type discriminator \u2014 Core \u00a78.2."
+        },
+        "agent_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            },
+            {
+              "description": "Server's agent identifier \u2014 Core \u00a78.2, Core \u00a73.3 Rule 8."
+            }
+          ]
+        },
+        "session_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+            },
+            {
+              "description": "UUID v4 uniquely identifying this WebSocket session \u2014 Routing \u00a72.2.2."
+            }
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "agent_id"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "description": "Authentication failure frame \u2014 Core \u00a78.2, Routing \u00a72.2.2 Phase 2. After sending this frame, the server MUST close the connection with close code 4001 within 5 seconds.",
+      "properties": {
+        "type": {
+          "const": "auth_error",
+          "description": "Frame type discriminator \u2014 Core \u00a78.2."
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Error code \u2014 Core \u00a78.2."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable error description \u2014 Core \u00a78.2."
+        }
+      },
+      "required": [
+        "type",
+        "code",
+        "description"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "description": "Heartbeat request frame \u2014 Core \u00a78.2, Routing \u00a72.2.2 Phase 4. Client SHOULD send every 30 seconds. Server MUST respond with pong within 5 seconds.",
+      "properties": {
+        "type": {
+          "const": "ping",
+          "description": "Frame type discriminator \u2014 Core \u00a78.2."
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "description": "Heartbeat response frame \u2014 Core \u00a78.2, Routing \u00a72.2.2 Phase 4. MUST be sent within 5 seconds of receiving a ping.",
+      "properties": {
+        "type": {
+          "const": "pong",
+          "description": "Frame type discriminator \u2014 Core \u00a78.2."
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

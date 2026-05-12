@@ -1,0 +1,418 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Idempotency primitive — ARSIA-Core.md §10. Covers key grammar (§10.2),
+# scope tuple (§10.1), header vs envelope key resolution (§10.4), and
+# record expiry (§10.3). Store-level semantics (put/get collisions,
+# thread-safety) are covered by unit tests — not expressible as pure
+# input/expected data.
+name: idempotency
+description: 'Idempotency: key grammar, scope tuple, header/envelope key resolution, record expiry.'
+level: compliance
+cases:
+
+  # ---- §10.2 Key grammar --------------------------------------------
+
+  - id: IDEM-KEY-01
+    description: "printable-ASCII key with letters, digits, underscore, hyphen is accepted"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.2"
+    input:
+      operation: validate_key
+      key: "abc-123_XYZ"
+    expected:
+      valid: true
+
+  - id: IDEM-KEY-02
+    description: "empty key is rejected"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.2"
+    input:
+      operation: validate_key
+      key: ""
+    expected:
+      valid: false
+      error_contains: "at least"
+
+  - id: IDEM-KEY-03
+    description: "single-character key is accepted (lower bound = 1)"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.2"
+    input:
+      operation: validate_key
+      key: "a"
+    expected:
+      valid: true
+
+  - id: IDEM-KEY-04
+    description: "128-character key is accepted (upper bound)"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.2"
+    input:
+      operation: validate_key
+      key: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    expected:
+      valid: true
+
+  - id: IDEM-KEY-05
+    description: "129-character key is rejected"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.2"
+    input:
+      operation: validate_key
+      key: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    expected:
+      valid: false
+      error_contains: "at most"
+
+  - id: IDEM-KEY-06
+    description: "control character (0x01) is rejected"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.2"
+    input:
+      operation: validate_key
+      key: "ab\u0001cd"
+    expected:
+      valid: false
+      error_contains: "printable-ASCII"
+
+  - id: IDEM-KEY-07
+    description: "tab character is rejected"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.2"
+    input:
+      operation: validate_key
+      key: "ab\tcd"
+    expected:
+      valid: false
+      error_contains: "printable-ASCII"
+
+  - id: IDEM-KEY-08
+    description: "newline character is rejected"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.2"
+    input:
+      operation: validate_key
+      key: "ab\ncd"
+    expected:
+      valid: false
+
+  - id: IDEM-KEY-09
+    description: "non-ASCII character is rejected"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.2"
+    input:
+      operation: validate_key
+      key: "café"
+    expected:
+      valid: false
+      error_contains: "printable-ASCII"
+
+  - id: IDEM-KEY-10
+    description: "space character (0x20, boundary) is accepted"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.2"
+    input:
+      operation: validate_key
+      key: "a b"
+    expected:
+      valid: true
+
+  - id: IDEM-KEY-11
+    description: "tilde character (0x7E, boundary) is accepted"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.2"
+    input:
+      operation: validate_key
+      key: "a~b"
+    expected:
+      valid: true
+
+  # ---- §10.1 Scope tuple --------------------------------------------
+
+  - id: IDEM-SCOPE-01
+    description: "scope tuple is extracted from (from, to, payload.type)"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.1"
+    rtm_ids:
+      - "CORE-§4.3.2-03"
+    input:
+      operation: scope_tuple
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload:
+          type: "arsiaprotocol.state/set"
+    expected:
+      from: "agent:acme.alpha"
+      to: "agent:acme.beta"
+      payload_type: "arsiaprotocol.state/set"
+
+  - id: IDEM-SCOPE-02
+    description: "envelope missing 'from' is rejected"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.1"
+    input:
+      operation: scope_tuple
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload:
+          type: "arsiaprotocol.state/set"
+    expected:
+      valid: false
+
+  - id: IDEM-SCOPE-03
+    description: "envelope missing payload.type is rejected"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.1"
+    input:
+      operation: scope_tuple
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {}
+    expected:
+      valid: false
+
+  # ---- §10.4 Header vs envelope key resolution ----------------------
+
+  - id: IDEM-RESOLVE-01
+    description: "header key wins over envelope key"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.4"
+    rtm_ids:
+      - "CORE-§10.4-01"
+    input:
+      operation: resolve_key
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload:
+          type: "arsiaprotocol.state/set"
+        idempotency:
+          key: "env-key"
+          expires_at: "2099-12-31T23:59:59.999Z"
+      header_key: "hdr-key"
+    expected:
+      key: "hdr-key"
+
+  - id: IDEM-RESOLVE-02
+    description: "envelope key used when no header present"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.4"
+    rtm_ids:
+      - "CORE-§10.4-01"
+    input:
+      operation: resolve_key
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload:
+          type: "arsiaprotocol.state/set"
+        idempotency:
+          key: "env-key"
+          expires_at: "2099-12-31T23:59:59.999Z"
+    expected:
+      key: "env-key"
+
+  - id: IDEM-RESOLVE-03
+    description: "header key used when no envelope key present"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.4"
+    rtm_ids:
+      - "CORE-§10.4-01"
+    input:
+      operation: resolve_key
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload:
+          type: "arsiaprotocol.state/set"
+      header_key: "hdr-key"
+    expected:
+      key: "hdr-key"
+
+  - id: IDEM-RESOLVE-04
+    description: "neither header nor envelope key yields null"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.4"
+    input:
+      operation: resolve_key
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload:
+          type: "arsiaprotocol.state/set"
+    expected:
+      key: null
+
+  - id: IDEM-RESOLVE-05
+    description: "empty header key falls back to envelope key"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.4"
+    rtm_ids:
+      - "CORE-§10.4-01"
+    input:
+      operation: resolve_key
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload:
+          type: "arsiaprotocol.state/set"
+        idempotency:
+          key: "env-key"
+          expires_at: "2099-12-31T23:59:59.999Z"
+      header_key: ""
+    expected:
+      key: "env-key"
+
+  # ---- §10.3 Record expiry ------------------------------------------
+
+  - id: IDEM-EXPIRY-01
+    description: "future expires_at is not expired (with injected now)"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.3"
+    rtm_ids:
+      - "CORE-§10.2-03"
+    input:
+      operation: is_record_expired
+      expires_at: "2026-04-14T12:00:01.000Z"
+      now: "2026-04-14T12:00:00.000Z"
+    expected:
+      expired: false
+
+  - id: IDEM-EXPIRY-02
+    description: "past expires_at is expired (with injected now)"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.3"
+    rtm_ids:
+      - "CORE-§10.2-06"
+    input:
+      operation: is_record_expired
+      expires_at: "2026-04-14T11:59:59.000Z"
+      now: "2026-04-14T12:00:00.000Z"
+    expected:
+      expired: true
+
+  - id: IDEM-EXPIRY-03
+    description: "malformed timestamp is treated as expired (fail-closed)"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.3"
+    input:
+      operation: is_record_expired
+      expires_at: "not-a-timestamp"
+      now: "2026-04-14T12:00:00.000Z"
+    expected:
+      expired: true
+
+  - id: IDEM-EXPIRY-04
+    description: "header-only key yields retention floor of at least 24 hours (§10.2(2))"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.2(2)"
+    rtm_ids:
+      - "CORE-§10.2-04"
+    input:
+      operation: compute_expiry
+      envelope_expires_at: null
+      header_only: true
+      now: "2026-04-14T12:00:00.000Z"
+    expected:
+      min_expires_at: "2026-04-15T12:00:00.000Z"
+
+  # ---- §10.3(4) In-progress duplicate detection ----------------------
+
+  - id: IDEM-INFLIGHT-01
+    description: "mark_pending on a new key transitions to 'pending' (§10.3(4))"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.3(4)"
+    rtm_ids:
+      - "CORE-§10.3-04"
+    input:
+      operation: in_progress_lifecycle
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+      key: "inflight-key-001"
+    expected:
+      first_mark: true
+      status_after_first: "pending"
+
+  - id: IDEM-INFLIGHT-02
+    description: "a second mark_pending for the same in-flight key returns False (§10.3(4))"
+    category: idempotency
+    level: compliance
+    spec_ref: "ARSIA-Core §10.3(4)"
+    rtm_ids:
+      - "CORE-§10.3-04"
+    input:
+      operation: in_progress_lifecycle
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+      key: "inflight-key-002"
+    expected:
+      second_mark: false

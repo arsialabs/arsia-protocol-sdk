@@ -1,0 +1,14 @@
+ARSIA Protocol SDK
+Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda)
+
+This product includes technical interoperability artifacts (schemas,
+compliance profiles, and test vectors) from the ARSIA Protocol specification,
+licensed under the Apache License 2.0.
+
+  Source: https://github.com/arsialabs/arsia-protocol
+  Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda)
+  Licensed under the Apache License, Version 2.0
+  https://www.apache.org/licenses/LICENSE-2.0
+
+These artifacts are located in the _data/ directory of the installed package
+and in the shared/ directory of the source repository.

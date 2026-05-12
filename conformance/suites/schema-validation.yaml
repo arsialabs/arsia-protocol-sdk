@@ -1,0 +1,705 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Schema validation of Format B test vectors
+# Generated from shared/test-vectors/arsia-test-vectors.json (ITV-05..ITV-46).
+# Language-agnostic — any ARSIA runner consumes this file.
+name: schema-validation
+description: 'Validates Format B test vectors against their named JSON Schema'
+level: core
+cases:
+  - id: SV-01
+    description: "ITV-05: Valid broker entry — EU-based Compliance Broker"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Routing §7.2"
+    input:
+      vector_id: "ITV-05"
+    expected:
+      valid: true
+  - id: SV-02
+    description: "ITV-06: Invalid broker entry — empty residency_zones"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Routing §7.2"
+    input:
+      vector_id: "ITV-06"
+    expected:
+      valid: false
+      error_contains: "non-empty"
+  - id: SV-03
+    description: "ITV-07: Valid action descriptor — high-risk MiFID II"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Actions §1.1"
+    rtm_ids:
+      - "ACT-§2.2-15"
+      - "ACT-§2.2-17"
+    input:
+      vector_id: "ITV-07"
+    expected:
+      valid: true
+  - id: SV-04
+    description: "ITV-08: Invalid action descriptor — audit_required false for risk 6"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Actions §1.1"
+    rtm_ids:
+      - "ACT-§2.2-11"
+    input:
+      vector_id: "ITV-08"
+    expected:
+      valid: false
+      error_contains: "True was expected"
+  - id: SV-05
+    description: "ITV-09: Invalid action descriptor — single-segment capability"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Actions §1.1"
+    rtm_ids:
+      - "ACT-§2.1-15"
+    input:
+      vector_id: "ITV-09"
+    expected:
+      valid: false
+      error_contains: "dot-separated segments"
+  - id: SV-06
+    description: "ITV-10: Valid capability policy — 3 rules"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Actions §2"
+    # TODO: map to RTM — ITV-10 maps to IDENT-§8.1 rows, not ACT rows
+    input:
+      vector_id: "ITV-10"
+    expected:
+      valid: true
+  - id: SV-07
+    description: "ITV-11: Invalid capability policy — wildcard capability"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Actions §2"
+    # TODO: map to RTM — ITV-11 maps to IDENT-§8.2 rows, not ACT rows
+    input:
+      vector_id: "ITV-11"
+    expected:
+      valid: false
+      error_contains: "dot-separated segments"
+  - id: SV-08
+    description: "ITV-12: Valid encrypted message — ECDH-ES + A256GCM"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §5"
+    input:
+      vector_id: "ITV-12"
+    expected:
+      valid: true
+  - id: SV-09
+    description: "ITV-13: Invalid encrypted message — missing enc_alg"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §5"
+    input:
+      vector_id: "ITV-13"
+    expected:
+      valid: false
+      error_contains: "enc_alg"
+  - id: SV-10
+    description: "ITV-14: Valid error message — certificate_invalid"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §11"
+    input:
+      vector_id: "ITV-14"
+    expected:
+      valid: true
+  - id: SV-11
+    description: "ITV-15: Valid error message — not_implemented"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §11"
+    input:
+      vector_id: "ITV-15"
+    expected:
+      valid: true
+  - id: SV-12
+    description: "ITV-16: Valid audit record — state_set with oversight"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-State §5"
+    rtm_ids:
+      - "STATE-§7.1-04"
+      - "STATE-§7.1-07"
+    input:
+      vector_id: "ITV-16"
+    expected:
+      valid: true
+  - id: SV-13
+    description: "ITV-17: Valid audit record — key_rotation with oversight expired"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-State §5"
+    rtm_ids:
+      - "STATE-§7.1-04"
+      - "STATE-§7.1-07"
+    input:
+      vector_id: "ITV-17"
+    expected:
+      valid: true
+  - id: SV-14
+    description: "ITV-18: Valid compliance field — legal_obligation + required oversight"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §4.3.8"
+    input:
+      vector_id: "ITV-18"
+    expected:
+      valid: true
+  - id: SV-15
+    description: "ITV-19: Valid compliance field — vital_interests + required_always"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §4.3.8"
+    input:
+      vector_id: "ITV-19"
+    expected:
+      valid: true
+  - id: SV-16
+    description: "ITV-20: Valid asset transfer request — token type"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Assets §2"
+    input:
+      vector_id: "ITV-20"
+    expected:
+      valid: true
+  - id: SV-17
+    description: "ITV-21: Valid state entry — session scope"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-State §3"
+    rtm_ids:
+      - "STATE-§1-01"
+      - "STATE-§2.1.4-01"
+    input:
+      vector_id: "ITV-21"
+    expected:
+      valid: true
+  - id: SV-18
+    description: "ITV-22: Valid state entry — global scope"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-State §3"
+    rtm_ids:
+      - "STATE-§1-01"
+      - "STATE-§2.1.4-01"
+    input:
+      vector_id: "ITV-22"
+    expected:
+      valid: true
+  - id: SV-19
+    description: "ITV-23: Invalid compliance — lowercase data_residency"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §4.3.8"
+    input:
+      vector_id: "ITV-23"
+    expected:
+      valid: false
+      error_contains: "does not match"
+  - id: SV-20
+    description: "ITV-24: Invalid message — uppercase hex in trace_id"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ITV-24"
+    expected:
+      valid: false
+      error_contains: "does not match"
+  - id: SV-21
+    description: "ITV-25: Invalid message — non-hex chars in span_id"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ITV-25"
+    expected:
+      valid: false
+      error_contains: "does not match"
+  - id: SV-22
+    description: "ITV-26: Invalid message — context.flags exceeds 255"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ITV-26"
+    expected:
+      valid: false
+      error_contains: "maximum"
+  - id: SV-23
+    description: "ITV-27: Invalid message — context.priority exceeds 10"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ITV-27"
+    expected:
+      valid: false
+      error_contains: "maximum"
+  - id: SV-24
+    description: "ITV-28: Invalid compliance — retention_days below 1"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §4.3.8"
+    input:
+      vector_id: "ITV-28"
+    expected:
+      valid: false
+      error_contains: "minimum"
+  - id: SV-25
+    description: "ITV-29: Invalid reversal — empty reversal_reason"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Assets §3"
+    input:
+      vector_id: "ITV-29"
+    expected:
+      valid: false
+      error_contains: "non-empty"
+  - id: SV-26
+    description: "ITV-30: Invalid escrow — empty release_condition"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Assets §4"
+    input:
+      vector_id: "ITV-30"
+    expected:
+      valid: false
+      error_contains: "non-empty"
+  - id: SV-27
+    description: "ITV-31: Valid JWT claims — all 7 required fields"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Identity §6"
+    input:
+      vector_id: "ITV-31"
+    expected:
+      valid: true
+  - id: SV-28
+    description: "ITV-32: Invalid JWT claims — missing scope"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Identity §6"
+    input:
+      vector_id: "ITV-32"
+    expected:
+      valid: false
+      error_contains: "scope"
+  - id: SV-29
+    description: "ITV-33: Valid DPoP proof — all 5 required fields"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Identity §6"
+    input:
+      vector_id: "ITV-33"
+    expected:
+      valid: true
+  - id: SV-30
+    description: "ITV-34: Invalid DPoP proof — htm is GET not POST"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Identity §6"
+    input:
+      vector_id: "ITV-34"
+    expected:
+      valid: false
+      error_contains: "POST"
+  - id: SV-31
+    description: "ITV-35: Valid JWK entry — Ed25519 signing key"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Identity §5"
+    input:
+      vector_id: "ITV-35"
+    expected:
+      valid: true
+  - id: SV-32
+    description: "ITV-36: Valid JWK entry — X25519 encryption key"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Identity §5"
+    input:
+      vector_id: "ITV-36"
+    expected:
+      valid: true
+  - id: SV-33
+    description: "ITV-37: Invalid JWK entry — OKP with crv P-256"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Identity §5"
+    input:
+      vector_id: "ITV-37"
+    expected:
+      valid: false
+      error_contains: "not valid under any"
+  - id: SV-34
+    description: "ITV-38: Invalid onboarding decision — approved without token"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Identity §7"
+    input:
+      vector_id: "ITV-38"
+    expected:
+      valid: false
+      error_contains: "token"
+  - id: SV-35
+    description: "ITV-39: Valid MiFID II audit record — completed with settled_at"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Assets §5"
+    input:
+      vector_id: "ITV-39"
+    expected:
+      valid: true
+  - id: SV-36
+    description: "ITV-40: Invalid MiFID II audit — failed without failure_reason"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Assets §5"
+    input:
+      vector_id: "ITV-40"
+    expected:
+      valid: false
+      error_contains: "failure_reason"
+  - id: SV-37
+    description: "ITV-41: Valid DORA incident — provider_unavailable high severity"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Assets §6"
+    input:
+      vector_id: "ITV-41"
+    expected:
+      valid: true
+  - id: SV-38
+    description: "ITV-42: Invalid DORA incident — severity 'urgent' not in enum"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Assets §6"
+    input:
+      vector_id: "ITV-42"
+    expected:
+      valid: false
+      error_contains: "is not one of"
+  - id: SV-39
+    description: "ITV-43: Valid broker relay audit — successful relay"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Routing §4"
+    input:
+      vector_id: "ITV-43"
+    expected:
+      valid: true
+  - id: SV-40
+    description: "ITV-44: Invalid broker relay audit — forwarding_result 'dropped'"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Routing §4"
+    input:
+      vector_id: "ITV-44"
+    expected:
+      valid: false
+      error_contains: "is not one of"
+  - id: SV-41
+    description: "ITV-45: Valid discovery response — full AgentMetadata"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §7.1"
+    input:
+      vector_id: "ITV-45"
+    expected:
+      valid: true
+  - id: SV-42
+    description: "ITV-46: Invalid discovery response — missing inbox"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §7.1"
+    input:
+      vector_id: "ITV-46"
+    expected:
+      valid: false
+      error_contains: "inbox"
+  - id: SV-43
+    description: "ITV-47: Valid SET operation — all 4 required args fields"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-State §3.1.2"
+    rtm_ids:
+      - "STATE-§3.1.2-01"
+      - "STATE-§3.1.2-02"
+      - "STATE-§3.1.2-03"
+      - "STATE-§3.1.2-04"
+    input:
+      vector_id: "ITV-47"
+    expected:
+      valid: true
+  - id: SV-44
+    description: "ITV-48: Invalid SET operation — missing scope"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-State §3.1.2"
+    rtm_ids:
+      - "STATE-§3.1.2-03"
+    input:
+      vector_id: "ITV-48"
+    expected:
+      valid: false
+      error_contains: "scope"
+  - id: SV-45
+    description: "ITV-49: Invalid SET operation — scope 'global' forbidden"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-State §3.1.2"
+    rtm_ids:
+      - "STATE-§3.1.2-09"
+    input:
+      vector_id: "ITV-49"
+    expected:
+      valid: false
+      error_contains: "is not one of"
+  - id: SV-46
+    description: "ITV-50: Valid QUERY operation — optional args with pagination"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-State §3.1.4"
+    rtm_ids:
+      - "STATE-§3.1.4-01"
+    input:
+      vector_id: "ITV-50"
+    expected:
+      valid: true
+  - id: SV-47
+    description: "ITV-51: Valid GRANT operation — all 3 required args fields"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-State §3.3.1"
+    rtm_ids:
+      - "STATE-§3.3.1-01"
+      - "STATE-§3.3.1-02"
+      - "STATE-§3.3.1-03"
+    input:
+      vector_id: "ITV-51"
+    expected:
+      valid: true
+  - id: SV-48
+    description: "ITV-52: Invalid GRANT operation — access_level 'admin' not in enum"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-State §3.3.1"
+    rtm_ids:
+      - "STATE-§3.3.1-03"
+    input:
+      vector_id: "ITV-52"
+    expected:
+      valid: false
+      error_contains: "is not one of"
+  - id: SV-49
+    description: "ITV-53: Valid action discovery response — 2 descriptors with pagination"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Actions §2.3"
+    rtm_ids:
+      - "ACT-§2.3-08"
+    input:
+      vector_id: "ITV-53"
+    expected:
+      valid: true
+  - id: SV-50
+    description: "ITV-54: Invalid action discovery response — missing total"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Actions §2.3"
+    rtm_ids:
+      - "ACT-§2.3-08"
+    input:
+      vector_id: "ITV-54"
+    expected:
+      valid: false
+      error_contains: "total"
+  - id: SV-51
+    description: "ITV-55: Valid audit query response — 1 record with cursor pagination"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-State §7.4"
+    rtm_ids:
+      - "STATE-§7.4-01"
+    input:
+      vector_id: "ITV-55"
+    expected:
+      valid: true
+  - id: SV-52
+    description: "ITV-56: Invalid audit query response — missing records"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-State §7.4"
+    rtm_ids:
+      - "STATE-§7.4-01"
+    input:
+      vector_id: "ITV-56"
+    expected:
+      valid: false
+      error_contains: "records"
+  - id: SV-53
+    description: "ITV-57: Valid capability descriptor — all fields plus optional rate_limit"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §7.2"
+    input:
+      vector_id: "ITV-57"
+    expected:
+      valid: true
+  - id: SV-54
+    description: "ITV-58: Invalid capability descriptor — risk_level 11 exceeds maximum"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §7.2"
+    input:
+      vector_id: "ITV-58"
+    expected:
+      valid: false
+      error_contains: "maximum"
+  - id: SV-55
+    description: "ITV-59: Valid WebSocket auth frame — Bearer token"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §8.2"
+    input:
+      vector_id: "ITV-59"
+    expected:
+      valid: true
+  - id: SV-56
+    description: "ITV-60: Valid WebSocket auth frame — DPoP-bound token with proof"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §8.2"
+    input:
+      vector_id: "ITV-60"
+    expected:
+      valid: true
+  - id: SV-57
+    description: "ITV-61: Valid WebSocket auth_error frame — authentication failure"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §8.2"
+    input:
+      vector_id: "ITV-61"
+    expected:
+      valid: true
+  - id: SV-58
+    description: "ITV-62: Invalid WebSocket auth frame — missing token"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §8.2"
+    input:
+      vector_id: "ITV-62"
+    expected:
+      valid: false
+      error_contains: "not valid under any"
+  - id: SV-59
+    description: "ITV-63: BCP-deviation — encrypted message with RSA-OAEP-256"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §5.3"
+    input:
+      vector_id: "ITV-63"
+    expected:
+      valid: true
+  - id: SV-60
+    description: "ITV-64: BCP-deviation — encrypted message with ECDH-ES+A256KW"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §5.3"
+    input:
+      vector_id: "ITV-64"
+    expected:
+      valid: true
+  - id: SV-61
+    description: "ITV-65: BCP-deviation — capability policy with 48h token lifetime"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Identity §8.1"
+    input:
+      vector_id: "ITV-65"
+    expected:
+      valid: true
+  - id: SV-62
+    description: "ITV-66: BCP-deviation — message with context but no locale"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Core §4.3.5"
+    input:
+      vector_id: "ITV-66"
+    expected:
+      valid: true
+  - id: SV-63
+    description: "ITV-67: BCP-deviation — asset transfer with non-ISO-4217 unit"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Assets §2"
+    input:
+      vector_id: "ITV-67"
+    expected:
+      valid: true
+  - id: SV-64
+    description: "ITV-68: Invalid message — single-segment capability"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Actions §1.1"
+    rtm_ids:
+      - "ACT-§1.1-01"
+      - "ACT-§1.1-02"
+    input:
+      vector_id: "ITV-68"
+    expected:
+      valid: false
+      error_contains: "dot-separated segments"
+  - id: SV-65
+    description: "ITV-69: Invalid message — capability exceeds 128 characters"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Actions §1.1"
+    rtm_ids:
+      - "ACT-§1.1-03"
+      - "ACT-§1.1-04"
+    input:
+      vector_id: "ITV-69"
+    expected:
+      valid: false
+      error_contains: "too long"
+  - id: SV-66
+    description: "ITV-70: Invalid currency transfer — amount exceeds 2 decimal places"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Assets §3.1.1"
+    input:
+      vector_id: "ITV-70"
+    expected:
+      valid: false
+      error_contains: "multiple of"
+  - id: SV-67
+    description: "ITV-71: Invalid token transfer — amount exceeds 8 decimal places"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Assets §3.1.1"
+    input:
+      vector_id: "ITV-71"
+    expected:
+      valid: false
+      error_contains: "multiple of"
+  - id: SV-68
+    description: "ITV-72: Invalid currency transfer — lowercase currency code"
+    category: schema-validation
+    level: core
+    spec_ref: "ARSIA-Assets §3.1.1"
+    input:
+      vector_id: "ITV-72"
+    expected:
+      valid: false
+      error_contains: "does not match"

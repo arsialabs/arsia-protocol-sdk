@@ -1,0 +1,112 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Payload encryption and decryption — ARSIA-Core §5.3.
+# Exercises encrypt_payload and decrypt_and_verify against the §5.3
+# decryption procedure (verify→decrypt→parse).
+name: encryption
+description: 'Payload encryption/decryption procedure (ARSIA-Core §5.3)'
+level: core
+cases:
+
+  # ---- §5.3 Step 1: signature verification before decryption ----------------
+
+  - id: ENC-SIG-BEFORE-DECRYPT
+    description: "decrypt_and_verify rejects when signature is invalid (§5.3 step 1)"
+    category: encryption
+    level: core
+    spec_ref: "ARSIA-Core §5.3 Decryption Procedure step 1"
+    rtm_ids:
+      - "CORE-§5.3-08"
+    input:
+      operation: decrypt_bad_signature
+      signer_agent_id: "agent:acme.billing"
+      wrong_signer_agent_id: "agent:acme.echo-client"
+      from_agent: "agent:acme.billing"
+      to_agent: "agent:arsialabs.demo.risk-assessor"
+      plaintext_payload:
+        type: "com.acme.test.encrypted"
+        body: "secret content"
+    expected:
+      valid: false
+      error_contains: "signature"
+
+  - id: ENC-SIG-BEFORE-DECRYPT-ORDER
+    description: "Ordering: dual-fault envelope (bad sig + malformed JWE) produces signature error, proving verify runs before decrypt"
+    category: encryption
+    level: core
+    spec_ref: "ARSIA-Core §5.3 Decryption Procedure step 1"
+    rtm_ids:
+      - "CORE-§5.3-08"
+    input:
+      operation: decrypt_dual_fault
+      signer_agent_id: "agent:acme.billing"
+      wrong_signer_agent_id: "agent:acme.echo-client"
+      from_agent: "agent:acme.billing"
+      to_agent: "agent:arsialabs.demo.risk-assessor"
+      plaintext_payload:
+        type: "com.acme.test.encrypted"
+        body: "secret content"
+    expected:
+      valid: false
+      error_contains: "signature"
+
+  # ---- §5.3 Step 2: JWE decryption -----------------------------------------
+
+  - id: ENC-DECRYPT-JWE
+    description: "decrypt_and_verify successfully decrypts a valid JWE payload (§5.3 step 2)"
+    category: encryption
+    level: core
+    spec_ref: "ARSIA-Core §5.3 Decryption Procedure step 2"
+    rtm_ids:
+      - "CORE-§5.3-09"
+    input:
+      operation: decrypt_and_verify
+      signer_agent_id: "agent:acme.billing"
+      from_agent: "agent:acme.billing"
+      to_agent: "agent:arsialabs.demo.risk-assessor"
+      plaintext_payload:
+        type: "com.acme.test.encrypted"
+        body: "decrypted content"
+    expected:
+      valid: true
+      payload_type: "com.acme.test.encrypted"
+
+  # ---- §5.3 Step 3: decrypted payload parsed as JSON object -----------------
+
+  - id: ENC-PAYLOAD-JSON-OBJECT
+    description: "decrypt_and_verify parses decrypted payload as JSON object (§5.3 step 3)"
+    category: encryption
+    level: core
+    spec_ref: "ARSIA-Core §5.3 Decryption Procedure step 3"
+    rtm_ids:
+      - "CORE-§5.3-10"
+    input:
+      operation: decrypt_and_verify
+      signer_agent_id: "agent:acme.billing"
+      from_agent: "agent:acme.billing"
+      to_agent: "agent:arsialabs.demo.risk-assessor"
+      plaintext_payload:
+        type: "com.acme.test.structured"
+        data:
+          key: value
+          count: 42
+    expected:
+      valid: true
+      payload_fields:
+        type: "com.acme.test.structured"
+
+  - id: ENC-PAYLOAD-NOT-OBJECT
+    description: "decrypt_and_verify rejects when decrypted payload is a JSON array, not object"
+    category: encryption
+    level: core
+    spec_ref: "ARSIA-Core §5.3 Decryption Procedure step 3"
+    rtm_ids:
+      - "CORE-§5.3-10"
+    input:
+      operation: decrypt_not_json_object
+      signer_agent_id: "agent:acme.billing"
+      from_agent: "agent:acme.billing"
+      to_agent: "agent:arsialabs.demo.risk-assessor"
+      non_object_json: "[1, 2, 3]"
+    expected:
+      valid: false
+      error_contains: "JSON object"

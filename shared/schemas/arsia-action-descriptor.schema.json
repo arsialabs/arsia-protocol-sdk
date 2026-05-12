@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/action-descriptor/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Action Descriptor",
+  "description": "Describes a single action available at an ARSIA-conformant agent. Returned by the action discovery endpoint (ARSIA-Actions.md \u00a72.3). Defined in ARSIA-Actions.md \u00a72.1. Each descriptor declares the action's identity, capability requirements, risk level, and compliance obligations (human oversight, audit, explainability).",
+  "type": "object",
+  "required": [
+    "action_id",
+    "category",
+    "description",
+    "risk_level",
+    "reversible",
+    "idempotent",
+    "required_capabilities",
+    "human_oversight_required",
+    "audit_required",
+    "explainability_required"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "action_id": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/payload-type"
+        },
+        {
+          "description": "Reverse domain notation with optional action path, using the same pattern as payload.type in ARSIA-Core.md \u00a74.4.1. Uniquely identifies the action within the agent's registry. MUST correspond to a payload.type value that the agent will accept. Per ARSIA-Actions.md \u00a72.1 'action_id'."
+        }
+      ]
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "data",
+        "communication",
+        "financial",
+        "system",
+        "oversight"
+      ],
+      "description": "High-level classification of the action's domain. 'data': read/write/transform/delete data. 'communication': send/receive/forward messages. 'financial': monetary transactions, asset transfers, billing. 'system': infrastructure, configuration, lifecycle. 'oversight': approval workflows, compliance checks, audit queries. Per ARSIA-Actions.md \u00a72.1 'category'."
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 512,
+      "description": "Concise human-readable description of what this action does, in English. SHOULD be sufficiently detailed for a human reviewer to understand the action's purpose and potential impact without consulting additional documentation. Used in oversight workflows (\u00a73.2). Per ARSIA-Actions.md \u00a72.1 'description'."
+    },
+    "risk_level": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10,
+      "description": "Risk assessment score determining the compliance requirements for this action. Mapped to EU AI Act classifications per ARSIA-Actions.md \u00a72.2. MUST be consistent with the agent's ai_system_classification in its IdentityRecord (ARSIA-Identity.md \u00a71.2) \u2014 an agent classified as 'minimal-risk' SHOULD NOT register actions with risk_level \u2265 7. Per ARSIA-Actions.md \u00a72.1 'risk_level'."
+    },
+    "reversible": {
+      "type": "boolean",
+      "description": "When true, this action supports rollback via the mechanism defined in ARSIA-Actions.md \u00a74.2. Declaring reversible: true for an action that cannot actually be rolled back is a conformance violation. Per ARSIA-Actions.md \u00a72.1 'reversible'."
+    },
+    "idempotent": {
+      "type": "boolean",
+      "description": "When true, executing this action multiple times with identical input parameters produces the same result and side effects. Informs the requesting agent's retry strategy. Non-idempotent actions require idempotency keys (ARSIA-Core.md \u00a710). Per ARSIA-Actions.md \u00a72.1 'idempotent'."
+    },
+    "required_capabilities": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "arsia-common.schema.json#/$defs/capability-name-wildcard"
+          },
+          {
+            "maxLength": 128
+          }
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Capabilities that a requesting agent MUST have in its access token scope to invoke this action. Each element conforms to the capability grammar in ARSIA-Actions.md \u00a71.1. The receiving agent enforces this per ARSIA-Core.md \u00a76.4. Per ARSIA-Actions.md \u00a72.1 'required_capabilities'."
+    },
+    "optional_capabilities": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "arsia-common.schema.json#/$defs/capability-name-wildcard"
+          },
+          {
+            "maxLength": 128
+          }
+        ]
+      },
+      "uniqueItems": true,
+      "description": "Capabilities that enhance the action's behavior when present but are not required for invocation. Default: empty array. Per ARSIA-Actions.md \u00a72.1 'optional_capabilities'."
+    },
+    "human_oversight_required": {
+      "type": "boolean",
+      "description": "When true, the action MUST go through the pending_approval flow (ARSIA-Actions.md \u00a73) before execution. The agent MUST NOT execute until an approval_decision with decision: 'approved' is received from an identity with the arsiaprotocol.oversight.approve capability. Per ARSIA-Actions.md \u00a72.1 'human_oversight_required'."
+    },
+    "audit_required": {
+      "type": "boolean",
+      "description": "When true, every execution of this action MUST generate an audit record in the agent's audit trail (ARSIA-State.md \u00a77). Per ARSIA-Actions.md \u00a72.1 'audit_required'."
+    },
+    "retention_days": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Overrides the default retention period from the applicable compliance profile for audit records generated by this action. Only meaningful when audit_required is true. If absent, retention is determined by the compliance profile (default 90 days if no profile active). Per ARSIA-Actions.md \u00a72.1 'retention_days'."
+    },
+    "explainability_required": {
+      "type": "boolean",
+      "description": "When true, every response to this action MUST include a payload.explanation object as defined in ARSIA-Actions.md \u00a75.2. Implements EU AI Act Article 13 transparency obligations at the action level. Per ARSIA-Actions.md \u00a72.1 'explainability_required'."
+    },
+    "max_execution_ms": {
+      "type": "integer",
+      "minimum": 100,
+      "default": 30000,
+      "description": "Maximum time, in milliseconds, the action should take to execute. If execution exceeds this duration, the agent MUST respond with error code service_unavailable (ARSIA-Core.md \u00a711.2). Default 30000 (30 seconds). Per ARSIA-Actions.md \u00a72.1 'max_execution_ms'."
+    },
+    "required_approvals": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Number of distinct approval_decision messages required before the action may proceed. OPTIONAL, default 1. Per ARSIA-Actions.md \u00a73.6."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "risk_level": {
+            "minimum": 5
+          }
+        },
+        "required": [
+          "risk_level"
+        ]
+      },
+      "then": {
+        "properties": {
+          "audit_required": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "risk_level": {
+            "minimum": 7
+          }
+        },
+        "required": [
+          "risk_level"
+        ]
+      },
+      "then": {
+        "properties": {
+          "explainability_required": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "risk_level": {
+            "minimum": 9
+          }
+        },
+        "required": [
+          "risk_level"
+        ]
+      },
+      "then": {
+        "properties": {
+          "human_oversight_required": {
+            "const": true
+          }
+        }
+      }
+    }
+  ]
+}

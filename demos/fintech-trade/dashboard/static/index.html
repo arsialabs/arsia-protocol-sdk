@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARSIA Compliance Dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <h1>ARSIA Compliance Dashboard</h1>
+        <span class="tag">MiFID-II Demo</span>
+    </div>
+    <div class="connection">
+        <div class="status-dot" id="sse-dot"></div>
+        <span id="sse-label">Disconnected</span>
+    </div>
+</header>
+
+<main>
+
+    <!-- ── Pipeline status ─────────────────────────────── -->
+    <div class="card" id="pipeline-card">
+        <div class="card-header">
+            <h2>Pipeline Status</h2>
+            <div class="actions-bar">
+                <button class="primary" id="btn-trigger">Start Pipeline</button>
+                <button class="sm" id="btn-reset">Reset</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="pipeline-steps" id="pipeline-steps"></div>
+            <div class="status-bar">
+                <span class="status-badge idle" id="status-badge">Idle</span>
+                <span class="status-times" id="status-times"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Trade request ───────────────────────────────── -->
+    <div class="card" id="trade-card">
+        <div class="card-header">
+            <h2>Trade Request</h2>
+        </div>
+        <div class="card-body">
+            <div class="trade-details" id="trade-details">
+                <div class="empty-state">
+                    <div class="icon">&#x21C4;</div>
+                    Start the pipeline to see the trade request.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── LLM streaming ────────────────────────────── -->
+    <div class="card panel-hidden" id="llm-stream-card">
+        <div class="card-header">
+            <h2 id="llm-stream-title">LLM Processing</h2>
+            <span class="status-badge running" id="llm-stream-badge">Streaming</span>
+        </div>
+        <div class="card-body" style="padding:0">
+            <div class="llm-stream-output" id="llm-stream-output"></div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+
+        <!-- ── Suitability assessment ──────────────────── -->
+        <div class="card panel-hidden" id="suitability-card">
+            <div class="card-header">
+                <h2>Suitability Assessment</h2>
+                <span class="status-badge" id="suit-step-badge" style="font-size:0.72rem">Step 3</span>
+            </div>
+            <div class="card-body" id="suitability-body"></div>
+        </div>
+
+        <!-- ── Human oversight ─────────────────────────── -->
+        <div class="card panel-hidden" id="oversight-card">
+            <div class="card-header">
+                <h2>Human Oversight</h2>
+                <span class="status-badge awaiting_approval" id="oversight-badge">Pending</span>
+            </div>
+            <div class="card-body" id="oversight-body"></div>
+        </div>
+
+    </div>
+
+    <!-- ── Execution report ────────────────────────────── -->
+    <div class="card panel-hidden" id="execution-card">
+        <div class="card-header">
+            <h2>Execution Report</h2>
+            <span class="status-badge" id="exec-step-badge" style="font-size:0.72rem">Step 6</span>
+        </div>
+        <div class="card-body" id="execution-body"></div>
+    </div>
+
+    <!-- ── Audit trail ─────────────────────────────────── -->
+    <div class="card" id="audit-card">
+        <div class="card-header">
+            <h2>Audit Trail</h2>
+            <span id="audit-count" style="font-size:0.78rem;color:var(--text-muted)">0 records</span>
+        </div>
+        <div class="card-body" style="padding:0">
+            <div id="audit-body">
+                <div class="empty-state">
+                    <div class="icon">&#x1F4CB;</div>
+                    Audit records will appear as the pipeline progresses.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Envelope inspector ──────────────────────────── -->
+    <div class="card" id="envelope-card">
+        <div class="card-header">
+            <h2>Envelope Inspector</h2>
+        </div>
+        <div class="card-body">
+            <div class="envelope-list" id="envelope-list">
+                <div class="empty-state">
+                    <div class="icon">&#x1F4E8;</div>
+                    Signed ARSIA envelopes will appear here for inspection.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Data isolation summary ──────────────────────── -->
+    <div class="card" id="isolation-card">
+        <div class="card-header">
+            <h2>Data Isolation Summary</h2>
+        </div>
+        <div class="card-body" style="padding:0">
+            <div class="isolation-grid">
+                <div class="isolation-col">
+                    <h3>Agent A &mdash; Client Advisor</h3>
+                    <div class="agent-id">agent:acme.advisor</div>
+                    <div style="margin-top:12px">
+                        <div class="data-field"><span class="check yes">&#10003;</span> Client name &amp; account</div>
+                        <div class="data-field"><span class="check yes">&#10003;</span> Risk tolerance</div>
+                        <div class="data-field"><span class="check yes">&#10003;</span> Portfolio composition</div>
+                        <div class="data-field"><span class="check yes">&#10003;</span> Trade parameters</div>
+                        <div class="data-field"><span class="check yes">&#10003;</span> Suitability assessment</div>
+                        <div class="data-field"><span class="check yes">&#10003;</span> Execution report</div>
+                        <div class="data-field"><span class="check yes">&#10003;</span> Full audit trail</div>
+                    </div>
+                </div>
+                <div class="isolation-col">
+                    <h3>Agent B &mdash; Risk Assessor</h3>
+                    <div class="agent-id">agent:acme.risk-assessor</div>
+                    <div style="margin-top:12px">
+                        <div class="data-field"><span class="check no">&#10007;</span> Client name &amp; account</div>
+                        <div class="data-field"><span class="check yes">&#10003;</span> Risk tolerance</div>
+                        <div class="data-field"><span class="check yes">&#10003;</span> Portfolio composition</div>
+                        <div class="data-field"><span class="check yes">&#10003;</span> Trade parameters</div>
+                        <div class="data-field"><span class="check no">&#10007;</span> Suitability assessment</div>
+                        <div class="data-field"><span class="check no">&#10007;</span> Execution report</div>
+                        <div class="data-field"><span class="check no">&#10007;</span> Full audit trail</div>
+                    </div>
+                </div>
+                <div class="isolation-col">
+                    <h3>Agent C &mdash; Trade Executor</h3>
+                    <div class="agent-id">agent:acme.trade-executor</div>
+                    <div style="margin-top:12px">
+                        <div class="data-field"><span class="check no">&#10007;</span> Client name &amp; account</div>
+                        <div class="data-field"><span class="check no">&#10007;</span> Risk tolerance</div>
+                        <div class="data-field"><span class="check no">&#10007;</span> Portfolio composition</div>
+                        <div class="data-field"><span class="check yes">&#10003;</span> Trade parameters</div>
+                        <div class="data-field"><span class="check no">&#10007;</span> Suitability assessment</div>
+                        <div class="data-field"><span class="check no">&#10007;</span> Execution report</div>
+                        <div class="data-field"><span class="check no">&#10007;</span> Full audit trail</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<script>
+(function() {
+    "use strict";
+
+    // ── State ────────────────────────────────────────────
+    var state = null;
+    var sseSource = null;
+    var countdownTimer = null;
+    var auditRecords = [];
+
+    var CLIENT_PROFILES = [
+        {
+            client_ref: "CLT-2026-4471",
+            client_name: "Maria Torres",
+            client_account: "WM-PT-88201",
+            risk_tolerance: "moderate",
+            investment_horizon: "5-10 years",
+            current_portfolio: {
+                equity_pct: 45,
+                fixed_income_pct: 35,
+                cash_pct: 20,
+                total_value_eur: 850000
+            },
+            proposed_trade: {
+                asset_class: "EU equities",
+                region: "EU",
+                amount_eur: 200000,
+                instrument: "UCITS-EU-BLEND-50"
+            }
+        },
+        {
+            client_ref: "CLT-2026-7823",
+            client_name: "Hans Weber",
+            client_account: "WM-DE-55103",
+            risk_tolerance: "conservative",
+            investment_horizon: "1-3 years",
+            current_portfolio: {
+                equity_pct: 15,
+                fixed_income_pct: 60,
+                cash_pct: 25,
+                total_value_eur: 320000
+            },
+            proposed_trade: {
+                asset_class: "Emerging market equities",
+                region: "APAC",
+                amount_eur: 150000,
+                instrument: "MSCI-EM-ASIA-ETF"
+            }
+        },
+        {
+            client_ref: "CLT-2026-1190",
+            client_name: "Sofia Lindqvist",
+            client_account: "WM-SE-90442",
+            risk_tolerance: "aggressive",
+            investment_horizon: "10-20 years",
+            current_portfolio: {
+                equity_pct: 72,
+                fixed_income_pct: 10,
+                cash_pct: 18,
+                total_value_eur: 2400000
+            },
+            proposed_trade: {
+                asset_class: "EU equities",
+                region: "EU",
+                amount_eur: 500000,
+                instrument: "STOXX-600-TECH"
+            }
+        },
+        {
+            client_ref: "CLT-2026-5537",
+            client_name: "Pierre Dumont",
+            client_account: "WM-FR-31876",
+            risk_tolerance: "conservative",
+            investment_horizon: "0-6 months",
+            current_portfolio: {
+                equity_pct: 10,
+                fixed_income_pct: 50,
+                cash_pct: 40,
+                total_value_eur: 180000
+            },
+            proposed_trade: {
+                asset_class: "Crypto derivatives",
+                region: "Global",
+                amount_eur: 90000,
+                instrument: "BTC-EUR-PERP"
+            }
+        },
+        {
+            client_ref: "CLT-2026-8864",
+            client_name: "Elena Rossi",
+            client_account: "WM-IT-72019",
+            risk_tolerance: "moderate",
+            investment_horizon: "3-5 years",
+            current_portfolio: {
+                equity_pct: 30,
+                fixed_income_pct: 45,
+                cash_pct: 25,
+                total_value_eur: 520000
+            },
+            proposed_trade: {
+                asset_class: "EU government bonds",
+                region: "EU",
+                amount_eur: 120000,
+                instrument: "EUR-GOVT-BOND-AGG"
+            }
+        }
+    ];
+
+    var profileIndex = 0;
+    var DEMO_TRADE = CLIENT_PROFILES[0];
+
+    var STEP_LABELS = {
+        1: "Receive client order",
+        2: "A → B: risk profile",
+        3: "B → A: assessment",
+        4: "Compliance approval",
+        5: "A → C: trade order",
+        6: "C → A: execution",
+        7: "Audit complete"
+    };
+
+    var ENVELOPE_LABELS = {
+        1: "① Client → Agent A: trade request",
+        2: "② Agent A → Agent B: risk profile (no client PII)",
+        3: "③ Agent B → Agent A: suitability assessment",
+        4: "④ Agent A: pending approval (human oversight)",
+        5: "⑤ Agent A → Agent C: trade parameters (no identity, no risk)",
+        6: "⑥ Agent C → Agent A: execution report",
+        7: "⑦ Audit trail finalized"
+    };
+
+    var ABSENT_FIELDS = {
+        2: ["client_name", "client_account", "proposed_trade.amount_eur"],
+        5: ["client_name", "client_account", "risk_tolerance", "investment_horizon",
+            "current_portfolio", "suitability_score", "suitability_classification", "warnings"]
+    };
+
+    // ── DOM refs ─────────────────────────────────────────
+    var $steps = document.getElementById("pipeline-steps");
+    var $badge = document.getElementById("status-badge");
+    var $times = document.getElementById("status-times");
+    var $trade = document.getElementById("trade-details");
+    var $suitCard = document.getElementById("suitability-card");
+    var $suitBody = document.getElementById("suitability-body");
+    var $overCard = document.getElementById("oversight-card");
+    var $overBody = document.getElementById("oversight-body");
+    var $overBadge = document.getElementById("oversight-badge");
+    var $execCard = document.getElementById("execution-card");
+    var $execBody = document.getElementById("execution-body");
+    var $auditBody = document.getElementById("audit-body");
+    var $auditCount = document.getElementById("audit-count");
+    var $envList = document.getElementById("envelope-list");
+    var $btnTrigger = document.getElementById("btn-trigger");
+    var $btnReset = document.getElementById("btn-reset");
+    var $sseDot = document.getElementById("sse-dot");
+    var $sseLabel = document.getElementById("sse-label");
+    var $llmCard = document.getElementById("llm-stream-card");
+    var $llmTitle = document.getElementById("llm-stream-title");
+    var $llmBadge = document.getElementById("llm-stream-badge");
+    var $llmOutput = document.getElementById("llm-stream-output");
+
+    // ── Init ─────────────────────────────────────────────
+    buildSteps();
+    connectSSE();
+
+    $btnTrigger.addEventListener("click", triggerPipeline);
+    $btnReset.addEventListener("click", resetPipeline);
+
+    // ── SSE connection ───────────────────────────────────
+    function connectSSE() {
+        fetch("/api/state/stream-url").then(function(res) {
+            return res.json();
+        }).then(function(data) {
+            var url = data.url;
+            if (sseSource) sseSource.close();
+            sseSource = new EventSource(url);
+
+            sseSource.onopen = function() {
+                $sseDot.classList.add("connected");
+                $sseLabel.textContent = "Connected";
+            };
+            sseSource.onerror = function() {
+                $sseDot.classList.remove("connected");
+                $sseLabel.textContent = "Reconnecting…";
+            };
+            sseSource.addEventListener("snapshot", function(e) {
+                handleSnapshot(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("pipeline_started", function(e) {
+                handlePipelineStarted(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("step_advanced", function(e) {
+                handleStepAdvanced(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("awaiting_approval", function(e) {
+                handleAwaitingApproval(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("approval_decision", function(e) {
+                handleApprovalDecision(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("pipeline_completed", function(e) {
+                handlePipelineCompleted(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("pipeline_error", function(e) {
+                handlePipelineError(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("pipeline_reset", function() {
+                handleReset();
+            });
+            sseSource.addEventListener("keepalive", function() {});
+            sseSource.addEventListener("llm_stream", function(e) {
+                handleLlmStream(JSON.parse(e.data));
+            });
+        }).catch(function(err) {
+            console.error("SSE connect failed:", err);
+            setTimeout(connectSSE, 3000);
+        });
+    }
+
+    // ── Pipeline actions ─────────────────────────────────
+    function triggerPipeline() {
+        $btnTrigger.disabled = true;
+        fetch("/api/trigger", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(DEMO_TRADE)
+        }).then(function(resp) {
+            if (!resp.ok) return resp.json().then(function(d) { alert("Trigger failed: " + (d.error || resp.statusText)); });
+        }).catch(function(err) {
+            alert("Trigger failed: " + err.message);
+        }).finally(function() {
+            setTimeout(function() { $btnTrigger.disabled = false; }, 2000);
+        });
+    }
+
+    function resetPipeline() {
+        fetch("/api/reset", {method: "POST"}).then(function() {
+            profileIndex = (profileIndex + 1) % CLIENT_PROFILES.length;
+            DEMO_TRADE = CLIENT_PROFILES[profileIndex];
+        }).catch(function(err) {
+            alert("Reset failed: " + err.message);
+        });
+    }
+
+    function submitDecision(decision) {
+        var reason = document.getElementById("approval-reason");
+        var approver = document.getElementById("approver-id");
+        if (!reason || !reason.value.trim()) { reason.focus(); return; }
+        var body = {
+            intent: "approval_decision",
+            decision: decision,
+            approver_id: approver ? approver.value : "agent:acme.compliance-officer",
+            reason: reason.value.trim()
+        };
+        var btns = document.querySelectorAll("#oversight-body button");
+        btns.forEach(function(b) { b.disabled = true; });
+        fetch("/api/envelope", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        }).then(function(resp) {
+            if (!resp.ok) return resp.json().then(function(d) {
+                alert("Decision failed: " + (d.error || resp.statusText));
+                btns.forEach(function(b) { b.disabled = false; });
+            });
+        }).catch(function(err) {
+            alert("Decision failed: " + err.message);
+            btns.forEach(function(b) { b.disabled = false; });
+        });
+    }
+
+    // ── Payload extractors ───────────────────────────────
+
+    function extractSuitability(envs) {
+        var env = envs && (envs["3"] || envs[3]);
+        if (!env || !env.payload) return null;
+        var result = env.payload.result;
+        if (!result || typeof result !== "object") return null;
+        return {
+            score: Number(result.suitability_score) || 0,
+            classification: result.suitability_classification || result.recommendation || "unknown",
+            warnings: Array.isArray(result.warnings) ? result.warnings : [],
+            basis: result.regulatory_basis || null
+        };
+    }
+
+    function extractExecution(envs) {
+        var env = envs && (envs["6"] || envs[6]);
+        if (!env || !env.payload) return null;
+        var result = env.payload.result;
+        if (!result || typeof result !== "object") return null;
+        if (!Array.isArray(result.orders)) return null;
+        return result;
+    }
+
+    // ── SSE handlers ─────────────────────────────────────
+    function handleSnapshot(data) {
+        state = data;
+        renderPipeline(data.current_step, data.status);
+        renderStatusBadge(data.status);
+        renderTimes(data.started_at, data.completed_at);
+        if (data.status !== "idle") renderTradeDetails();
+        if (data.current_step >= 3 && data.step_envelopes) {
+            var suit = extractSuitability(data.step_envelopes);
+            if (suit) {
+                $suitCard.classList.remove("panel-hidden");
+                renderSuitability(suit);
+            }
+        }
+        if (data.status === "awaiting_approval") {
+            renderOversight(data.pending_approval, extractSuitability(data.step_envelopes));
+        }
+        if (data.status === "approved" || data.status === "denied") {
+            renderDecisionResult(data.status, data.approval_decision);
+        }
+        if (data.current_step >= 6 && data.step_envelopes) {
+            var exec = extractExecution(data.step_envelopes);
+            if (exec) {
+                $execCard.classList.remove("panel-hidden");
+                renderExecution(exec);
+            }
+        }
+        if (data.step_envelopes) renderEnvelopes(data.step_envelopes);
+        fetchAudit();
+    }
+
+    function handlePipelineStarted(data) {
+        state = state || {};
+        state.status = data.status;
+        state.started_at = data.started_at;
+        state.current_step = data.step;
+        state.completed_at = null;
+        state.step_envelopes = {};
+        renderPipeline(data.step, data.status);
+        renderStatusBadge(data.status);
+        renderTimes(data.started_at, null);
+        renderTradeDetails();
+        $llmCard.classList.add("panel-hidden");
+        $suitCard.classList.add("panel-hidden");
+        $overCard.classList.add("panel-hidden");
+        $execCard.classList.add("panel-hidden");
+        $envList.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4E8;</div>Signed ARSIA envelopes will appear here for inspection.</div>';
+    }
+
+    function handleStepAdvanced(data) {
+        if (state) state.current_step = data.step;
+        renderPipeline(data.step, (state && state.status) || "running");
+        fetchState().then(function(s) {
+            if (!s) return;
+            if (data.step >= 3) {
+                var suit = extractSuitability(s.step_envelopes);
+                if (suit) { $suitCard.classList.remove("panel-hidden"); renderSuitability(suit); }
+            }
+            if (data.step >= 6) {
+                var exec = extractExecution(s.step_envelopes);
+                if (exec) { $execCard.classList.remove("panel-hidden"); renderExecution(exec); }
+            }
+        });
+        fetchAudit();
+    }
+
+    function handleAwaitingApproval(data) {
+        if (state) state.status = data.status;
+        renderPipeline((state && state.current_step) || 4, data.status);
+        renderStatusBadge(data.status);
+        fetchState().then(function(s) {
+            if (s && s.pending_approval) {
+                renderOversight(s.pending_approval, extractSuitability(s.step_envelopes));
+            }
+        });
+    }
+
+    function handleApprovalDecision(data) {
+        if (state) {
+            state.status = data.status;
+            if (data.decision === "denied") {
+                state.completed_at = new Date().toISOString();
+            }
+        }
+        renderStatusBadge(data.status);
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+        if (data.decision === "denied") {
+            renderPipeline((state && state.current_step) || 4, "denied");
+            renderTimes(state && state.started_at, state && state.completed_at);
+        }
+        fetchState().then(function(s) {
+            if (s) renderDecisionResult(data.decision, s.approval_decision);
+        });
+        fetchAudit();
+    }
+
+    function handlePipelineCompleted(data) {
+        if (state) {
+            state.status = data.status;
+            state.completed_at = data.completed_at;
+            state.current_step = 7;
+        }
+        renderPipeline(7, data.status);
+        renderStatusBadge(data.status);
+        renderTimes(state && state.started_at, data.completed_at);
+        fetchState();
+        fetchAudit();
+    }
+
+    function handlePipelineError(data) {
+        if (state) state.status = data.status;
+        renderStatusBadge(data.status);
+        fetchAudit();
+    }
+
+    function handleReset() {
+        state = {status: "idle", current_step: 0, step_envelopes: {}};
+        auditRecords = [];
+        renderPipeline(0, "idle");
+        renderStatusBadge("idle");
+        renderTimes(null, null);
+        $trade.innerHTML = '<div class="empty-state"><div class="icon">&#x21C4;</div>Start the pipeline to see the trade request.</div>';
+        $llmCard.classList.add("panel-hidden");
+        $suitCard.classList.add("panel-hidden");
+        $overCard.classList.add("panel-hidden");
+        $execCard.classList.add("panel-hidden");
+        $auditBody.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4CB;</div>Audit records will appear as the pipeline progresses.</div>';
+        $auditCount.textContent = "0 records";
+        $envList.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4E8;</div>Signed ARSIA envelopes will appear here for inspection.</div>';
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    }
+
+    // ── LLM streaming handler ─────────────────────────────
+    var AGENT_NAMES = {
+        "agent:acme.risk-assessor": "Agent B — Risk Assessor",
+        "agent:acme.trade-executor": "Agent C — Trade Executor"
+    };
+
+    function handleLlmStream(data) {
+        if (data.event === "start") {
+            $llmCard.classList.remove("panel-hidden");
+            $llmTitle.textContent = AGENT_NAMES[data.agent] || "LLM Processing";
+            $llmBadge.className = "status-badge running";
+            $llmBadge.textContent = "Streaming";
+            $llmOutput.textContent = "";
+            var cursor = document.createElement("span");
+            cursor.className = "llm-cursor";
+            $llmOutput.appendChild(cursor);
+            return;
+        }
+
+        if (data.event === "end") {
+            $llmBadge.className = "status-badge completed";
+            $llmBadge.textContent = "Complete";
+            var cursor = $llmOutput.querySelector(".llm-cursor");
+            if (cursor) cursor.remove();
+            return;
+        }
+
+        if (data.token) {
+            var cursor = $llmOutput.querySelector(".llm-cursor");
+            if (cursor) cursor.remove();
+            $llmOutput.appendChild(document.createTextNode(data.token));
+            var newCursor = document.createElement("span");
+            newCursor.className = "llm-cursor";
+            $llmOutput.appendChild(newCursor);
+            $llmOutput.scrollTop = $llmOutput.scrollHeight;
+        }
+    }
+
+    // ── Fetch helpers ────────────────────────────────────
+    function fetchState() {
+        return fetch("/api/state").then(function(resp) {
+            return resp.json();
+        }).then(function(data) {
+            state = data;
+            if (data.step_envelopes) renderEnvelopes(data.step_envelopes);
+            return data;
+        }).catch(function() { return null; });
+    }
+
+    function fetchAudit() {
+        fetch("/api/audit").then(function(resp) {
+            return resp.json();
+        }).then(function(data) {
+            auditRecords = data.records || [];
+            renderAudit(auditRecords);
+        }).catch(function() {});
+    }
+
+    // ── Renderers ────────────────────────────────────────
+
+    function buildSteps() {
+        var html = "";
+        for (var i = 1; i <= 7; i++) {
+            html += '<div class="step" data-step="' + i + '">';
+            html += '<div class="step-circle">' + i + '</div>';
+            html += '<div class="step-label">' + esc(STEP_LABELS[i]) + '</div>';
+            if (i < 7) html += '<div class="step-connector"></div>';
+            html += '</div>';
+        }
+        $steps.innerHTML = html;
+    }
+
+    function renderPipeline(currentStep, status) {
+        var steps = $steps.querySelectorAll(".step");
+        steps.forEach(function(el) {
+            var s = parseInt(el.getAttribute("data-step"));
+            el.classList.remove("completed", "active", "awaiting", "error", "denied");
+            if (status === "denied") {
+                if (s < currentStep) el.classList.add("completed");
+                else if (s === currentStep) el.classList.add("denied");
+            } else {
+                if (s < currentStep) el.classList.add("completed");
+                else if (s === currentStep) {
+                    if (status === "awaiting_approval") el.classList.add("awaiting");
+                    else if (status === "error") el.classList.add("error");
+                    else if (status === "completed") el.classList.add("completed");
+                    else el.classList.add("active");
+                }
+            }
+        });
+    }
+
+    function renderStatusBadge(status) {
+        $badge.className = "status-badge " + status;
+        $badge.textContent = status.replace(/_/g, " ");
+    }
+
+    function renderTimes(started, completed) {
+        var parts = [];
+        if (started) parts.push("Started: " + fmtTime(started));
+        if (completed) parts.push("Completed: " + fmtTime(completed));
+        $times.textContent = parts.join(" · ");
+    }
+
+    function renderTradeDetails() {
+        var t = DEMO_TRADE;
+        $trade.innerHTML =
+            detail("Client Ref", t.client_ref, true) +
+            detail("Client", t.client_name) +
+            detail("Account", t.client_account, true) +
+            detail("Amount", "€" + num(t.proposed_trade.amount_eur)) +
+            detail("Asset Class", t.proposed_trade.asset_class) +
+            detail("Region", t.proposed_trade.region) +
+            detail("Risk Tolerance", t.risk_tolerance) +
+            detail("Horizon", t.investment_horizon) +
+            detail("Portfolio Value", "€" + num(t.current_portfolio.total_value_eur)) +
+            detail("Equity", t.current_portfolio.equity_pct + "%") +
+            detail("Fixed Income", t.current_portfolio.fixed_income_pct + "%") +
+            detail("Cash", t.current_portfolio.cash_pct + "%");
+    }
+
+    function renderSuitability(suit) {
+        var score = suit.score;
+        var classification = suit.classification;
+        var warnings = suit.warnings;
+        var basis = suit.basis;
+
+        var circumference = 2 * Math.PI * 34;
+        var offset = circumference - (score * circumference);
+        var colorClass = classification === "suitable" ? "" :
+            classification === "unsuitable" ? " unsuitable" : " warning";
+
+        var html = '<div class="suitability-score">';
+        html += '<div class="score-ring">';
+        html += '<svg width="80" height="80" viewBox="0 0 80 80">';
+        html += '<circle class="bg" cx="40" cy="40" r="34"/>';
+        html += '<circle class="fg' + colorClass + '" cx="40" cy="40" r="34" stroke-dasharray="' +
+            circumference.toFixed(1) + '" stroke-dashoffset="' + offset.toFixed(1) + '"/>';
+        html += '</svg>';
+        html += '<div class="score-value">' + score.toFixed(2) + '</div>';
+        html += '</div>';
+        html += '<div class="score-meta">';
+        html += '<div class="classification ' + esc(classification) + '">' + esc(classification.replace(/_/g, " ")) + '</div>';
+        if (basis) {
+            html += '<div class="basis">' + esc(basis.framework || "") + " " + esc(basis.article || "") +
+                " — " + esc(basis.method || "") + '</div>';
+        }
+        html += '</div></div>';
+
+        if (warnings.length > 0) {
+            html += '<ul class="warnings-list">';
+            warnings.forEach(function(w) { html += "<li>" + esc(w) + "</li>"; });
+            html += "</ul>";
+        }
+
+        if (basis && basis.factors) {
+            html += '<div class="regulatory-basis"><dl>';
+            html += "<dt>Framework</dt><dd>" + esc(basis.framework || "") + "</dd>";
+            html += "<dt>Article</dt><dd>" + esc(basis.article || "") + "</dd>";
+            html += "<dt>Method</dt><dd>" + esc(basis.method || "") + "</dd>";
+            html += "<dt>Factors</dt><dd>" + basis.factors.map(esc).join("; ") + "</dd>";
+            html += "</dl></div>";
+        }
+
+        $suitBody.innerHTML = html;
+    }
+
+    function renderOversight(pending, suit) {
+        $overCard.classList.remove("panel-hidden");
+        $overBadge.className = "status-badge awaiting_approval";
+        $overBadge.textContent = "Pending";
+
+        var score = suit ? suit.score : 0;
+        var warningCount = suit ? suit.warnings.length : 0;
+        var amount = DEMO_TRADE.proposed_trade.amount_eur;
+
+        var html = '<div class="oversight-form">';
+
+        html += '<div class="oversight-summary">';
+        html += '<div class="summary-stat"><div class="stat-value">€' + num(amount) + '</div><div class="stat-label">Amount</div></div>';
+        html += '<div class="summary-stat"><div class="stat-value">' + score.toFixed(2) + '</div><div class="stat-label">Suitability</div></div>';
+        html += '<div class="summary-stat"><div class="stat-value">' + warningCount + '</div><div class="stat-label">Warnings</div></div>';
+        html += '</div>';
+
+        if (pending && pending.expires_at) {
+            html += '<div class="countdown" id="countdown-bar">Approval deadline: <span class="time" id="countdown-time">--:--:--</span></div>';
+        }
+
+        html += '<div class="form-field"><label>Approver ID</label>';
+        html += '<select id="approver-id">';
+        html += '<option value="agent:acme.compliance-officer">agent:acme.compliance-officer</option>';
+        html += '</select></div>';
+
+        html += '<div class="form-field"><label>Justification (required)</label>';
+        html += '<textarea id="approval-reason" placeholder="Provide your reasoning for this decision…"></textarea></div>';
+
+        html += '<div class="form-actions">';
+        html += '<button class="approve" onclick="window._submitDecision(\'approved\')">Approve</button>';
+        html += '<button class="deny" onclick="window._submitDecision(\'denied\')">Deny</button>';
+        html += '</div>';
+
+        html += '</div>';
+        $overBody.innerHTML = html;
+
+        window._submitDecision = submitDecision;
+
+        var reasonField = document.getElementById("approval-reason");
+        var approveBtn = $overBody.querySelector(".approve");
+        var denyBtn = $overBody.querySelector(".deny");
+        function checkReason() {
+            var empty = !reasonField.value.trim();
+            approveBtn.disabled = empty;
+            denyBtn.disabled = empty;
+        }
+        reasonField.addEventListener("input", checkReason);
+        checkReason();
+
+        if (pending && pending.expires_at) startCountdown(pending.expires_at);
+    }
+
+    function renderDecisionResult(decision, envelope) {
+        $overCard.classList.remove("panel-hidden");
+        var cls = decision === "approved" ? "approved" : "denied";
+        $overBadge.className = "status-badge " + cls;
+        $overBadge.textContent = decision;
+
+        var reason = envelope && envelope.payload && envelope.payload.result && envelope.payload.result.reason;
+        var approver = envelope && envelope.payload && envelope.payload.result && envelope.payload.result.approver_id;
+
+        var html = '<div class="decision-panel ' + cls + '">';
+
+        html += '<div class="decision-panel-header">';
+        html += '<div class="decision-indicator ' + cls + '">' + (decision === "approved" ? "Approved" : "Denied") + '</div>';
+        if (envelope && envelope.ts) {
+            html += '<span class="decision-ts">' + fmtTime(envelope.ts) + '</span>';
+        }
+        if (approver) {
+            html += '<span class="decision-ts">' + esc(approver) + '</span>';
+        }
+        html += '</div>';
+
+        if (reason) {
+            html += '<div class="decision-panel-reason">' + esc(reason) + '</div>';
+        }
+
+        if (envelope) {
+            html += '<div class="decision-panel-footer">';
+            html += '<span class="decision-env-link" onclick="window._toggleDecisionEnv()">';
+            html += '<span class="arrow" id="decision-env-arrow">&#x25B6;</span> Signed envelope</span>';
+            html += '</div>';
+            html += '<div class="decision-env-body" id="decision-env-content">';
+            html += '<div class="envelope-json">' + syntaxHighlight(envelope) + '</div>';
+            html += '</div>';
+        }
+
+        html += '</div>';
+        $overBody.innerHTML = html;
+
+        window._toggleDecisionEnv = function() {
+            var content = document.getElementById("decision-env-content");
+            var arrow = document.getElementById("decision-env-arrow");
+            if (content) {
+                var open = content.style.display === "block";
+                content.style.display = open ? "none" : "block";
+                arrow.style.transform = open ? "" : "rotate(90deg)";
+            }
+        };
+    }
+
+    function renderExecution(exec) {
+        var orders = exec.orders || [];
+
+        var html = '<table class="orders-table"><thead><tr>';
+        html += '<th>Order ID</th><th>Instrument</th><th>Qty</th><th>Price</th><th>Amount</th><th>Venue</th><th>Fill Time</th>';
+        html += '</tr></thead><tbody>';
+
+        orders.forEach(function(o) {
+            html += '<tr>';
+            html += '<td class="mono">' + esc(o.order_id) + '</td>';
+            html += '<td>' + esc(o.instrument) + '</td>';
+            html += '<td class="mono">' + num(o.quantity) + '</td>';
+            html += '<td class="mono">€' + (Number(o.price) || 0).toFixed(2) + '</td>';
+            html += '<td class="mono">€' + num(o.amount) + '</td>';
+            html += '<td>' + esc(o.venue) + '</td>';
+            html += '<td class="mono">' + fmtTime(o.fill_time) + '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+
+        html += '<div class="exec-summary">';
+        html += detail("Total Units", num(exec.total_units), true);
+        html += detail("Avg Price", "€" + (Number(exec.average_price) || 0).toFixed(2), true);
+        html += detail("Total Cost", "€" + num(exec.total_amount), true);
+        html += detail("Strategy", exec.strategy || "TWAP");
+        html += detail("Venue", exec.venue || "");
+        html += detail("Settlement", exec.settlement_date || "");
+        html += '</div>';
+
+        $execBody.innerHTML = html;
+    }
+
+    function renderAudit(records) {
+        if (!records || records.length === 0) {
+            $auditBody.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4CB;</div>Audit records will appear as the pipeline progresses.</div>';
+            $auditCount.textContent = "0 records";
+            return;
+        }
+
+        $auditCount.textContent = records.length + " record" + (records.length === 1 ? "" : "s");
+
+        var html = '<table class="audit-table"><thead><tr>';
+        html += '<th>Record ID</th><th>Event</th><th>From → To</th><th>Profile</th><th>Retained Until</th><th>Processed At</th>';
+        html += '</tr></thead><tbody>';
+
+        records.forEach(function(r, idx) {
+            var isDenial = r.event_type === "error" && r.human_oversight_status === "denied";
+            var evtClass = isDenial ? "denied" : (r.event_type || "request");
+            var evtLabel = isDenial ? "denied" : (r.event_type || "");
+            html += '<tr onclick="window._toggleAuditRow(' + idx + ')" data-audit-idx="' + idx + '">';
+            html += '<td class="mono">' + esc((r.record_id || "").substring(0, 12)) + '…</td>';
+            html += '<td><span class="event-type-badge ' + esc(evtClass) + '">' + esc(evtLabel) + '</span></td>';
+            html += '<td>' + fmtAgent(r.from_agent) + ' → ' + fmtAgent(r.to_agent) + '</td>';
+            html += '<td>' + esc(r.compliance_profile || "") + '</td>';
+            html += '<td class="mono">' + fmtDate(r.retained_until) + '</td>';
+            html += '<td class="mono">' + fmtTime(r.processed_at) + '</td>';
+            html += '</tr>';
+            html += '<tr class="audit-detail" id="audit-detail-' + idx + '"><td colspan="6">';
+            html += '<dl class="regulatory-basis">';
+            html += '<dt>Record ID</dt><dd class="mono" style="font-size:0.75rem;word-break:break-all">' + esc(r.record_id || "") + '</dd>';
+            html += '<dt>Message ID</dt><dd class="mono" style="font-size:0.75rem;word-break:break-all">' + esc(r.message_id || "") + '</dd>';
+            html += '<dt>Payload Hash</dt><dd class="mono" style="font-size:0.75rem;word-break:break-all">' + esc(r.payload_hash || "") + '</dd>';
+            html += '<dt>Correlation ID</dt><dd class="mono" style="font-size:0.75rem;word-break:break-all">' + esc(r.correlation_id || "") + '</dd>';
+            if (r.human_oversight_status) html += '<dt>Oversight</dt><dd>' + esc(r.human_oversight_status) + '</dd>';
+            if (r.approver_id) html += '<dt>Approver</dt><dd>' + esc(r.approver_id) + '</dd>';
+            if (r.event_type === "approval_decision" && state && state.approval_decision) {
+                var adResult = state.approval_decision.payload && state.approval_decision.payload.result;
+                if (adResult && adResult.reason) {
+                    html += '<dt>Justification</dt><dd>' + esc(adResult.reason) + '</dd>';
+                }
+            }
+            html += '</dl></td></tr>';
+        });
+
+        html += '</tbody></table>';
+        $auditBody.innerHTML = html;
+
+        window._toggleAuditRow = function(idx) {
+            var el = document.getElementById("audit-detail-" + idx);
+            if (el) el.classList.toggle("open");
+        };
+    }
+
+    function renderEnvelopes(envelopes) {
+        if (!envelopes || Object.keys(envelopes).length === 0) return;
+
+        var html = "";
+        var keys = Object.keys(envelopes).sort();
+        keys.forEach(function(step) {
+            var env = envelopes[step];
+            var stepNum = parseInt(step);
+            var label = ENVELOPE_LABELS[stepNum] || ("Step " + step);
+            var absentFields = ABSENT_FIELDS[stepNum];
+
+            html += '<div class="envelope-item" data-env-step="' + step + '">';
+            html += '<div class="envelope-header" onclick="window._toggleEnv(' + step + ')">';
+            html += '<span><span class="step-tag">Step ' + step + '</span> — ' + esc(label) + '</span>';
+            html += '<span class="arrow">&#x25B6;</span>';
+            html += '</div>';
+
+            if (absentFields) {
+                html += '<div class="isolation-note">';
+                html += '⚠ Data isolation: fields not sent to this agent: ' + absentFields.join(", ");
+                html += '</div>';
+            }
+
+            html += '<div class="envelope-content">';
+            html += '<div class="envelope-json">' + syntaxHighlight(env) + '</div>';
+            html += '</div></div>';
+        });
+
+        $envList.innerHTML = html;
+
+        window._toggleEnv = function(step) {
+            var item = document.querySelector('[data-env-step="' + step + '"]');
+            if (item) item.classList.toggle("open");
+        };
+    }
+
+    // ── Countdown ────────────────────────────────────────
+    function startCountdown(expiresAt) {
+        if (countdownTimer) clearInterval(countdownTimer);
+        var deadline = new Date(expiresAt).getTime();
+
+        function tick() {
+            var el = document.getElementById("countdown-time");
+            if (!el) { clearInterval(countdownTimer); return; }
+            var remaining = deadline - Date.now();
+            if (remaining <= 0) {
+                el.textContent = "EXPIRED";
+                clearInterval(countdownTimer);
+                return;
+            }
+            var mins = Math.floor(remaining / 60000);
+            var secs = Math.floor((remaining % 60000) / 1000);
+            el.textContent = mins + ":" + (secs < 10 ? "0" : "") + secs;
+        }
+
+        tick();
+        countdownTimer = setInterval(tick, 1000);
+    }
+
+    // ── Helpers ───────────────────────────────────────────
+
+    function detail(label, value, mono) {
+        return '<div class="detail-item"><label>' + esc(label) + '</label>' +
+            '<div class="value' + (mono ? " mono" : "") + '">' + esc(String(value == null ? "" : value)) + '</div></div>';
+    }
+
+    function esc(s) {
+        if (s == null) return "";
+        var d = document.createElement("div");
+        d.textContent = String(s);
+        return d.innerHTML;
+    }
+
+    function num(n) {
+        if (n == null) return "0";
+        return Number(n).toLocaleString("en-US");
+    }
+
+    function fmtTime(ts) {
+        if (!ts) return "—";
+        try {
+            var d = new Date(ts);
+            return d.toLocaleTimeString("en-GB", {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+        } catch (e) { return ts; }
+    }
+
+    function fmtDate(ts) {
+        if (!ts) return "—";
+        try {
+            var d = new Date(ts);
+            return d.toLocaleDateString("en-GB", {year: "numeric", month: "short", day: "numeric"});
+        } catch (e) { return ts; }
+    }
+
+    function fmtAgent(a) {
+        if (!a) return "—";
+        return a.replace("agent:acme.", "");
+    }
+
+    function syntaxHighlight(obj) {
+        var json = JSON.stringify(obj, null, 2);
+        return json.replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*")\s*:/g, '<span class="key">$1</span>:')
+            .replace(/: ("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*")/g, ': <span class="string">$1</span>')
+            .replace(/: (-?\d+\.?\d*)/g, ': <span class="number">$1</span>')
+            .replace(/: (true|false)/g, ': <span class="bool">$1</span>')
+            .replace(/: (null)/g, ': <span class="null">$1</span>');
+    }
+
+})();
+</script>
+
+</body>
+</html>

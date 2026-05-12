@@ -1,0 +1,417 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Compliance profile loading, field inheritance, and §4.3.8 R1-R5 enforcement.
+# Hand-authored — language-agnostic. Envelopes are inlined so any runner can
+# execute them without SDK-specific helpers.
+name: compliance
+description: 'Compliance profile behaviour: loading, inheritance, and §4.3.8 rules'
+level: compliance
+cases:
+
+  # ---- Profile registry ----------------------------------------------------
+
+  - id: COMPL-PROFILE-GDPR-LOADS
+    description: "GDPR-STANDARD profile exists in the bundled registry"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-State §6; ARSIA-Core §4.3.6.1"
+    # TODO: map to RTM — no GDPR-STANDARD "profile accepted" row
+    input:
+      operation: get_profile
+      profile_name: GDPR-STANDARD
+    expected:
+      exists: true
+
+  - id: COMPL-PROFILE-EUAIACT-LOADS
+    description: "EU-AI-ACT-HIGH-RISK profile exists in the bundled registry"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-State §6"
+    # TODO: map to RTM — no EU-AI-ACT-HIGH-RISK "profile accepted" row
+    input:
+      operation: get_profile
+      profile_name: EU-AI-ACT-HIGH-RISK
+    expected:
+      exists: true
+
+  - id: COMPL-PROFILE-MIFID-LOADS
+    description: "MIFID-II profile exists in the bundled registry"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-State §6"
+    # TODO: map to RTM — no MIFID-II "profile accepted" row
+    input:
+      operation: get_profile
+      profile_name: MIFID-II
+    expected:
+      exists: true
+
+  - id: COMPL-PROFILE-PAC-LOADS
+    description: "PAC-AGRICULTURE profile exists in the bundled registry"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-State §6"
+    rtm_ids:
+      - "STATE-§6.4-01"
+    input:
+      operation: get_profile
+      profile_name: PAC-AGRICULTURE
+    expected:
+      exists: true
+
+  - id: COMPL-PROFILE-NAMES-SEVEN
+    description: "get_profile_names returns exactly the seven bundled profiles"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-State §6"
+    rtm_ids:
+      - "STATE-§6.4-01"
+      - "STATE-§6.5-01"
+      - "STATE-§6.6-01"
+      - "STATE-§6.7-01"
+    input:
+      operation: get_profile_names
+    expected:
+      names:
+        - DORA
+        - DSA-VLOP
+        - EU-AI-ACT-HIGH-RISK
+        - EU-AI-ACT-LIMITED-RISK
+        - GDPR-STANDARD
+        - MIFID-II
+        - PAC-AGRICULTURE
+
+  # ---- §4.3.8 Rule 1 — unknown profile -------------------------------------
+
+  - id: COMPL-R1-UNKNOWN-STRICT
+    description: "R1: unknown profile rejected in strict mode"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.8 Rule 1"
+    rtm_ids:
+      - "CORE-§4.3.8-01"
+      - "CORE-§4.3.8-03"
+    input:
+      operation: validate_compliance
+      strict: true
+      envelope:
+        compliance:
+          profile: NOT-A-REAL-PROFILE
+          pii_involved: false
+    expected:
+      valid: false
+      error_contains: "R1"
+
+  - id: COMPL-R1-UNKNOWN-LENIENT
+    description: "R1: unknown profile silently tolerated in lenient mode"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.8 Rule 1"
+    rtm_ids:
+      - "CORE-§4.3.8-01"
+    input:
+      operation: validate_compliance
+      strict: false
+      envelope:
+        compliance:
+          profile: NOT-A-REAL-PROFILE
+          pii_involved: false
+    expected:
+      valid: true
+
+  # ---- §4.3.8 Rule 2 — pii_involved requires legal_basis -------------------
+
+  - id: COMPL-R2-PII-MISSING-LEGAL-BASIS
+    description: "R2: pii_involved=true without legal_basis is rejected"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.8 Rule 2"
+    rtm_ids:
+      - "CORE-§4.3.8-01"
+      - "CORE-§4.3.8-03"
+    input:
+      operation: validate_compliance
+      envelope:
+        compliance:
+          profile: GDPR-STANDARD
+          pii_involved: true
+    expected:
+      valid: false
+      error_contains: "legal_basis"
+
+  - id: COMPL-R2-PII-WITH-LEGAL-BASIS
+    description: "R2: pii_involved=true with legal_basis is accepted"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.8 Rule 2"
+    rtm_ids:
+      - "CORE-§4.3.8-01"
+    input:
+      operation: validate_compliance
+      envelope:
+        compliance:
+          profile: GDPR-STANDARD
+          pii_involved: true
+          legal_basis: consent
+    expected:
+      valid: true
+
+  # ---- §4.3.8 Rule 3 — high-risk requires human_oversight ------------------
+  # Rule 3 is not reachable via declarative YAML. All four bundled profiles
+  # set `human_oversight` in their defaults, so after §4.3.7 field inheritance
+  # the effective value is never None. The SDK's own unit test exercises R3
+  # by monkeypatching `compliance._PROFILE_CACHE` with a synthetic profile
+  # that omits the field — an internal manipulation that an external
+  # conformance consumer cannot (and should not) perform. See
+  # python/tests/unit/test_compliance_module.py::test_validate_high_risk_without_oversight_is_rule_3
+  # for the in-SDK coverage of this rule.
+
+  # ---- §4.3.8 Rule 4 — MiFID-II retention floor (receiver rejects raw) -----
+
+  - id: COMPL-R4-MIFID-RETENTION-TOO-LOW
+    description: "R4: MiFID-II with raw retention_days=90 is rejected by receiver"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.8 Rule 4"
+    rtm_ids:
+      - "CORE-§4.3.8-03"
+      - "CORE-§4.3.6.4-03"
+    input:
+      operation: validate_compliance
+      envelope:
+        compliance:
+          profile: MIFID-II
+          retention_days: 90
+          legal_basis: contract
+    expected:
+      valid: false
+      error_contains: "R4"
+
+  - id: COMPL-R4-MIFID-RETENTION-EXACT-FLOOR
+    description: "R4: MiFID-II with retention_days=1827 is accepted"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.8 Rule 4"
+    rtm_ids:
+      - "CORE-§4.3.8-01"
+    input:
+      operation: validate_compliance
+      envelope:
+        compliance:
+          profile: MIFID-II
+          retention_days: 1827
+          legal_basis: contract
+    expected:
+      valid: true
+
+  # ---- §4.3.8 Rule 5 — data_residency format -------------------------------
+
+  - id: COMPL-R5-RESIDENCY-BAD-FORMAT
+    description: "R5: data_residency 'BRAZIL' is rejected (not ISO 3166-1 alpha-2)"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.8 Rule 5"
+    rtm_ids:
+      - "CORE-§4.3.8-03"
+    input:
+      operation: validate_compliance
+      envelope:
+        compliance:
+          profile: GDPR-STANDARD
+          data_residency: BRAZIL
+    expected:
+      valid: false
+      error_contains: "data_residency"
+
+  - id: COMPL-R5-RESIDENCY-EU-OK
+    description: "R5: data_residency 'EU' is accepted"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.8 Rule 5"
+    rtm_ids:
+      - "CORE-§4.3.8-01"
+    input:
+      operation: validate_compliance
+      envelope:
+        compliance:
+          profile: GDPR-STANDARD
+          data_residency: EU
+    expected:
+      valid: true
+
+  # ---- Sender-side vs receiver-side split ----------------------------------
+  # Same raw retention_days=90 under MIFID-II:
+  #  - apply_profile (sender) silently floors it to 1825
+  #  - validate_compliance (receiver) rejects with R4
+
+  - id: COMPL-APPLY-PROFILE-FLOORS-RETENTION
+    description: "apply_profile silently floors retention_days below profile minimum"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.7"
+    rtm_ids:
+      - "CORE-§4.3.7-02"
+    input:
+      operation: apply_profile
+      envelope:
+        compliance:
+          profile: MIFID-II
+          retention_days: 90
+          legal_basis: contract
+    expected:
+      compliance_after:
+        retention_days: 1827
+
+  - id: COMPL-INHERITANCE-PER-MESSAGE-WINS
+    description: "Field inheritance: per-message retention_days overrides profile default"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.7"
+    input:
+      operation: apply_profile
+      envelope:
+        compliance:
+          profile: EU-AI-ACT-HIGH-RISK
+          retention_days: 400
+          legal_basis: public_task
+    expected:
+      compliance_after:
+        retention_days: 400
+
+  - id: COMPL-INHERITANCE-PROFILE-DEFAULT-APPLIES
+    description: "Field inheritance: profile default is inherited when not set on message"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.7"
+    input:
+      operation: apply_profile
+      envelope:
+        compliance:
+          profile: EU-AI-ACT-HIGH-RISK
+          legal_basis: public_task
+    expected:
+      compliance_after:
+        retention_days: 180
+        audit_required: true
+        human_oversight: required_before_execution
+
+  # ---- §4.3.7 Retention floor warning (SHOULD) --------------------------------
+
+  - id: COMPL-RETENTION-FLOOR-WARNING
+    description: "apply_profile floors retention_days below EU-AI-ACT-HIGH-RISK minimum (warning logged)"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.7"
+    rtm_ids:
+      - "CORE-§4.3.7-03"
+    input:
+      operation: apply_profile
+      envelope:
+        compliance:
+          profile: EU-AI-ACT-HIGH-RISK
+          retention_days: 30
+          legal_basis: contract
+    expected:
+      compliance_after:
+        profile: EU-AI-ACT-HIGH-RISK
+        retention_days: 180
+        legal_basis: contract
+      warning_contains: "retention"
+
+  # ---- §12.4 normative test cases ------------------------------------------
+  # These exercise the exact error-envelope details shapes the spec calls
+  # out in §12.4. CORE-COMPLIANCE-01/02 drive the string path through
+  # validate_compliance; the pipeline-level §12.4 structured-details
+  # envelopes are exercised by SDK integration tests against create_arsia_app.
+
+  - id: CORE-COMPLIANCE-01
+    description: "§12.4: pii_involved=true without legal_basis is rejected (R2)"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §12.4; ARSIA-Core §4.3.8 Rule 2"
+    rtm_ids:
+      - "CORE-§4.3.8-01"
+      - "CORE-§4.3.8-03"
+    input:
+      operation: validate_compliance
+      envelope:
+        v: "1.0"
+        id: "12345678-0000-4000-8000-0000000c0c01"
+        ts: "2026-04-16T12:00:00.000Z"
+        from: "agent:test.sender"
+        to: "agent:test.receiver"
+        intent: request
+        expires_at: "2026-04-16T12:00:30.000Z"
+        capabilities: ["test.action"]
+        payload:
+          type: "com.test/action"
+        compliance:
+          profile: GDPR-STANDARD
+          pii_involved: true
+    expected:
+      valid: false
+      error_contains: "legal_basis"
+
+  - id: CORE-COMPLIANCE-02
+    description: "§12.4: per-message high-risk on a minimal-risk agent is rejected (R6)"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §12.4; ARSIA-Core §4.3.8 Rule 6; ARSIA-Identity §4.2"
+    rtm_ids:
+      - "CORE-§4.3.8-01"
+      - "CORE-§4.3.8-03"
+    input:
+      operation: validate_compliance
+      identity_classification: minimal-risk
+      envelope:
+        v: "1.0"
+        id: "12345678-0000-4000-8000-0000000c0c02"
+        ts: "2026-04-16T12:00:00.000Z"
+        from: "agent:test.sender"
+        to: "agent:test.receiver"
+        intent: request
+        expires_at: "2026-04-16T12:00:30.000Z"
+        capabilities: ["test.action"]
+        payload:
+          type: "com.test/action"
+        compliance:
+          profile: EU-AI-ACT-HIGH-RISK
+          ai_system_classification: high-risk
+          human_oversight: required_before_execution
+    expected:
+      valid: false
+      error_contains: "escalat"
+
+  - id: CORE-COMPLIANCE-03
+    description: "§12.4: audit record is payload-type-agnostic (MCP tool-call envelope)"
+    category: compliance
+    level: compliance
+    spec_ref: "ARSIA-Core §12.4; ARSIA-State §7.1"
+    rtm_ids:
+      - "STATE-§7.1-17"
+      - "STATE-§7.1-19"
+    input:
+      operation: audit_from_envelope
+      event_type: request
+      operator_id: "agent:test.operator"
+      effective_retention_days: 2555
+      envelope:
+        v: "1.0"
+        id: "12345678-0000-4000-8000-0000000c0c03"
+        ts: "2026-04-16T12:00:00.000Z"
+        from: "agent:test.mcp-sender"
+        to: "agent:test.receiver"
+        intent: request
+        expires_at: "2026-04-16T12:00:30.000Z"
+        capabilities: ["mcp.tool.invoke"]
+        payload:
+          type: "arsiaprotocol.mcp/tool-call"
+          tool: "example"
+        compliance:
+          profile: EU-AI-ACT-HIGH-RISK
+          audit_required: true
+          ai_system_classification: high-risk
+          human_oversight: required_before_execution
+    expected:
+      audit:
+        compliance_profile: EU-AI-ACT-HIGH-RISK
+        payload_type: "arsiaprotocol.mcp/tool-call"

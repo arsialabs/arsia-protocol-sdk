@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/discovery-response/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Discovery Response",
+  "description": "AgentMetadata object returned by the discovery endpoint (GET /.well-known/arsia). Describes an agent's identity, protocol support, capabilities, rate limits, and compliance profile support. Defined in ARSIA-Core.md \u00a77.1.",
+  "type": "object",
+  "required": [
+    "agent_id",
+    "name",
+    "version",
+    "protocol_version",
+    "inbox",
+    "jwks",
+    "capabilities_supported",
+    "max_message_bytes",
+    "request_timeout_ms",
+    "server_min",
+    "server_max"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "agent_id": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "The agent's identifier (ARSIA-Core.md \u00a73). Per ARSIA-Core.md \u00a77.1."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable display name of the agent. Per ARSIA-Core.md \u00a77.1."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The agent's software version (e.g. '2.1.0'). Per ARSIA-Core.md \u00a77.1."
+    },
+    "protocol_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "The ARSIA protocol version supported (e.g. '1.0'). Per ARSIA-Core.md \u00a77.1."
+    },
+    "inbox": {
+      "type": "string",
+      "format": "uri",
+      "description": "Absolute URL of the agent's inbox endpoint (ARSIA-Core.md \u00a78.1). Per ARSIA-Core.md \u00a77.1."
+    },
+    "jwks": {
+      "type": "string",
+      "format": "uri",
+      "description": "Absolute URL of the agent's JWKS endpoint (ARSIA-Core.md \u00a77.3). Per ARSIA-Core.md \u00a77.1."
+    },
+    "capabilities_supported": {
+      "type": "array",
+      "items": {
+        "$ref": "arsia-common.schema.json#/$defs/capability-name"
+      },
+      "description": "Array of capability strings that this agent accepts. Per ARSIA-Core.md \u00a77.1."
+    },
+    "max_message_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum message size in bytes that this agent accepts. Per ARSIA-Core.md \u00a77.1."
+    },
+    "request_timeout_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Maximum time in milliseconds that this agent will spend processing a request before timing out. Per ARSIA-Core.md \u00a77.1."
+    },
+    "server_min": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Minimum ARSIA protocol version this agent supports (e.g. '1.0'). Per ARSIA-Core.md \u00a77.1."
+    },
+    "server_max": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Maximum ARSIA protocol version this agent supports (e.g. '1.0'). Per ARSIA-Core.md \u00a77.1."
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Feature flags indicating optional protocol support. Per ARSIA-Core.md \u00a77.1.",
+      "properties": {
+        "async_responses": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the agent supports asynchronous responses (HTTP 202). Per ARSIA-Core.md \u00a77.1."
+        },
+        "batch_requests": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the agent supports batch request processing. Per ARSIA-Core.md \u00a77.1."
+        },
+        "encryption": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the agent supports payload encryption (ARSIA-Core.md \u00a75.3). Per ARSIA-Core.md \u00a77.1."
+        }
+      }
+    },
+    "rate_limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Rate limiting parameters. Per ARSIA-Core.md \u00a77.1.",
+      "properties": {
+        "requests_per_minute": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum number of requests accepted per minute. Per ARSIA-Core.md \u00a77.1."
+        },
+        "burst_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum number of requests accepted in a burst. Per ARSIA-Core.md \u00a77.1."
+        }
+      }
+    },
+    "compliance_profiles_supported": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Array of compliance profile name strings that this agent can apply when processing messages (e.g. ['EU-AI-ACT-HIGH-RISK', 'MIFID-II']). Per ARSIA-Core.md \u00a77.1."
+    }
+  }
+}

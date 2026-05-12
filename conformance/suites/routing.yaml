@@ -1,0 +1,1041 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Routing primitive — §1 topology, §4 lifecycle, §5 priority, §6 rate
+# limits, §7 brokers, Core §11.3 retry. Transport-bound cases (actual
+# HTTP dispatch, broker round-trip) are out of scope for the SDK and
+# live in the product repo.
+name: routing
+description: 'Routing primitive: topology determination, broker entry validation, EU/EEA zones, broker selection, lifecycle transitions, relay preconditions, rate-limit header parsing, priority, retry delay.'
+level: compliance
+cases:
+
+  # ---- §1.3 Topology determination ------------------------------------
+
+  - id: ROUTING-TOPO-01
+    description: "EU residency with no brokers → service_unavailable error"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §1.3"
+    rtm_ids:
+      - "ROUTE-§1-01"
+      - "ROUTE-§1.3-01"
+      - "ROUTE-§1.3-02"
+    input:
+      operation: select_topology
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+    expected:
+      topology: error
+      data_residency: "EU"
+      error:
+        code: "service_unavailable"
+        required_zone: "EU"
+        available_zones: []
+
+  - id: ROUTING-TOPO-02
+    description: "US residency with no brokers → service_unavailable (zone-agnostic §1.3)"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §1.3"
+    input:
+      operation: select_topology
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "US"}
+    expected:
+      topology: error
+      data_residency: "US"
+      error:
+        code: "service_unavailable"
+        required_zone: "US"
+
+  - id: ROUTING-TOPO-03
+    description: "no compliance field uses direct topology"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §1.3"
+    rtm_ids:
+      - "ROUTE-§1.2.1-04"
+    input:
+      operation: select_topology
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+    expected:
+      topology: direct
+      data_residency: null
+
+  - id: ROUTING-TOPO-04
+    description: "single-country residency (PT) with no brokers → error"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §1.3"
+    input:
+      operation: select_topology
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "PT"}
+    expected:
+      topology: error
+      data_residency: "PT"
+      error:
+        required_zone: "PT"
+
+  - id: ROUTING-TOPO-05
+    description: "EU residency + eligible healthy broker → brokered"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §1.3"
+    rtm_ids:
+      - "ROUTE-§1.4-01"
+    input:
+      operation: select_topology
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+      brokers:
+        - agent_id: "agent:arsialabs.broker-de"
+          inbox: "https://broker-de.example/inbox"
+          jurisdiction: "DE"
+          residency_zones: ["EU"]
+          health: "healthy"
+          last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      topology: brokered
+      data_residency: "EU"
+      selected_agent_id: "agent:arsialabs.broker-de"
+
+  - id: ROUTING-TOPO-06
+    description: "EU residency with only non-matching brokers → error with available_zones"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §1.3"
+    input:
+      operation: select_topology
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+      brokers:
+        - agent_id: "agent:us.broker"
+          inbox: "https://us.broker.example/inbox"
+          jurisdiction: "US"
+          residency_zones: ["US"]
+          health: "healthy"
+          last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      topology: error
+      data_residency: "EU"
+      error:
+        code: "service_unavailable"
+        required_zone: "EU"
+        available_zones: ["US"]
+
+  - id: ROUTING-TOPO-07
+    description: "EU residency skips unhealthy broker and selects healthy one"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §1.3, §7.4"
+    input:
+      operation: select_topology
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+      brokers:
+        - agent_id: "agent:bad.broker"
+          inbox: "https://bad.broker.example/inbox"
+          jurisdiction: "DE"
+          residency_zones: ["EU"]
+          health: "unhealthy"
+          last_health_check: "2026-04-14T12:00:00.000Z"
+        - agent_id: "agent:good.broker"
+          inbox: "https://good.broker.example/inbox"
+          jurisdiction: "FR"
+          residency_zones: ["EU"]
+          health: "healthy"
+          last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      topology: brokered
+      data_residency: "EU"
+      selected_agent_id: "agent:good.broker"
+
+  - id: ROUTING-TOPO-08
+    description: "empty data_residency string is equivalent to unset → direct"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §1.3"
+    input:
+      operation: select_topology
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: ""}
+    expected:
+      topology: direct
+      data_residency: null
+
+  # ---- §7.2 Broker entry validation ----------------------------------
+
+  - id: ROUTING-BROKER-01
+    description: "well-formed broker entry passes schema + semantic checks"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.2"
+    input:
+      operation: validate_broker_entry
+      entry:
+        agent_id: "agent:compliance.broker"
+        inbox: "https://broker.example.org/inbox"
+        jurisdiction: "PT"
+        residency_zones: ["EU"]
+        health: "healthy"
+        last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      valid: true
+
+  - id: ROUTING-BROKER-02
+    description: "EU zone with non-EU/EEA jurisdiction is rejected"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.3 Rule 2"
+    input:
+      operation: validate_broker_entry
+      entry:
+        agent_id: "agent:compliance.broker"
+        inbox: "https://broker.example.org/inbox"
+        jurisdiction: "CH"
+        residency_zones: ["EU"]
+        health: "healthy"
+        last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      valid: false
+      error_contains: "EU/EEA"
+
+  - id: ROUTING-BROKER-03
+    description: "Iceland (IS) accepted as EU/EEA jurisdiction"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.3 Rule 2"
+    input:
+      operation: validate_broker_entry
+      entry:
+        agent_id: "agent:compliance.broker"
+        inbox: "https://broker.example.org/inbox"
+        jurisdiction: "IS"
+        residency_zones: ["EU"]
+        health: "healthy"
+        last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      valid: true
+
+  - id: ROUTING-BROKER-04
+    description: "missing required field is rejected"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.2"
+    input:
+      operation: validate_broker_entry
+      entry:
+        agent_id: "agent:compliance.broker"
+        inbox: "https://broker.example.org/inbox"
+        residency_zones: ["EU"]
+        health: "healthy"
+        last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      valid: false
+      error_contains: "jurisdiction"
+
+  - id: ROUTING-BROKER-05
+    description: "non-EU zone accepts non-EU jurisdiction"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.2"
+    input:
+      operation: validate_broker_entry
+      entry:
+        agent_id: "agent:compliance.broker"
+        inbox: "https://broker.example.org/inbox"
+        jurisdiction: "US"
+        residency_zones: ["US"]
+        health: "healthy"
+        last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      valid: true
+
+  # ---- §7.3 Rule 2 EU/EEA membership ---------------------------------
+
+  - id: ROUTING-EEA-01
+    description: "Portugal is an EU member"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.3 Rule 2"
+    rtm_ids:
+      - "ROUTE-§5.2-06"
+    input:
+      operation: is_eu_eea_member
+      country_code: "PT"
+    expected:
+      is_member: true
+
+  - id: ROUTING-EEA-02
+    description: "Norway is an EEA member"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.3 Rule 2"
+    input:
+      operation: is_eu_eea_member
+      country_code: "NO"
+    expected:
+      is_member: true
+
+  - id: ROUTING-EEA-03
+    description: "Switzerland is NOT an EEA member"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.3 Rule 2"
+    input:
+      operation: is_eu_eea_member
+      country_code: "CH"
+    expected:
+      is_member: false
+
+  - id: ROUTING-EEA-04
+    description: "lowercase country code is rejected (case-sensitive)"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.3 Rule 2"
+    input:
+      operation: is_eu_eea_member
+      country_code: "pt"
+    expected:
+      is_member: false
+
+  # ---- §7.4 Broker selection -----------------------------------------
+
+  - id: ROUTING-SEL-01
+    description: "priority selection returns first healthy broker"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.4"
+    rtm_ids:
+      - "ROUTE-§1.4-02"
+      - "ROUTE-§1.4-03"
+      - "ROUTE-§1.4-14"
+    input:
+      operation: select_broker_by_priority
+      zone: "EU"
+      brokers:
+        - agent_id: "agent:b.one"
+          inbox: "https://b1/inbox"
+          jurisdiction: "PT"
+          residency_zones: ["EU"]
+          health: "healthy"
+          last_health_check: "2026-04-14T12:00:00.000Z"
+        - agent_id: "agent:b.two"
+          inbox: "https://b2/inbox"
+          jurisdiction: "DE"
+          residency_zones: ["EU"]
+          health: "healthy"
+          last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      selected_agent_id: "agent:b.one"
+
+  - id: ROUTING-SEL-02
+    description: "priority selection skips unhealthy and returns next"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.4"
+    input:
+      operation: select_broker_by_priority
+      zone: "EU"
+      brokers:
+        - agent_id: "agent:b.one"
+          inbox: "https://b1/inbox"
+          jurisdiction: "PT"
+          residency_zones: ["EU"]
+          health: "unhealthy"
+          last_health_check: "2026-04-14T12:00:00.000Z"
+        - agent_id: "agent:b.two"
+          inbox: "https://b2/inbox"
+          jurisdiction: "DE"
+          residency_zones: ["EU"]
+          health: "healthy"
+          last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      selected_agent_id: "agent:b.two"
+
+  - id: ROUTING-SEL-03
+    description: "no eligible broker returns null"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.4"
+    input:
+      operation: select_broker_by_priority
+      zone: "EU"
+      brokers:
+        - agent_id: "agent:b.one"
+          inbox: "https://b1/inbox"
+          jurisdiction: "US"
+          residency_zones: ["US"]
+          health: "healthy"
+          last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      selected_agent_id: null
+
+  # ---- §4.1 Lifecycle state machine ----------------------------------
+
+  - id: ROUTING-LIFE-01
+    description: "CREATED -> SIGNED is allowed"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §4.1"
+    input:
+      operation: lifecycle_transition
+      from_state: "created"
+      to_state: "signed"
+    expected:
+      valid: true
+
+  - id: ROUTING-LIFE-02
+    description: "DISPATCHED -> BROKER_RELAYED is allowed"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §4.1"
+    input:
+      operation: lifecycle_transition
+      from_state: "dispatched"
+      to_state: "broker_relayed"
+    expected:
+      valid: true
+
+  - id: ROUTING-LIFE-03
+    description: "BROKER_RELAYED -> DELIVERY_FAILED is forbidden"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §4.1 + §7.3"
+    input:
+      operation: lifecycle_transition
+      from_state: "broker_relayed"
+      to_state: "delivery_failed"
+    expected:
+      valid: false
+
+  - id: ROUTING-LIFE-04
+    description: "RESPONDED is terminal"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §4.1"
+    input:
+      operation: lifecycle_transition
+      from_state: "responded"
+      to_state: "expired"
+    expected:
+      valid: false
+
+  - id: ROUTING-LIFE-05
+    description: "DISPATCH_FAILED -> DISPATCHED is allowed (retry)"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §4.1 + Core §11.3"
+    input:
+      operation: lifecycle_transition
+      from_state: "dispatch_failed"
+      to_state: "dispatched"
+    expected:
+      valid: true
+
+  # ---- §7.3 Relay preconditions (offline) ----------------------------
+
+  - id: ROUTING-RELAY-01
+    description: "valid EU relay with EU jurisdiction and future expiry"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.3"
+    input:
+      operation: validate_relay_preconditions
+      now: "2026-04-14T12:00:00.000Z"
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        expires_at: "2026-04-14T12:05:00.000Z"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+      broker:
+        agent_id: "agent:compliance.broker"
+        inbox: "https://broker.example.org/inbox"
+        jurisdiction: "PT"
+        residency_zones: ["EU"]
+        health: "healthy"
+        last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      valid: true
+
+  - id: ROUTING-RELAY-02
+    description: "Rule 2 violation — broker does not list requested zone (residency mismatch)"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.3 Rule 2"
+    input:
+      operation: validate_relay_preconditions
+      now: "2026-04-14T12:00:00.000Z"
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        expires_at: "2026-04-14T12:05:00.000Z"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+      broker:
+        agent_id: "agent:compliance.broker"
+        inbox: "https://broker.example.org/inbox"
+        jurisdiction: "US"
+        residency_zones: ["US"]
+        health: "healthy"
+        last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      valid: false
+      error_contains: "Rule 2"
+
+  - id: ROUTING-RELAY-03
+    description: "Rule 9 violation — envelope expires within safety margin"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.3 Rule 9"
+    input:
+      operation: validate_relay_preconditions
+      now: "2026-04-14T12:00:00.000Z"
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        expires_at: "2026-04-14T12:00:02.000Z"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+      broker:
+        agent_id: "agent:compliance.broker"
+        inbox: "https://broker.example.org/inbox"
+        jurisdiction: "PT"
+        residency_zones: ["EU"]
+        health: "healthy"
+        last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      valid: false
+      error_contains: "Rule 9"
+
+  # ---- §6 Rate-limit headers -----------------------------------------
+
+  - id: ROUTING-RATE-01
+    description: "parses all four headers (spec names: X-RateLimit-*, Retry-After)"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §6.2"
+    input:
+      operation: parse_rate_limit_headers
+      headers:
+        X-RateLimit-Limit: "1000"
+        X-RateLimit-Remaining: "999"
+        X-RateLimit-Reset: "1777777777"
+        Retry-After: "30"
+    expected:
+      limit: 1000
+      remaining: 999
+      reset_at: 1777777777
+      retry_after_seconds: 30
+
+  - id: ROUTING-RATE-02
+    description: "case-insensitive header names"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §6.2"
+    input:
+      operation: parse_rate_limit_headers
+      headers:
+        x-ratelimit-limit: "42"
+    expected:
+      limit: 42
+
+  - id: ROUTING-RATE-03
+    description: "non-numeric retry-after is dropped"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §6"
+    input:
+      operation: parse_rate_limit_headers
+      headers:
+        Retry-After: "soon"
+    expected:
+      retry_after_seconds: null
+
+  # ---- §5 Priority resolution ----------------------------------------
+
+  - id: ROUTING-PRIO-01
+    description: "envelope context.priority wins when no override"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §5"
+    input:
+      operation: resolve_priority
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        context: {priority: 7}
+    expected:
+      priority: 7
+
+  - id: ROUTING-PRIO-02
+    description: "default of 5 when priority absent"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §5"
+    input:
+      operation: resolve_priority
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+    expected:
+      priority: 5
+
+  - id: ROUTING-PRIO-03
+    description: "override wins over envelope"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §5"
+    input:
+      operation: resolve_priority
+      override: 9
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        context: {priority: 3}
+    expected:
+      priority: 9
+
+  # ---- Core §11.3 Retry delay ----------------------------------------
+
+  - id: ROUTING-RETRY-01
+    description: "attempt 1 delay is 1s"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Core §11.3"
+    rtm_ids:
+      - "CORE-§11.3-06"
+    input:
+      operation: compute_retry_delay
+      attempt: 1
+    expected:
+      delay_seconds: 1.0
+
+  - id: ROUTING-RETRY-02
+    description: "attempt 3 delay is 4s"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Core §11.3"
+    rtm_ids:
+      - "CORE-§11.3-06"
+    input:
+      operation: compute_retry_delay
+      attempt: 3
+    expected:
+      delay_seconds: 4.0
+
+  - id: ROUTING-RETRY-03
+    description: "attempt 6 caps at 32s"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Core §11.3"
+    rtm_ids:
+      - "CORE-§11.3-06"
+    input:
+      operation: compute_retry_delay
+      attempt: 6
+    expected:
+      delay_seconds: 32.0
+
+  - id: ROUTING-RETRY-04
+    description: "attempt 0 is invalid"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Core §11.3"
+    input:
+      operation: compute_retry_delay
+      attempt: 0
+    expected:
+      valid: false
+
+  # ---- §7.4 Broker relay audit record --------------------------------
+
+  - id: ROUTING-AUDIT-01
+    description: "audit_type is fixed to broker_relay"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.4"
+    input:
+      operation: build_relay_audit_record
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+      broker_agent_id: "agent:arsialabs.broker-de"
+      payload_hash: "a3f2b8c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1"
+      forwarding_result: "success"
+      relay_latency_ms: 47
+    expected:
+      valid: true
+      fields:
+        audit_type: "broker_relay"
+
+  - id: ROUTING-AUDIT-02
+    description: "relay_latency_ms is required and preserved"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.4"
+    input:
+      operation: build_relay_audit_record
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+      broker_agent_id: "agent:arsialabs.broker-de"
+      payload_hash: "a3f2b8c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1"
+      forwarding_result: "success"
+      relay_latency_ms: 42
+    expected:
+      valid: true
+      fields:
+        relay_latency_ms: 42
+
+  - id: ROUTING-AUDIT-03
+    description: "forwarding_result accepts 'success'"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.4"
+    input:
+      operation: build_relay_audit_record
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+      broker_agent_id: "agent:arsialabs.broker-de"
+      payload_hash: "a3f2b8c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1"
+      forwarding_result: "success"
+      relay_latency_ms: 1
+    expected:
+      valid: true
+      fields:
+        forwarding_result: "success"
+
+  - id: ROUTING-AUDIT-04
+    description: "forwarding_result accepts 'failure'"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.4"
+    input:
+      operation: build_relay_audit_record
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+      broker_agent_id: "agent:arsialabs.broker-de"
+      payload_hash: "a3f2b8c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1"
+      forwarding_result: "failure"
+      relay_latency_ms: 1
+    expected:
+      valid: true
+      fields:
+        forwarding_result: "failure"
+
+  - id: ROUTING-AUDIT-05
+    description: "forwarding_result accepts 'timeout' (Rule 9 expiry refusal)"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.4 + §7.3 Rule 9"
+    input:
+      operation: build_relay_audit_record
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+      broker_agent_id: "agent:arsialabs.broker-de"
+      payload_hash: "a3f2b8c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1"
+      forwarding_result: "timeout"
+      relay_latency_ms: 1
+    expected:
+      valid: true
+      fields:
+        forwarding_result: "timeout"
+
+  - id: ROUTING-AUDIT-06
+    description: "forwarding_result rejects off-enum value 'forwarded'"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.4"
+    input:
+      operation: build_relay_audit_record
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+      broker_agent_id: "agent:arsialabs.broker-de"
+      payload_hash: "a3f2b8c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1"
+      forwarding_result: "forwarded"
+      relay_latency_ms: 1
+    expected:
+      valid: false
+
+  - id: ROUTING-AUDIT-07
+    description: "field names: relay_id/broker_agent_id present; record_id/broker_id absent"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §7.4"
+    input:
+      operation: build_relay_audit_record
+      envelope:
+        v: "1.0"
+        id: "11111111-1111-4111-9111-111111111111"
+        ts: "2026-04-14T12:00:00.000Z"
+        from: "agent:acme.alpha"
+        to: "agent:acme.beta"
+        intent: "request"
+        payload: {type: "arsiaprotocol.state/set"}
+        compliance: {data_residency: "EU"}
+      broker_agent_id: "agent:arsialabs.broker-de"
+      payload_hash: "a3f2b8c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1"
+      forwarding_result: "success"
+      relay_latency_ms: 1
+    expected:
+      valid: true
+      fields_present: ["relay_id", "broker_agent_id"]
+      fields_absent: ["record_id", "broker_id"]
+
+  # ---- §4.2 Lifecycle negative edges ---------------------------------
+
+  - id: ROUTING-LIFE-06
+    description: "CREATED -> EXPIRED is forbidden (only DISPATCHED/BROKER_RELAYED can expire)"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §4.2"
+    input:
+      operation: lifecycle_transition
+      from_state: "created"
+      to_state: "expired"
+    expected:
+      valid: false
+
+  - id: ROUTING-LIFE-07
+    description: "SIGNED -> EXPIRED is forbidden"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §4.2"
+    input:
+      operation: lifecycle_transition
+      from_state: "signed"
+      to_state: "expired"
+    expected:
+      valid: false
+
+  - id: ROUTING-LIFE-08
+    description: "DELIVERED -> DELIVERY_FAILED is forbidden (delivered is a success state)"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §4.2"
+    input:
+      operation: lifecycle_transition
+      from_state: "delivered"
+      to_state: "delivery_failed"
+    expected:
+      valid: false
+
+  - id: ROUTING-LIFE-09
+    description: "DELIVERED -> EXPIRED is forbidden"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §4.2"
+    input:
+      operation: lifecycle_transition
+      from_state: "delivered"
+      to_state: "expired"
+    expected:
+      valid: false
+
+  - id: ROUTING-LIFE-10
+    description: "DISPATCH_FAILED -> EXPIRED is forbidden"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §4.2"
+    input:
+      operation: lifecycle_transition
+      from_state: "dispatch_failed"
+      to_state: "expired"
+    expected:
+      valid: false
+
+  - id: ROUTING-LIFE-11
+    description: "DELIVERY_FAILED -> EXPIRED is forbidden"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §4.2"
+    input:
+      operation: lifecycle_transition
+      from_state: "delivery_failed"
+      to_state: "expired"
+    expected:
+      valid: false
+
+  # ---- §1.4 Degraded broker selection --------------------------------
+
+  - id: ROUTING-SEL-04
+    description: "degraded-only pool yields a selection (degraded is deprioritised, not excluded)"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §1.4"
+    rtm_ids:
+      - "ROUTE-§1.4-11"
+      - "ROUTE-§1.4-16"
+    input:
+      operation: select_broker_by_priority
+      zone: "EU"
+      brokers:
+        - agent_id: "agent:only.degraded"
+          inbox: "https://only.degraded.example/inbox"
+          jurisdiction: "PT"
+          residency_zones: ["EU"]
+          health: "degraded"
+          last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      selected_agent_id: "agent:only.degraded"
+
+  # ---- §1.4 Random selection among equals ------------------------------------
+
+  - id: ROUTING-SEL-RANDOM-01
+    description: "select_broker_random picks from equal candidates (not always the first)"
+    category: routing
+    level: compliance
+    spec_ref: "ARSIA-Routing §1.4 criterion 4"
+    rtm_ids:
+      - "ROUTE-§1.4-10"
+    input:
+      operation: select_broker_random
+      zone: "EU"
+      iterations: 50
+      brokers:
+        - agent_id: "agent:broker-a.relay"
+          inbox: "https://a.example/inbox"
+          jurisdiction: "DE"
+          residency_zones: ["EU"]
+          health: "healthy"
+          last_health_check: "2026-04-14T12:00:00.000Z"
+        - agent_id: "agent:broker-b.relay"
+          inbox: "https://b.example/inbox"
+          jurisdiction: "FR"
+          residency_zones: ["EU"]
+          health: "healthy"
+          last_health_check: "2026-04-14T12:00:00.000Z"
+        - agent_id: "agent:broker-c.relay"
+          inbox: "https://c.example/inbox"
+          jurisdiction: "NL"
+          residency_zones: ["EU"]
+          health: "healthy"
+          last_health_check: "2026-04-14T12:00:00.000Z"
+    expected:
+      not_always_first: true
+      any_selected: true

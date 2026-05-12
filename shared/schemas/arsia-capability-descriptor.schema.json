@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/capability-descriptor/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Capability Descriptor",
+  "description": "Describes a single capability exposed by an ARSIA agent. Returned as an element of the JSON array from the capability discovery endpoint (GET /.well-known/arsia/capabilities). Defined in ARSIA-Core.md \u00a77.2. Distinct from ActionDescriptor (ARSIA-Actions.md \u00a72.1) \u2014 a capability descriptor provides protocol-level metadata about a capability (risk, oversight, prerequisites), while an ActionDescriptor defines a business action's full compliance obligations.",
+  "type": "object",
+  "required": [
+    "capability",
+    "description",
+    "risk_level",
+    "human_oversight_required"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "capability": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/capability-name"
+        },
+        {
+          "description": "The capability identifier string using dot-separated reverse domain notation with at least two segments. Per ARSIA-Core.md \u00a77.2."
+        }
+      ]
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable description of the capability. Per ARSIA-Core.md \u00a77.2."
+    },
+    "risk_level": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10,
+      "description": "Risk level from 0 (no risk) to 10 (critical). Informs compliance decisions: 0\u20132 low, 3\u20135 medium, 6\u20138 high, 9\u201310 critical. Per ARSIA-Core.md \u00a77.2."
+    },
+    "human_oversight_required": {
+      "type": "boolean",
+      "description": "Whether the receiving agent will require human approval via pending_approval/approval_decision intents before executing this capability, regardless of compliance profile. Per ARSIA-Core.md \u00a77.2."
+    },
+    "rate_limit": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Per-capability rate limit in requests per minute. Per ARSIA-Core.md \u00a77.2."
+    },
+    "requires": {
+      "type": "array",
+      "items": {
+        "$ref": "arsia-common.schema.json#/$defs/capability-name"
+      },
+      "uniqueItems": true,
+      "description": "Array of prerequisite capability strings that MUST also be present in the request's capabilities array when this capability is invoked. Per ARSIA-Core.md \u00a77.2."
+    }
+  }
+}

@@ -1,0 +1,94 @@
+site_name: ARSIA Protocol SDK — Python API Reference
+site_description: API reference for the ARSIA Protocol Python SDK
+site_url: https://arsiaprotocol.org
+repo_url: https://github.com/arsialabs/arsia-protocol-sdk
+repo_name: arsialabs/arsia-protocol-sdk
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: amber
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.expand
+    - search.highlight
+    - toc.follow
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            merge_init_into_class: true
+            show_signature_annotations: true
+            separate_signature: true
+            signature_crossrefs: true
+            summary: true
+
+nav:
+  - Home: index.md
+  - Learning Path: learning-path.md
+  - Concepts: concepts.md
+  - Cookbook: cookbook.md
+  - API Reference:
+    - Core:
+      - Message: api/core/message.md
+      - Validation: api/core/validation.md
+      - Compliance: api/core/compliance.md
+      - Errors: api/core/errors.md
+      - Encryption: api/core/encryption.md
+      - Authorization: api/core/authorization.md
+      - Idempotency: api/core/idempotency.md
+      - Version: api/core/version.md
+    - Identity:
+      - Agent ID: api/identity/agent_id.md
+      - Certificates: api/identity/certificates.md
+      - Discovery: api/identity/discovery.md
+      - Onboarding: api/identity/onboarding.md
+    - Actions: api/actions.md
+    - Routing: api/routing.md
+    - State:
+      - State Operations: api/state/state.md
+      - Audit: api/state/audit.md
+      - Breach: api/state/breach.md
+    - Assets: api/assets.md
+    - Types:
+      - Envelope: api/types/envelope.md
+      - Identity: api/types/identity.md
+      - Actions: api/types/actions.md
+      - Compliance: api/types/compliance.md
+      - Security: api/types/security.md
+      - Errors: api/types/errors.md
+      - Routing: api/types/routing.md
+      - State: api/types/state.md
+      - Breach: api/types/breach.md
+      - Assets: api/types/assets.md
+    - Hazmat:
+      - Canonicalization: api/hazmat/canonicalization.md
+      - Primitives:
+        - Ed25519: api/hazmat/primitives/ed25519.md
+        - JWE: api/hazmat/primitives/jwe.md
+        - ECDSA: api/hazmat/primitives/ecdsa.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - toc:
+      permalink: true

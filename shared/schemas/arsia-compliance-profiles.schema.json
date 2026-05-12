@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/compliance-profiles/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Compliance Profiles",
+  "description": "Schema for the ARSIA Protocol compliance profiles registry. Validates the structure of arsia-compliance-profiles.json.",
+  "type": "object",
+  "required": [
+    "version",
+    "generated",
+    "profiles"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "generated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "profiles": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/profile"
+      },
+      "minProperties": 1
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "required": [
+        "name",
+        "description",
+        "status",
+        "regulatory_references",
+        "defaults"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "draft",
+            "deprecated"
+          ]
+        },
+        "regulatory_references": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "defaults": {
+          "type": "object",
+          "required": [
+            "audit_required",
+            "retention_days",
+            "human_oversight",
+            "explainability_required",
+            "pii_involved",
+            "data_residency"
+          ],
+          "properties": {
+            "audit_required": {
+              "type": "boolean"
+            },
+            "retention_days": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1
+            },
+            "human_oversight": {
+              "type": "string",
+              "enum": [
+                "not_required",
+                "required_before_execution",
+                "required_within_24h",
+                "required_post_execution"
+              ]
+            },
+            "explainability_required": {
+              "type": "boolean"
+            },
+            "pii_involved": {
+              "type": "boolean"
+            },
+            "data_residency": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "legal_basis": {
+              "type": "string",
+              "enum": [
+                "consent",
+                "contract",
+                "legal_obligation",
+                "vital_interests",
+                "public_task",
+                "legitimate_interests"
+              ]
+            },
+            "clock_skew_seconds": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 300,
+              "description": "Clock skew tolerance in seconds for timestamp validation. Overrides the Core \u00a78.3 default of 300 seconds. MUST NOT exceed 300 \u2014 profiles can only tighten the tolerance. When absent, the 300-second default applies. Per ARSIA-Core.md \u00a78.3."
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

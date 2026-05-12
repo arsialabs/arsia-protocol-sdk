@@ -1,0 +1,545 @@
+# SPDX-License-Identifier: BUSL-1.1
+# External-agent onboarding — §7 onboarding flow + §8 CapabilityPolicy.
+# All policy inputs are inlined as plain dicts; no SDK-specific helpers.
+name: onboarding
+description: 'Phase 1-5 onboarding helpers: §4.2 profile declaration, §4.3.8 R6 rank consistency, §8.3 policy evaluation, §7.5 provenance, §7.6 decision payload'
+level: compliance
+cases:
+
+  # ---- §4.2 Classification Consistency Rule (profile declaration) ----
+
+  - id: ONBOARD-PROFILE-01
+    description: "minimal-risk agent passes without a profile"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §4.2"
+    input:
+      operation: check_profile_requirement
+      identity_classification: minimal-risk
+      declared_profile: null
+    expected:
+      valid: true
+
+  - id: ONBOARD-PROFILE-02
+    description: "high-risk agent without profile is rejected"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §4.2"
+    input:
+      operation: check_profile_requirement
+      identity_classification: high-risk
+      declared_profile: null
+    expected:
+      valid: false
+      error_contains: "MUST declare a compliance profile"
+
+  - id: ONBOARD-PROFILE-03
+    description: "unacceptable-risk agent MUST NOT be onboarded"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §4.2"
+    input:
+      operation: check_profile_requirement
+      identity_classification: unacceptable-risk
+      declared_profile: EU-AI-ACT-HIGH-RISK
+    expected:
+      valid: false
+      error_contains: "MUST NOT be onboarded"
+
+  - id: ONBOARD-PROFILE-04
+    description: "high-risk with profile is conformant"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §4.2"
+    input:
+      operation: check_profile_requirement
+      identity_classification: high-risk
+      declared_profile: EU-AI-ACT-HIGH-RISK
+    expected:
+      valid: true
+
+  - id: ONBOARD-PROFILE-05
+    description: "error intent is exempt from §4.2 profile check"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §4.2"
+    input:
+      operation: check_profile_requirement
+      identity_classification: high-risk
+      declared_profile: null
+      intent: error
+    expected:
+      valid: true
+
+  # ---- §4.3.8 Rule 6 rank consistency (Phase 1 predicate) ------------
+
+  - id: ONBOARD-R6-01
+    description: "minimal-risk per-message is consistent with high-risk identity"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.8 R6"
+    input:
+      operation: check_classification_consistency
+      per_message_classification: minimal-risk
+      identity_classification: high-risk
+    expected:
+      consistent: true
+
+  - id: ONBOARD-R6-02
+    description: "high-risk per-message escalates a minimal-risk identity"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.8 R6"
+    input:
+      operation: check_classification_consistency
+      per_message_classification: high-risk
+      identity_classification: minimal-risk
+    expected:
+      consistent: false
+
+  - id: ONBOARD-R6-03
+    description: "equal ranks are consistent"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.8 R6"
+    input:
+      operation: check_classification_consistency
+      per_message_classification: high-risk
+      identity_classification: high-risk
+    expected:
+      consistent: true
+
+  - id: ONBOARD-R6-04
+    description: "unknown per-message classification is false (conservative)"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Core §4.3.8 R6"
+    input:
+      operation: check_classification_consistency
+      per_message_classification: not-a-real-class
+      identity_classification: high-risk
+    expected:
+      consistent: false
+
+  # ---- §8.3 CapabilityPolicy evaluation (Phase 3) --------------------
+
+  - id: ONBOARD-POLICY-VALID
+    description: "well-formed policy reports no structural errors"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §8.1"
+    input:
+      operation: validate_policy
+      policy:
+        policy_version: test-policy-1
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: notes.read, status: allowed}
+          - {capability: notes.write, status: oversight_required}
+          - {capability: notes.delete, status: prohibited}
+    expected:
+      valid: true
+
+  - id: ONBOARD-POLICY-DUPLICATE
+    description: "duplicate capability in policy is a configuration bug"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §8.2"
+    input:
+      operation: validate_policy
+      policy:
+        policy_version: test-policy-dup
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: notes.read, status: allowed}
+          - {capability: notes.read, status: oversight_required}
+    expected:
+      valid: false
+      error_contains: "duplicate capability"
+
+  - id: ONBOARD-POLICY-RESERVED-PREFIX
+    description: "arsiaprotocol.-prefixed capability not in the reserved set is rejected"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Actions §1.1 rule 5"
+    rtm_ids:
+      - "ACT-§1.1-10"
+      - "ACT-§1.1-11"
+    input:
+      operation: validate_policy
+      policy:
+        policy_version: test-policy-reserved
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: arsiaprotocol.bogus, status: allowed}
+    expected:
+      valid: false
+      error_contains: "reserved"
+
+  - id: ONBOARD-POLICY-EVAL-ALLOWED
+    description: "§8.3 evaluation grants an allowed capability"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §8.3"
+    input:
+      operation: evaluate_policy
+      policy:
+        policy_version: p1
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: notes.read, status: allowed}
+          - {capability: notes.write, status: oversight_required}
+          - {capability: notes.delete, status: prohibited}
+      requested_capabilities: [notes.read]
+    expected:
+      approved: true
+      freely_allowed: [notes.read]
+      oversight_required: []
+      denied: []
+
+  - id: ONBOARD-POLICY-EVAL-OVERSIGHT
+    description: "§8.3 evaluation counts oversight_required as effective"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §8.3"
+    input:
+      operation: evaluate_policy
+      policy:
+        policy_version: p1
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: notes.read, status: allowed}
+          - {capability: notes.write, status: oversight_required}
+      requested_capabilities: [notes.write]
+    expected:
+      approved: true
+      freely_allowed: []
+      oversight_required: [notes.write]
+
+  - id: ONBOARD-POLICY-EVAL-PROHIBITED
+    description: "§8.3 prohibited capability forces denial and lands in `denied`"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §8.3 step 3"
+    input:
+      operation: evaluate_policy
+      policy:
+        policy_version: p1
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: notes.read, status: allowed}
+          - {capability: notes.delete, status: prohibited}
+      requested_capabilities: [notes.read, notes.delete]
+    expected:
+      approved: false
+      freely_allowed: [notes.read]
+      denied: [notes.delete]
+      denial_reason: no_permitted_capabilities
+
+  - id: ONBOARD-POLICY-EVAL-DENY-BY-DEFAULT
+    description: "capabilities not listed are denied by default"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §8.3 step 4"
+    input:
+      operation: evaluate_policy
+      policy:
+        policy_version: p1
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: notes.read, status: allowed}
+      requested_capabilities: [payments.charge]
+    expected:
+      approved: false
+      denied: [payments.charge]
+      denial_reason: no_permitted_capabilities
+
+  - id: ONBOARD-POLICY-EVAL-EMPTY
+    description: "empty request yields no_permitted_capabilities"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §8.3 step 5"
+    input:
+      operation: evaluate_policy
+      policy:
+        policy_version: p1
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: notes.read, status: allowed}
+      requested_capabilities: []
+    expected:
+      approved: false
+      denial_reason: no_permitted_capabilities
+
+  - id: ONBOARD-POLICY-EVAL-PARTIAL-OK
+    description: "partial match is still approved when no prohibition is hit"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §8.3"
+    input:
+      operation: evaluate_policy
+      policy:
+        policy_version: p1
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: notes.read, status: allowed}
+      requested_capabilities: [notes.read, payments.charge]
+    expected:
+      approved: true
+      freely_allowed: [notes.read]
+      denied: [payments.charge]
+
+  # ---- §7.5 Provenance (Phase 4, informational) ---------------------
+
+  - id: ONBOARD-PROV-01
+    description: "identity older than audit yields positive delta"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §7.5"
+    input:
+      operation: verify_provenance
+      identity_created_at: "2026-01-01T00:00:00.000Z"
+      earliest_audit_record: "2026-03-01T00:00:00.000Z"
+    expected:
+      verified: true
+
+  - id: ONBOARD-PROV-02
+    description: "audit predating identity is flagged (still informational)"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §7.5"
+    rtm_ids:
+      - "IDENT-§7.5-03"
+    input:
+      operation: verify_provenance
+      identity_created_at: "2026-03-01T00:00:00.000Z"
+      earliest_audit_record: "2026-01-01T00:00:00.000Z"
+    expected:
+      verified: false
+      notes_contain: "audit predates identity"
+
+  - id: ONBOARD-PROV-03
+    description: "missing identity_created_at surfaces a warning"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §7.5"
+    rtm_ids:
+      - "IDENT-§7.5-03"
+    input:
+      operation: verify_provenance
+      identity_created_at: null
+      earliest_audit_record: "2026-03-01T00:00:00.000Z"
+    expected:
+      verified: false
+      notes_contain: "identity_created_at is missing"
+
+  # ---- §7.6 Phase 5 decision payload ---------------------------------
+
+  - id: ONBOARD-DEC-APPROVED
+    description: "clean approval payload carries granted capabilities"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §7.6"
+    input:
+      operation: build_decision_payload
+      agent_id: "agent:acme.echo-client"
+      policy:
+        policy_version: prod-2026-q2
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: notes.read, status: allowed}
+          - {capability: notes.write, status: oversight_required}
+      requested_capabilities: [notes.read, notes.write]
+    expected:
+      decision: approved
+      required_keys:
+        - decision
+        - agent_id
+        - policy_version
+        - freely_allowed
+        - oversight_required
+        - token_lifetime_seconds
+        - phase
+      absent_keys:
+        - access_token
+        - jwt
+        - bearer
+
+  - id: ONBOARD-DEC-DENIED
+    description: "denial payload carries denial_reason and empty grants"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §7.6"
+    input:
+      operation: build_decision_payload
+      agent_id: "agent:acme.echo-client"
+      policy:
+        policy_version: prod-2026-q2
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: notes.read, status: allowed}
+      requested_capabilities: [payments.charge]
+    expected:
+      decision: denied
+      denial_reason: [no_permitted_capabilities]
+      required_keys: [denial_reason]
+      absent_keys:
+        - access_token
+        - jwt
+
+  - id: ONBOARD-DEC-UPSTREAM-DENIAL
+    description: "Phase 1 failure wins over a clean evaluation"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §7.6"
+    input:
+      operation: build_decision_payload
+      agent_id: "agent:acme.echo-client"
+      policy:
+        policy_version: prod-2026-q2
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: notes.read, status: allowed}
+      requested_capabilities: [notes.read]
+      denial_reasons: [discovery_failed]
+      phase: discovery_and_identity
+    expected:
+      decision: denied
+      phase: discovery_and_identity
+
+  # ---- §9.3 audit event table ---------------------------------------
+
+  - id: ONBOARD-AUDIT-TABLE
+    description: "onboarding audit event table has the seven §9.3 entries"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §9.3"
+    input:
+      operation: get_audit_events
+    expected:
+      event_names:
+        - approval_decision
+        - agent_onboarded
+        - agent_rejected
+        - capability_granted
+        - capability_revoked
+        - token_issued
+        - token_revoked
+
+  - id: IDENTITY-19
+    description: "Phase 5 — issue access token over TLS"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §7.6"
+    rtm_ids:
+      - "IDENT-§7.6-01"
+    skip_until: "authorization-server"
+    # Requires: Live Authorization Server to issue access tokens after onboarding
+    # completes Phase 4 (capability negotiation). The SDK builds onboarding
+    # payloads but does not issue tokens — that is the AS's responsibility.
+    input:
+      operation: issue_token
+      agent_id: "agent:external.demo"
+    expected:
+      status: 200
+
+  # ---- §7.2 Phase ordering (Phases MUST NOT be reordered/skipped) ----
+  # NOTE: Phase ordering is enforced by the gateway flow, not by individual
+  # SDK functions. build_onboarding_decision is a stateless builder — it
+  # takes a phase tag and denial_reasons from upstream. The gateway enforces
+  # sequence (§7.2: "Phases MUST NOT be reordered or skipped"). These cases
+  # verify denial propagation as the SDK's contribution to phase ordering
+  # integrity; a phase-skip-attempt test is not applicable at the SDK level.
+
+  - id: ONBOARD-PHASE-ORDER-P1-DENIAL
+    description: "Phase 1 failure correctly propagates as discovery_and_identity denial"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §7.2"
+    rtm_ids:
+      - "IDENT-§7.2-02"
+    input:
+      operation: build_decision_payload
+      agent_id: "agent:external.bad-discovery"
+      phase: "discovery_and_identity"
+      denial_reasons:
+        - discovery_failed
+      policy:
+        policy_version: prod-2026-q2
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: notes.read, status: allowed}
+      requested_capabilities: [notes.read]
+    expected:
+      decision: denied
+      phase: "discovery_and_identity"
+
+  - id: ONBOARD-PHASE-ORDER-P2-DENIAL
+    description: "Phase 2 failure correctly propagates as compliance_conformance denial"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §7.2"
+    rtm_ids:
+      - "IDENT-§7.2-02"
+    input:
+      operation: build_decision_payload
+      agent_id: "agent:external.bad-compliance"
+      phase: "compliance_conformance"
+      denial_reasons:
+        - conformance_failed
+      policy:
+        policy_version: prod-2026-q2
+        token_lifetime_seconds: 3600
+        capabilities:
+          - {capability: notes.read, status: allowed}
+      requested_capabilities: [notes.read]
+    expected:
+      decision: denied
+      phase: "compliance_conformance"
+
+  # ---- §7.2 Phase 1 step ordering -------------------------------------------
+
+  - id: ONBOARD-PHASE1-STEPS-ORDER
+    description: "Phase 1 identity verification steps execute in sequence (requires live endpoints)"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §7.2"
+    rtm_ids:
+      - "IDENT-§7.2-03"
+    skip_until: "multi-agent-flow"
+    # Requires: Multi-agent HTTP orchestration with live endpoints.
+    # Phase 1 identity verification involves sequential HTTP calls between
+    # the onboarding agent and the platform — the SDK builds each step's
+    # payload but cannot orchestrate the multi-step flow.
+    input:
+      operation: phase1_step_order
+      agent_id: "agent:external.demo"
+    expected:
+      steps_in_order: true
+
+  # ---- §7.7 Risk-level enforcement ------------------------------------------
+
+  - id: ONBOARD-RISK-LEVEL-EXCEEDED
+    description: "Action risk_level exceeding max_risk_level forces denial"
+    category: onboarding
+    level: compliance
+    spec_ref: "ARSIA-Identity §7.7, §8.2"
+    rtm_ids:
+      - "IDENT-§7.7-06b"
+    input:
+      operation: evaluate_policy
+      policy:
+        policy_version: prod-2026-q2
+        token_lifetime_seconds: 3600
+        capabilities:
+          - capability: payments.charge
+            status: allowed
+            max_risk_level: 3
+      requested_capabilities:
+        - payments.charge
+      action_risk_levels:
+        payments.charge: 5
+    expected:
+      approved: false
+      denied:
+        - payments.charge

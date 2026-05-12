@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/jwk-entry/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA JWK Key Entry",
+  "description": "Schema for a single JWK entry in an ARSIA agent's JWKS. Supports Ed25519 signing keys (MUST), P-256 signing keys (SHOULD), and encryption keys (X25519 or P-256). Per ARSIA-Core.md \u00a77.3 and ARSIA-Identity.md \u00a72.1\u20132.5.",
+  "not": {
+    "required": [
+      "d"
+    ],
+    "description": "Private key parameter 'd' MUST NOT be present in any JWK published via ARSIA Protocol. Per ARSIA-Identity.md \u00a76.8."
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ed25519-signing-key"
+    },
+    {
+      "$ref": "#/$defs/p256-signing-key"
+    },
+    {
+      "$ref": "#/$defs/encryption-key"
+    }
+  ],
+  "$defs": {
+    "kid-format": {
+      "type": "string",
+      "description": "Key identifier. MUST follow {agent-id}#{key-index} format per ARSIA-Identity.md \u00a72.2. Globally unique within the agent's JWKS. MUST NOT be reused after key retirement.",
+      "pattern": "^agent:[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*(\\/[a-zA-Z0-9][a-zA-Z0-9_-]*)?#[a-zA-Z0-9][a-zA-Z0-9_-]*$"
+    },
+    "ed25519-signing-key": {
+      "type": "object",
+      "title": "Ed25519 Signing Key",
+      "description": "OKP/Ed25519 signing key. This is the REQUIRED algorithm for ARSIA Protocol v1.0. ARSIA-Core.md \u00a77.3, ARSIA-Identity.md \u00a72.1, \u00a72.3.",
+      "properties": {
+        "kty": {
+          "type": "string",
+          "const": "OKP",
+          "description": "Key type: Octet Key Pair."
+        },
+        "crv": {
+          "type": "string",
+          "const": "Ed25519",
+          "description": "Curve identifier."
+        },
+        "kid": {
+          "$ref": "#/$defs/kid-format"
+        },
+        "x": {
+          "type": "string",
+          "description": "Base64url-encoded 32-byte public key, no padding. ARSIA-Core.md \u00a77.3."
+        },
+        "use": {
+          "type": "string",
+          "const": "sig",
+          "description": "Key usage: signing."
+        }
+      },
+      "required": [
+        "kty",
+        "crv",
+        "kid",
+        "x",
+        "use"
+      ],
+      "additionalProperties": false
+    },
+    "p256-signing-key": {
+      "type": "object",
+      "title": "P-256 Signing Key (ES256)",
+      "description": "EC/P-256 signing key for ES256. SHOULD be supported. ARSIA-Core.md \u00a77.3.",
+      "properties": {
+        "kty": {
+          "type": "string",
+          "const": "EC",
+          "description": "Key type: Elliptic Curve."
+        },
+        "crv": {
+          "type": "string",
+          "const": "P-256",
+          "description": "Curve identifier."
+        },
+        "kid": {
+          "$ref": "#/$defs/kid-format"
+        },
+        "x": {
+          "type": "string",
+          "description": "Base64url-encoded x-coordinate. ARSIA-Core.md \u00a77.3."
+        },
+        "y": {
+          "type": "string",
+          "description": "Base64url-encoded y-coordinate. ARSIA-Core.md \u00a77.3."
+        },
+        "use": {
+          "type": "string",
+          "const": "sig",
+          "description": "Key usage: signing."
+        }
+      },
+      "required": [
+        "kty",
+        "crv",
+        "kid",
+        "x",
+        "y",
+        "use"
+      ],
+      "additionalProperties": false
+    },
+    "encryption-key": {
+      "type": "object",
+      "title": "Encryption Key",
+      "description": "Encryption key for payload encryption (\u00a75.3). Supports X25519 (ECDH-ES with Curve25519) or P-256. ARSIA-Core.md \u00a77.3.",
+      "properties": {
+        "kty": {
+          "type": "string",
+          "enum": [
+            "OKP",
+            "EC"
+          ],
+          "description": "Key type: OKP for X25519, EC for P-256."
+        },
+        "crv": {
+          "type": "string",
+          "enum": [
+            "X25519",
+            "P-256"
+          ],
+          "description": "Curve: X25519 for ECDH-ES with Curve25519, or P-256."
+        },
+        "kid": {
+          "$ref": "#/$defs/kid-format"
+        },
+        "x": {
+          "type": "string",
+          "description": "Base64url-encoded public key material."
+        },
+        "y": {
+          "type": "string",
+          "description": "Base64url-encoded y-coordinate. Present only when crv is P-256."
+        },
+        "use": {
+          "type": "string",
+          "const": "enc",
+          "description": "Key usage: encryption."
+        }
+      },
+      "required": [
+        "kty",
+        "crv",
+        "kid",
+        "x",
+        "use"
+      ],
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "crv": {
+            "const": "P-256"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "kty",
+          "crv",
+          "kid",
+          "x",
+          "y",
+          "use"
+        ]
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kty": {
+                "const": "OKP"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "crv": {
+                "const": "X25519"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kty": {
+                "const": "EC"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "crv": {
+                "const": "P-256"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

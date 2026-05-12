@@ -1,0 +1,296 @@
+# SPDX-License-Identifier: BUSL-1.1
+# RFC 8785 JCS canonicalization of ARSIA envelopes
+# Generated from shared/test-vectors/arsia-test-vectors.json.
+# Language-agnostic — any ARSIA runner consumes this file.
+name: canonicalization
+description: 'RFC 8785 JCS canonicalization of ARSIA envelopes'
+level: core
+cases:
+  - id: CORE-CANON-CTV-01
+    description: "Canonicalize CTV-01 — Minimal valid request — no compliance, no context, no idempo"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "CTV-01"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-CTV-02
+    description: "Canonicalize CTV-02 — Full request with EU-AI-ACT-HIGH-RISK compliance — all optio"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "CTV-02"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-CTV-03
+    description: "Canonicalize CTV-03 — Full request with MIFID-II compliance — financial transfer r"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "CTV-03"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-CTV-04
+    description: "Canonicalize CTV-04 — Valid response with correlation_id referencing CTV-01"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "CTV-04"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-CTV-05
+    description: "Canonicalize CTV-05 — Valid error response — forbidden with capability details"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "CTV-05"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-CTV-06
+    description: "Canonicalize CTV-06 — Generic event — status change notification"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "CTV-06"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-CTV-07
+    description: "Canonicalize CTV-07 — Event message — DORA incident notification"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "CTV-07"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-CTV-08
+    description: "Canonicalize CTV-08 — pending_approval message — human oversight flow"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "CTV-08"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-CTV-09
+    description: "Canonicalize CTV-09 — approval_decision — approved"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "CTV-09"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-CTV-10
+    description: "Canonicalize CTV-10 — approval_decision — denied with reason"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "CTV-10"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-STV-01
+    description: "Canonicalize STV-01 — State SET request — GDPR-STANDARD profile with idempotency ("
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "STV-01"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-STV-02
+    description: "Canonicalize STV-02 — State GET response — returns the complete StateEntry for an "
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "STV-02"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-STV-03
+    description: "Canonicalize STV-03 — State DELETE request — logical delete of a session-scoped en"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "STV-03"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-STV-04
+    description: "Canonicalize STV-04 — State PURGE request — GDPR Art. 17 erasure of personal data "
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "STV-04"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-STV-05
+    description: "Canonicalize STV-05 — State SNAPSHOT response — point-in-time retrieval returning "
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "STV-05"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-STV-06
+    description: "Canonicalize STV-06 — ArsiaAuditRecord — single 'request' event with EU-AI-ACT-HIG"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "STV-06"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-STV-07
+    description: "Canonicalize STV-07 — ArsiaAuditRecord oversight chain — 4 linked records (request"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "STV-07"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-ATV-01
+    description: "Canonicalize ATV-01 — AssetTransferReceipt — status 'completed' under MiFID II pro"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "ATV-01"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-ATV-02
+    description: "Canonicalize ATV-02 — AssetTransferReceipt — status 'failed' with explicit failure"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "ATV-02"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-ATV-03
+    description: "Canonicalize ATV-03 — AssetTransferReceipt — status 'escrowed' (held pending relea"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "ATV-03"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-ATV-04
+    description: "Canonicalize ATV-04 — AssetTransferReversal request — partial reversal of a comple"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "ATV-04"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-ATV-05
+    description: "Canonicalize ATV-05 — Escrow release trigger — release_agent signals that the rele"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "ATV-05"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-ATV-06
+    description: "Canonicalize ATV-06 — Escrow timeout event — funds returned to sender after timeou"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "ATV-06"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-ITV-01
+    description: "Canonicalize ITV-01 — IdentityRecord with L2 certificate_chain (2 PEM certificates"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "ITV-01"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-ITV-02
+    description: "Canonicalize ITV-02 — IdentityRecord with L3 eIDAS qualified certificate_chain. Qc"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "ITV-02"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-ITV-03
+    description: "Canonicalize ITV-03 — Onboarding decision (approved) — Phase 5 response in the 6-p"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "ITV-03"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-ITV-04
+    description: "Canonicalize ITV-04 — Onboarding decision (denied) — Phase 1 identity verification"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "ITV-04"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-RTV-01
+    description: "Canonicalize RTV-01 — Broker relay receipt — Compliance Broker confirms successful"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "RTV-01"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-RTV-02
+    description: "Canonicalize RTV-02 — Broker relay audit record — ArsiaAuditRecord with event_type"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "RTV-02"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-ACTV-01
+    description: "Canonicalize ACTV-01 — Response with complete Explanation object (all 6 fields popu"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "ACTV-01"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-ACTV-02
+    description: "Canonicalize ACTV-02 — Capability downgrading response — the receiving agent accept"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "ACTV-02"
+    expected:
+      match_vector_field: canonical_bytes_hex
+  - id: CORE-CANON-ACTV-03
+    description: "Canonicalize ACTV-03 — Rollback request — reverses a previously executed reversible"
+    category: canonicalization
+    level: core
+    spec_ref: "ARSIA-Core §5.1 Step 3"
+    input:
+      vector_id: "ACTV-03"
+    expected:
+      match_vector_field: canonical_bytes_hex

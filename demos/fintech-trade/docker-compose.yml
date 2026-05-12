@@ -1,0 +1,176 @@
+services:
+  # ── Ollama instances ──────────────────────────────────────
+  ollama-a:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-a-data:/root/.ollama
+    # GPU passthrough (uncomment for NVIDIA):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks:
+      - arsia-demo
+
+  ollama-b:
+    image: ollama/ollama:latest
+    ports:
+      - "11435:11434"
+    volumes:
+      - ollama-b-data:/root/.ollama
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks:
+      - arsia-demo
+
+  ollama-c:
+    image: ollama/ollama:latest
+    ports:
+      - "11436:11434"
+    volumes:
+      - ollama-c-data:/root/.ollama
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks:
+      - arsia-demo
+
+  # ── Agent services ────────────────────────────────────────
+  agent-a:
+    build:
+      context: .
+      args:
+        SDK_PATH: /sdk
+    command: ["python", "-m", "uvicorn", "agents.advisor:app", "--host", "0.0.0.0", "--port", "8001"]
+    ports:
+      - "8001:8001"
+    environment:
+      AGENT_A_ID: agent:acme.advisor
+      AGENT_A_PORT: "8001"
+      AGENT_A_OLLAMA_URL: http://ollama-a:11434
+      AGENT_A_OLLAMA_MODEL: gemma4:e2b
+      AGENT_A_CAPABILITIES: client.profile,trade.request
+      AGENT_B_ID: agent:acme.risk-assessor
+      AGENT_B_PORT: "8002"
+      AGENT_C_ID: agent:acme.trade-executor
+      AGENT_C_PORT: "8003"
+      PEER_B_URL: http://agent-b:8002
+      PEER_C_URL: http://agent-c:8003
+      DASHBOARD_URL: http://dashboard:3000
+    volumes:
+      - ../../python:/sdk:ro
+    depends_on:
+      ollama-a:
+        condition: service_healthy
+    networks:
+      - arsia-demo
+
+  agent-b:
+    build:
+      context: .
+      args:
+        SDK_PATH: /sdk
+    command: ["python", "-m", "uvicorn", "agents.risk_assessor:app", "--host", "0.0.0.0", "--port", "8002"]
+    ports:
+      - "8002:8002"
+    environment:
+      AGENT_B_ID: agent:acme.risk-assessor
+      AGENT_B_PORT: "8002"
+      AGENT_B_OLLAMA_URL: http://ollama-b:11434
+      AGENT_B_OLLAMA_MODEL: gemma4:e2b
+      AGENT_B_CAPABILITIES: risk.assess
+      AGENT_A_ID: agent:acme.advisor
+      AGENT_A_PORT: "8001"
+      PEER_A_URL: http://agent-a:8001
+    volumes:
+      - ../../python:/sdk:ro
+    depends_on:
+      ollama-b:
+        condition: service_healthy
+    networks:
+      - arsia-demo
+
+  agent-c:
+    build:
+      context: .
+      args:
+        SDK_PATH: /sdk
+    command: ["python", "-m", "uvicorn", "agents.trade_executor:app", "--host", "0.0.0.0", "--port", "8003"]
+    ports:
+      - "8003:8003"
+    environment:
+      AGENT_C_ID: agent:acme.trade-executor
+      AGENT_C_PORT: "8003"
+      AGENT_C_OLLAMA_URL: http://ollama-c:11434
+      AGENT_C_OLLAMA_MODEL: gemma4:e2b
+      AGENT_C_CAPABILITIES: trade.execute
+      AGENT_A_ID: agent:acme.advisor
+      AGENT_A_PORT: "8001"
+      PEER_A_URL: http://agent-a:8001
+    volumes:
+      - ../../python:/sdk:ro
+    depends_on:
+      ollama-c:
+        condition: service_healthy
+    networks:
+      - arsia-demo
+
+  # ── Dashboard ─────────────────────────────────────────────
+  dashboard:
+    build:
+      context: .
+      args:
+        SDK_PATH: /sdk
+    command: ["python", "-m", "uvicorn", "dashboard.app:app", "--host", "0.0.0.0", "--port", "3000"]
+    ports:
+      - "3000:3000"
+    environment:
+      DASHBOARD_PORT: "3000"
+      DASHBOARD_AGENT_A_URL: http://agent-a:8001
+    volumes:
+      - ../../python:/sdk:ro
+    depends_on:
+      - agent-a
+    networks:
+      - arsia-demo
+
+volumes:
+  ollama-a-data:
+  ollama-b-data:
+  ollama-c-data:
+
+networks:
+  arsia-demo:
+    driver: bridge

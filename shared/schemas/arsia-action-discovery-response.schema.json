@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/action-discovery-response/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Action Discovery Response",
+  "description": "Paginated response from the action discovery endpoint (GET /.well-known/arsia/actions). Contains an array of ActionDescriptor objects with pagination metadata. Defined in ARSIA-Actions.md \u00a72.3. The endpoint MUST support 7 query parameters for filtering and pagination: category, human_oversight_required, risk_level_min (integer 0\u201310), risk_level_max (integer 0\u201310), audit_required (boolean), limit (integer, default 20, max 100), offset (integer, default 0). Multiple query parameters are combined with logical AND.",
+  "type": "object",
+  "required": [
+    "actions",
+    "total",
+    "limit",
+    "offset"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "ActionDescriptor": {
+      "type": "object",
+      "description": "Describes a single action available at an ARSIA-conformant agent. Defined in ARSIA-Actions.md \u00a72.1.",
+      "required": [
+        "action_id",
+        "category",
+        "description",
+        "risk_level",
+        "reversible",
+        "idempotent",
+        "required_capabilities",
+        "human_oversight_required",
+        "audit_required",
+        "explainability_required"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "action_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/payload-type"
+            },
+            {
+              "description": "Reverse domain notation with optional action path. Uniquely identifies the action within the agent's registry. Per ARSIA-Actions.md \u00a72.1."
+            }
+          ]
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "data",
+            "communication",
+            "financial",
+            "system",
+            "oversight"
+          ],
+          "description": "High-level classification of the action's domain. Per ARSIA-Actions.md \u00a72.1."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "Concise human-readable description of what this action does. Per ARSIA-Actions.md \u00a72.1."
+        },
+        "risk_level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Risk assessment score (0\u201310) determining compliance requirements. Per ARSIA-Actions.md \u00a72.1\u2013\u00a72.2."
+        },
+        "reversible": {
+          "type": "boolean",
+          "description": "Whether this action supports rollback (ARSIA-Actions.md \u00a74.2). Per ARSIA-Actions.md \u00a72.1."
+        },
+        "idempotent": {
+          "type": "boolean",
+          "description": "Whether executing this action multiple times with identical input produces the same result. Per ARSIA-Actions.md \u00a72.1."
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "arsia-common.schema.json#/$defs/capability-name-wildcard"
+              },
+              {
+                "maxLength": 128
+              }
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Capabilities that a requesting agent MUST have in its access token scope to invoke this action. Per ARSIA-Actions.md \u00a72.1."
+        },
+        "optional_capabilities": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "arsia-common.schema.json#/$defs/capability-name-wildcard"
+              },
+              {
+                "maxLength": 128
+              }
+            ]
+          },
+          "uniqueItems": true,
+          "description": "Capabilities that enhance the action's behavior when present but are not required. Per ARSIA-Actions.md \u00a72.1."
+        },
+        "human_oversight_required": {
+          "type": "boolean",
+          "description": "When true, the action MUST go through the pending_approval flow before execution. Per ARSIA-Actions.md \u00a72.1."
+        },
+        "audit_required": {
+          "type": "boolean",
+          "description": "When true, every execution MUST generate an audit record (ARSIA-State.md \u00a77). Per ARSIA-Actions.md \u00a72.1."
+        },
+        "retention_days": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Override retention period for audit records from this action. Per ARSIA-Actions.md \u00a72.1."
+        },
+        "explainability_required": {
+          "type": "boolean",
+          "description": "When true, every response MUST include a payload.explanation object (ARSIA-Actions.md \u00a75.2). Per ARSIA-Actions.md \u00a72.1."
+        },
+        "max_execution_ms": {
+          "type": "integer",
+          "minimum": 100,
+          "default": 30000,
+          "description": "Maximum execution time in milliseconds. Default 30000. Per ARSIA-Actions.md \u00a72.1."
+        },
+        "required_approvals": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "Number of distinct approval_decision messages required before the action may proceed. Per ARSIA-Actions.md \u00a73.6."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "risk_level": {
+                "minimum": 5
+              }
+            },
+            "required": [
+              "risk_level"
+            ]
+          },
+          "then": {
+            "properties": {
+              "audit_required": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "risk_level": {
+                "minimum": 7
+              }
+            },
+            "required": [
+              "risk_level"
+            ]
+          },
+          "then": {
+            "properties": {
+              "explainability_required": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "risk_level": {
+                "minimum": 9
+              }
+            },
+            "required": [
+              "risk_level"
+            ]
+          },
+          "then": {
+            "properties": {
+              "human_oversight_required": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "action_id": {
+                "not": {
+                  "pattern": "^arsiaprotocol\\."
+                }
+              }
+            },
+            "required": [
+              "action_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "required_capabilities": {
+                "items": {
+                  "not": {
+                    "pattern": "^arsiaprotocol\\."
+                  }
+                }
+              },
+              "optional_capabilities": {
+                "items": {
+                  "not": {
+                    "pattern": "^arsiaprotocol\\."
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "properties": {
+    "actions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ActionDescriptor"
+      },
+      "description": "Array of ActionDescriptor objects matching the query filters, limited by pagination parameters. Per ARSIA-Actions.md \u00a72.3."
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of actions matching the query filters before pagination is applied. Per ARSIA-Actions.md \u00a72.3."
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "description": "Maximum number of actions returned in this response. Default: 20. Maximum: 100. Per ARSIA-Actions.md \u00a72.3."
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of actions skipped for pagination. Default: 0. Per ARSIA-Actions.md \u00a72.3."
+    }
+  }
+}

@@ -1,0 +1,262 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Discovery document, JWKS envelope, and capability listing builders
+# per ARSIA-Core.md §7.1, §7.2, §7.3.
+#
+# All cases are offline and language-agnostic: the runner feeds the
+# YAML input straight into build_discovery_document / build_jwks /
+# build_capability_listing and checks subset / equality expectations
+# against the returned dict. HTTP-served discovery endpoints
+# (DISCOVERY-*) are owned by the integrations layer and gated on the
+# transport slice.
+name: discovery
+description: 'ARSIA Core §7: discovery document, JWKS, and capability listing builders'
+level: core
+cases:
+
+  # ---- §7.1 Discovery document --------------------------------------------
+
+  - id: DISCOVERY-DOC-01
+    description: "Minimal discovery document has all eleven required fields"
+    category: discovery
+    level: core
+    spec_ref: "ARSIA-Core §7.1"
+    input:
+      operation: build_discovery_document
+      args:
+        agent_id: "agent:acme.bot"
+        name: "Acme Bot"
+        version: "2.1.0"
+        inbox: "https://acme.example/arsia/inbox"
+        jwks: "https://acme.example/.well-known/arsia/jwks.json"
+    expected:
+      required_keys:
+        - agent_id
+        - name
+        - version
+        - protocol_version
+        - inbox
+        - jwks
+        - capabilities_supported
+        - max_message_bytes
+        - request_timeout_ms
+        - server_min
+        - server_max
+      contains:
+        agent_id: "agent:acme.bot"
+        name: "Acme Bot"
+        version: "2.1.0"
+        protocol_version: "1.0"
+        inbox: "https://acme.example/arsia/inbox"
+        jwks: "https://acme.example/.well-known/arsia/jwks.json"
+        capabilities_supported: []
+        max_message_bytes: 1048576
+        request_timeout_ms: 30000
+        server_min: "1.0"
+        server_max: "1.0"
+      absent_keys:
+        - features
+        - rate_limits
+        - compliance_profiles_supported
+
+  - id: DISCOVERY-DOC-02
+    description: "Optional fields appear when caller passes them"
+    category: discovery
+    level: core
+    spec_ref: "ARSIA-Core §7.1"
+    input:
+      operation: build_discovery_document
+      args:
+        agent_id: "agent:acme.bot"
+        name: "Acme Bot"
+        version: "2.1.0"
+        inbox: "https://acme.example/arsia/inbox"
+        jwks: "https://acme.example/.well-known/arsia/jwks.json"
+        capabilities_supported: ["quotes.get", "orders.*"]
+        features:
+          async_responses: true
+          batch_requests: false
+          encryption: true
+        rate_limits:
+          requests_per_minute: 120
+          burst_size: 20
+        compliance_profiles_supported: ["GDPR-STANDARD", "MIFID-II"]
+    expected:
+      contains:
+        capabilities_supported: ["quotes.get", "orders.*"]
+        features:
+          async_responses: true
+          batch_requests: false
+          encryption: true
+        rate_limits:
+          requests_per_minute: 120
+          burst_size: 20
+        compliance_profiles_supported: ["GDPR-STANDARD", "MIFID-II"]
+
+  - id: DISCOVERY-DOC-03
+    description: "Custom server_min/server_max/protocol_version propagate"
+    category: discovery
+    level: core
+    spec_ref: "ARSIA-Core §7.1, §7.4"
+    input:
+      operation: build_discovery_document
+      args:
+        agent_id: "agent:acme.bot"
+        name: "Acme Bot"
+        version: "2.1.0"
+        inbox: "https://acme.example/arsia/inbox"
+        jwks: "https://acme.example/.well-known/arsia/jwks.json"
+        server_min: "1.0"
+        server_max: "1.2"
+        protocol_version: "1.2"
+    expected:
+      contains:
+        server_min: "1.0"
+        server_max: "1.2"
+        protocol_version: "1.2"
+
+  - id: DISCOVERY-DOC-04
+    description: "Custom size and timeout overrides propagate"
+    category: discovery
+    level: core
+    spec_ref: "ARSIA-Core §7.1"
+    input:
+      operation: build_discovery_document
+      args:
+        agent_id: "agent:acme.bot"
+        name: "Acme Bot"
+        version: "2.1.0"
+        inbox: "https://acme.example/arsia/inbox"
+        jwks: "https://acme.example/.well-known/arsia/jwks.json"
+        max_message_bytes: 4194304
+        request_timeout_ms: 60000
+    expected:
+      contains:
+        max_message_bytes: 4194304
+        request_timeout_ms: 60000
+
+  # ---- §7.3 JWKS envelope -------------------------------------------------
+
+  - id: DISCOVERY-JWKS-01
+    description: "Empty key list wraps to {keys: []}"
+    category: discovery
+    level: core
+    spec_ref: "ARSIA-Core §7.3, RFC 7517"
+    input:
+      operation: build_jwks
+      keys: []
+    expected:
+      jwks:
+        keys: []
+
+  - id: DISCOVERY-JWKS-02
+    description: "Two JWKs wrap into a single keys array"
+    category: discovery
+    level: core
+    spec_ref: "ARSIA-Core §7.3, RFC 7517"
+    input:
+      operation: build_jwks
+      keys:
+        - kty: OKP
+          crv: Ed25519
+          x: "MCowBQYDK2VwAyEAH4yYvI5fX"
+          kid: "agent:acme.bot#key1"
+          use: sig
+        - kty: OKP
+          crv: Ed25519
+          x: "Yg3qX2t5k9d7fF8hGjK1LmN2p"
+          kid: "agent:acme.bot#key2"
+          use: sig
+    expected:
+      count: 2
+
+  - id: DISCOVERY-JWKS-03
+    description: "Single JWK equality round-trip"
+    category: discovery
+    level: core
+    spec_ref: "ARSIA-Core §7.3"
+    input:
+      operation: build_jwks
+      keys:
+        - kty: OKP
+          crv: Ed25519
+          x: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          kid: "agent:acme.bot#key1"
+          use: sig
+    expected:
+      jwks:
+        keys:
+          - kty: OKP
+            crv: Ed25519
+            x: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            kid: "agent:acme.bot#key1"
+            use: sig
+
+  # ---- §7.2 Capability listing --------------------------------------------
+
+  - id: DISCOVERY-CAPS-01
+    description: "Default total equals len(actions) for non-paginated listings"
+    category: discovery
+    level: core
+    spec_ref: "ARSIA-Core §7.2"
+    input:
+      operation: build_capability_listing
+      actions:
+        - capability: "quotes.get"
+          description: "Fetch a quote"
+          risk_level: 2
+          input_schema: {type: object}
+          output_schema: {type: object}
+          oversight: {human_oversight: none}
+          pricing: {type: free}
+          retention_days: 30
+        - capability: "orders.create"
+          description: "Submit an order"
+          risk_level: 3
+          input_schema: {type: object}
+          output_schema: {type: object}
+          oversight: {human_oversight: advisory}
+          pricing: {type: per_call, amount: "0.05"}
+          retention_days: 365
+    expected:
+      total: 2
+      limit: 20
+      offset: 0
+
+  - id: DISCOVERY-CAPS-02
+    description: "Empty capability listing wraps cleanly"
+    category: discovery
+    level: core
+    spec_ref: "ARSIA-Core §7.2"
+    input:
+      operation: build_capability_listing
+      actions: []
+    expected:
+      listing:
+        actions: []
+        total: 0
+        limit: 20
+        offset: 0
+
+  - id: DISCOVERY-CAPS-03
+    description: "Explicit total/limit/offset carry a mid-stream page"
+    category: discovery
+    level: core
+    spec_ref: "ARSIA-Core §7.2"
+    input:
+      operation: build_capability_listing
+      total: 150
+      limit: 10
+      offset: 20
+      actions:
+        - capability: "quotes.get"
+          description: "Fetch a quote"
+          risk_level: 2
+          input_schema: {type: object}
+          output_schema: {type: object}
+          oversight: {human_oversight: none}
+          pricing: {type: free}
+          retention_days: 30
+    expected:
+      total: 150
+      limit: 10
+      offset: 20

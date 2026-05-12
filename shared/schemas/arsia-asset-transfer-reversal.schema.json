@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/asset-transfer-reversal/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Asset Transfer Reversal",
+  "description": "Validates the payload.args object of an AssetTransferReversal message (ARSIA-Assets.md \u00a73.3). Requests the reversal of a previously completed transfer. Defined in ARSIA-Assets.md \u00a73.3.1. Note: cross-message invariants are enforced programmatically \u2014 the original transfer MUST exist and be in status 'completed'; reversal_amount (when present) MUST NOT exceed the original transfer's amount; cumulative partial reversals MUST NOT exceed the original amount; reversals are only allowed within provider-defined windows (T+1 for full, T+30 for partial by default). Violations produce not_found or conflict errors per \u00a73.3.2.",
+  "type": "object",
+  "required": [
+    "original_payment_reference",
+    "reversal_reason",
+    "requested_by"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "original_payment_reference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "The payment_reference of the original AssetTransferRequest that this reversal targets. The receiving agent MUST locate the original transfer using this reference and verify it exists, is in status 'completed', and is within the reversal window. If not found, respond with error code 'not_found'. Per ARSIA-Assets.md \u00a73.3.1 'original_payment_reference'."
+    },
+    "reversal_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "description": "Human-readable explanation of why the reversal is being requested. Logged in the audit trail alongside the original transfer record. MUST be specific enough for a compliance officer to understand the business justification. Per ARSIA-Assets.md \u00a73.3.1 'reversal_reason'."
+    },
+    "requested_by": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "Agent-id of the entity requesting the reversal. MAY differ from the envelope's 'from' field when the reversal is requested by a compliance officer or dispute resolution agent acting on behalf of the original parties. MUST possess the arsiaprotocol.assets.transfer.reverse capability. Per ARSIA-Assets.md \u00a73.3.1 'requested_by'."
+    },
+    "reversal_amount": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Amount to reverse. When less than the original transfer's amount, this is a partial reversal. When equal, a full reversal. MUST NOT exceed the original transfer's amount (enforced programmatically; violations produce error code 'invalid_request'). When absent, defaults to a full reversal of the original amount. Per ARSIA-Assets.md \u00a73.3.1 'reversal_amount'."
+    }
+  }
+}

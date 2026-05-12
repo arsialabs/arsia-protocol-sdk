@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/breach-notification/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Breach Notification",
+  "description": "Validates the payload data for a GDPR breach notification event message (ARSIA-State.md \u00a75.7). Carries structured breach information between agents for supervisory authority notification (Art. 33) or data subject notification (Art. 34). The notification_target discriminator selects the notification type; OPTIONAL fields carry SHOULD-level guidance in descriptions rather than structural enforcement.",
+  "type": "object",
+  "required": [
+    "notification_target",
+    "breach_id",
+    "nature_of_breach",
+    "awareness_timestamp",
+    "likely_consequences",
+    "measures_taken"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "notification_target": {
+      "type": "string",
+      "enum": [
+        "supervisory_authority",
+        "data_subject"
+      ],
+      "description": "Discriminator for the notification type. 'supervisory_authority' for controller-to-DPA notifications per Art. 33; 'data_subject' for controller-to-data-subject notifications per Art. 34. Per ARSIA-State.md \u00a75.7."
+    },
+    "breach_id": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+        }
+      ],
+      "description": "Unique identifier for this breach. All notifications about the same breach share the same breach_id, enabling correlation of initial notifications and subsequent updates per Art. 33(4). Per ARSIA-State.md \u00a75.7."
+    },
+    "nature_of_breach": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "description": "Description of the nature of the personal data breach including, where possible, the categories and approximate number of data subjects and records concerned. Per Art. 33(3)(a)."
+    },
+    "awareness_timestamp": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+        }
+      ],
+      "description": "When the controller became aware of the breach. Art. 33 requires notification within 72 hours of this timestamp. Per ARSIA-State.md \u00a75.7."
+    },
+    "categories_of_data": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Categories of personal data affected (e.g., names, financial data, health records). SHOULD be present for supervisory_authority notifications. Per Art. 33(3)(a)."
+    },
+    "categories_of_data_subjects": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Categories of data subjects affected (e.g., employees, customers, patients). SHOULD be present for supervisory_authority notifications. Per Art. 33(3)(a)."
+    },
+    "approximate_data_subject_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Approximate number of data subjects affected. SHOULD be present for supervisory_authority notifications. Per Art. 33(3)(a)."
+    },
+    "approximate_record_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Approximate number of personal data records affected. SHOULD be present for supervisory_authority notifications. Per Art. 33(3)(a)."
+    },
+    "likely_consequences": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "description": "Description of the likely consequences of the breach. Per Art. 33(3)(b) and Art. 34(2)."
+    },
+    "measures_taken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "description": "Description of the measures taken or proposed to address the breach, including measures to mitigate possible adverse effects. Per Art. 33(3)(c)/(d) and Art. 34(2)."
+    },
+    "dpo_contact": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "description": "Name and contact details of the data protection officer or other contact point. SHOULD be present for supervisory_authority notifications. Per Art. 33(3)(b)."
+    },
+    "remediation_advice": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "description": "Advice to data subjects on steps they can take to protect themselves. SHOULD be present for data_subject notifications. Per Art. 34(2)."
+    }
+  }
+}

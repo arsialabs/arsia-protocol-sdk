@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/capability-policy/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Capability Policy",
+  "description": "JSON document maintained by the receiving organization that defines which capabilities are available to external agents and under what conditions. Input to Phase 3 (Capability Scoping) of the onboarding flow (ARSIA-Identity.md \u00a77.4). Defined in ARSIA-Identity.md \u00a78.1. The policy evaluation procedure in \u00a78.3 is deny-by-default: capabilities not listed in the policy are rejected.",
+  "type": "object",
+  "required": [
+    "policy_version",
+    "token_lifetime_seconds",
+    "capabilities"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "policy_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Version identifier for the policy, included in the onboarding decision to record which version was applied. Implementations SHOULD use a semantically meaningful version string (e.g. 'finco-2026-q1', 'v2.1'). Format is free-form. Per ARSIA-Identity.md \u00a78.1 'policy_version'."
+    },
+    "token_lifetime_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Lifetime in seconds of access tokens issued to approved external agents. Tokens MUST NOT be issued with a lifetime exceeding this value. RECOMMENDED minimum 900 (15 minutes); RECOMMENDED maximum 86400 (24 hours). Values outside this range are permitted but implementations SHOULD log a warning. Per ARSIA-Identity.md \u00a78.1 'token_lifetime_seconds'."
+    },
+    "capabilities": {
+      "type": "array",
+      "description": "Array of CapabilityRule entries defining the organization's policy for each capability. Per ARSIA-Identity.md \u00a78.1 'capabilities' and \u00a78.2 CapabilityRule structure.",
+      "items": {
+        "type": "object",
+        "required": [
+          "capability",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "capability": {
+            "allOf": [
+              {
+                "$ref": "arsia-common.schema.json#/$defs/capability-name"
+              },
+              {
+                "description": "The capability string, conforming to the ARSIA capability naming grammar (ARSIA-Actions.md \u00a71.1). Wildcard capabilities (e.g. 'arsiaprotocol.test.*') are NOT permitted in policy rules \u2014 each rule MUST specify an exact capability. Per ARSIA-Identity.md \u00a78.2 'capability'."
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "allowed",
+              "oversight_required",
+              "prohibited"
+            ],
+            "description": "Policy status for this capability. 'allowed': capability is freely permitted. 'oversight_required': capability is permitted but requires human oversight for each invocation. 'prohibited': capability is explicitly denied. Semantics defined in ARSIA-Identity.md \u00a77.4. Per ARSIA-Identity.md \u00a78.2 'status'."
+          },
+          "max_risk_level": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10,
+            "description": "Maximum risk level (per ARSIA-Actions.md \u00a72.2) at which this capability may be invoked. If the action's declared risk level exceeds this value, the invocation MUST be treated as prohibited regardless of the status field. Per ARSIA-Identity.md \u00a78.2 'max_risk_level'."
+          },
+          "conditions": {
+            "type": "string",
+            "description": "Human-readable description of the conditions under which this capability is available. Informational only \u2014 included in audit records but NOT machine-enforced. Per ARSIA-Identity.md \u00a78.2 'conditions'."
+          }
+        }
+      }
+    }
+  }
+}

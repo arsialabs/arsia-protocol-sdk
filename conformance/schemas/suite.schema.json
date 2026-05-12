@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/conformance/suite.schema.json",
+  "title": "ARSIA Conformance Suite",
+  "description": "Schema for ARSIA Protocol conformance suite YAML files.",
+  "type": "object",
+  "required": ["name", "cases"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "level": {
+      "type": "string",
+      "enum": ["core", "compliance", "full"]
+    },
+    "cases": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/case" },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["id", "description", "category", "level", "input", "expected"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "level": {
+          "type": "string",
+          "enum": ["core", "compliance", "full"]
+        },
+        "spec_ref": {
+          "type": "string"
+        },
+        "input": {
+          "type": "object"
+        },
+        "expected": {
+          "type": "object"
+        },
+        "skip_until": {
+          "type": "string"
+        },
+        "rtm_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z]+-§[\\d.]+-\\d+[a-z]?$"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

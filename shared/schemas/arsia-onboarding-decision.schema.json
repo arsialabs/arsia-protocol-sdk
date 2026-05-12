@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/onboarding-decision/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Onboarding Decision Payload",
+  "description": "Payload structure for the onboarding decision message (intent: approval_decision) emitted by the onboarding gateway after completing the six-phase onboarding evaluation. The decision is either 'approved' (with token, capabilities, conformance result, and provenance) or 'denied' (with denial_reason, no token). Defined in ARSIA-Identity.md \u00a77.6. Conformance check structure from \u00a77.3. Provenance structure from \u00a77.5. Capability scoping from \u00a77.4.",
+  "type": "object",
+  "required": [
+    "type",
+    "result"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "arsiaprotocol.onboarding/decision",
+      "description": "Payload type identifier for the onboarding decision. Per ARSIA-Identity.md \u00a77.6."
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "decision"
+      ],
+      "additionalProperties": false,
+      "description": "Decision result object. Structure varies based on the 'decision' value: 'approved' includes token, capability lists, conformance result, and provenance; 'denied' includes denial_reason and MUST NOT include token. Per ARSIA-Identity.md \u00a77.6.",
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": [
+            "approved",
+            "denied"
+          ],
+          "description": "The onboarding decision. 'approved': agent passes all phases and receives a scoped access token. 'denied': agent fails one or more phases. Per ARSIA-Identity.md \u00a77.6."
+        },
+        "effective_capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "arsia-common.schema.json#/$defs/capability-name"
+          },
+          "description": "Union of freely_allowed and oversight_required capabilities granted to the agent. Computed as (agent_declared \u2229 policy_allowed) \u222a (agent_declared \u2229 policy_oversight_required). Per ARSIA-Identity.md \u00a77.4 and \u00a77.6."
+        },
+        "freely_allowed": {
+          "type": "array",
+          "items": {
+            "$ref": "arsia-common.schema.json#/$defs/capability-name"
+          },
+          "description": "Capabilities the agent may invoke without additional oversight during the operational phase. Subset of effective_capabilities with policy status 'allowed'. Per ARSIA-Identity.md \u00a77.4."
+        },
+        "oversight_required": {
+          "type": "array",
+          "items": {
+            "$ref": "arsia-common.schema.json#/$defs/capability-name"
+          },
+          "description": "Capabilities the agent may invoke but each invocation MUST trigger a pending_approval flow (ARSIA-Actions.md \u00a73.2) before execution. Subset of effective_capabilities with policy status 'oversight_required'. Per ARSIA-Identity.md \u00a77.4."
+        },
+        "token": {
+          "type": "string",
+          "minLength": 1,
+          "description": "JWT access token whose scope claim includes exactly the effective_capabilities. The token's sub claim MUST be the external agent's agent-id, iss claim MUST be the gateway's agent-id, exp claim MUST be set per policy.token_lifetime_seconds. Per ARSIA-Identity.md \u00a77.6 and \u00a79.1."
+        },
+        "token_expires_at": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "description": "Token expiry time in RFC 3339 format with millisecond precision, UTC. Per ARSIA-Identity.md \u00a77.6."
+            }
+          ]
+        },
+        "conformance_result": {
+          "$ref": "#/$defs/conformance-result",
+          "description": "Aggregate result of the five Phase 2 conformance checks. REQUIRED for approval; SHOULD be included for denial to provide feedback. Per ARSIA-Identity.md \u00a77.3 and \u00a77.6."
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance",
+          "description": "Temporal provenance evidence recorded during Phase 4. Per ARSIA-Identity.md \u00a77.5."
+        },
+        "policy_version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Version identifier of the CapabilityPolicy applied during Phase 3. Establishes which policy version was in effect at onboarding time. Per ARSIA-Identity.md \u00a78.1."
+        },
+        "denial_reason": {
+          "type": "string",
+          "enum": [
+            "discovery_failed",
+            "identity_verification_failed",
+            "unacceptable_risk_classification",
+            "conformance_failed",
+            "no_permitted_capabilities"
+          ],
+          "description": "Reason for denial. 'discovery_failed': Phase 1 Step 1 failed (\u00a77.2). 'identity_verification_failed': Phase 1 Steps 2-5 failed (\u00a77.2). 'unacceptable_risk_classification': Phase 1 Step 6 \u2014 agent classified as unacceptable-risk (\u00a77.2). 'conformance_failed': Phase 2 \u2014 one or more conformance checks failed (\u00a77.3). 'no_permitted_capabilities': Phase 3 \u2014 no capabilities matched the policy (\u00a78.3)."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "decision": {
+                "const": "approved"
+              }
+            },
+            "required": [
+              "decision"
+            ]
+          },
+          "then": {
+            "required": [
+              "decision",
+              "effective_capabilities",
+              "freely_allowed",
+              "oversight_required",
+              "token",
+              "token_expires_at",
+              "conformance_result",
+              "provenance",
+              "policy_version"
+            ],
+            "properties": {
+              "effective_capabilities": {
+                "minItems": 1
+              }
+            },
+            "not": {
+              "required": [
+                "denial_reason"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "decision": {
+                "const": "denied"
+              }
+            },
+            "required": [
+              "decision"
+            ]
+          },
+          "then": {
+            "required": [
+              "decision",
+              "denial_reason"
+            ],
+            "not": {
+              "required": [
+                "token"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "conformance-check": {
+      "type": "object",
+      "description": "Result of a single conformance check run during Phase 2 of onboarding. Five normative checks are defined: CHECK-01 (envelope validity), CHECK-02 (signature verification), CHECK-03 (human oversight compliance), CHECK-04 (audit trail format), CHECK-05 (classification consistency). Per ARSIA-Identity.md \u00a77.3.",
+      "required": [
+        "test_id",
+        "status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "test_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identifier for the conformance check. Standard checks use CHECK-01 through CHECK-05. Per ARSIA-Identity.md \u00a77.3."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "skip"
+          ],
+          "description": "Result status. 'pass': check criteria met. 'fail': check criteria not met. 'skip': preconditions not met (e.g. CHECK-05 skipped for non-high-risk agents, CHECK-04 skipped when audit endpoint unavailable). Per ARSIA-Identity.md \u00a77.3."
+        },
+        "details": {
+          "type": "string",
+          "description": "Human-readable details about the check result. Typically provided for 'fail' and 'skip' results to explain the outcome. Per ARSIA-Identity.md \u00a77.3."
+        },
+        "duration_ms": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Duration of the check execution in milliseconds. May be omitted for skipped checks. Per ARSIA-Identity.md \u00a77.3."
+        }
+      }
+    },
+    "conformance-result": {
+      "type": "object",
+      "description": "Aggregate result of the five conformance checks in Phase 2. ALL checks with status 'pass' or 'skip' MUST be achieved for Phase 2 to pass. If any check has status 'fail', Phase 2 fails. Per ARSIA-Identity.md \u00a77.3.",
+      "required": [
+        "checks",
+        "all_passed",
+        "total_duration_ms"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/conformance-check"
+          },
+          "minItems": 1,
+          "description": "Array of individual conformance check results. Per ARSIA-Identity.md \u00a77.3."
+        },
+        "all_passed": {
+          "type": "boolean",
+          "description": "true if every check has status 'pass' or 'skip'; false if any check has status 'fail'. Per ARSIA-Identity.md \u00a77.3."
+        },
+        "total_duration_ms": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total duration of all conformance checks in milliseconds. Per ARSIA-Identity.md \u00a77.3."
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Temporal provenance evidence of the external agent's existence and operational history, recorded during Phase 4. Provenance is informational \u2014 a false result SHOULD be logged as a warning but MUST NOT automatically deny onboarding. Per ARSIA-Identity.md \u00a77.5.",
+      "required": [
+        "identity_created_at",
+        "provenance_verified"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "identity_created_at": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "description": "The created_at field from the agent's IdentityRecord (ARSIA-Identity.md \u00a71.2), establishing when the agent's identity was first created. RFC 3339 format with millisecond precision, UTC. Per ARSIA-Identity.md \u00a77.5."
+            }
+          ]
+        },
+        "earliest_audit_record": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "description": "The processed_at timestamp of the earliest audit record from the agent's audit endpoint (/.well-known/arsia/audit), if available. Establishes earliest known operational activity. MUST NOT be earlier than identity_created_at. Per ARSIA-Identity.md \u00a77.5."
+            }
+          ]
+        },
+        "provenance_verified": {
+          "type": "boolean",
+          "description": "true if both identity_created_at and earliest_audit_record are present, are valid RFC 3339 timestamps, and earliest_audit_record is not earlier than identity_created_at. false otherwise. Per ARSIA-Identity.md \u00a77.5."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,346 @@
+# SPDX-License-Identifier: BUSL-1.1
+# L1+L2 validation of valid ARSIA envelopes
+# Generated from shared/test-vectors/arsia-test-vectors.json.
+# Language-agnostic — any ARSIA runner consumes this file.
+name: validation-valid
+description: 'L1+L2 validation of valid ARSIA envelopes'
+level: core
+cases:
+  - id: CORE-VALIDATION-VALID-CTV-01
+    description: "CTV-01 passes L1+L2 — Minimal valid request — no compliance, no context, no i"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "CTV-01"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-CTV-02
+    description: "CTV-02 passes L1+L2 — Full request with EU-AI-ACT-HIGH-RISK compliance — all "
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "CTV-02"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-CTV-03
+    description: "CTV-03 passes L1+L2 — Full request with MIFID-II compliance — financial trans"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "CTV-03"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-CTV-04
+    description: "CTV-04 passes L1+L2 — Valid response with correlation_id referencing CTV-01"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "CTV-04"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-CTV-05
+    description: "CTV-05 passes L1+L2 — Valid error response — forbidden with capability detail"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "CTV-05"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-CTV-06
+    description: "CTV-06 passes L1+L2 — Generic event — status change notification"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "CTV-06"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-CTV-07
+    description: "CTV-07 passes L1+L2 — Event message — DORA incident notification"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "CTV-07"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-CTV-08
+    description: "CTV-08 passes L1+L2 — pending_approval message — human oversight flow"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "CTV-08"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-CTV-09
+    description: "CTV-09 passes L1+L2 — approval_decision — approved"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "CTV-09"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-CTV-10
+    description: "CTV-10 passes L1+L2 — approval_decision — denied with reason"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "CTV-10"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-STV-01
+    description: "STV-01 passes L1+L2 — State SET request — GDPR-STANDARD profile with idempote"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "STV-01"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-STV-02
+    description: "STV-02 passes L1+L2 — State GET response — returns the complete StateEntry fo"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "STV-02"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-STV-03
+    description: "STV-03 passes L1+L2 — State DELETE request — logical delete of a session-scop"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "STV-03"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-STV-04
+    description: "STV-04 passes L1+L2 — State PURGE request — GDPR Art. 17 erasure of personal "
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "STV-04"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-STV-05
+    description: "STV-05 passes L1+L2 — State SNAPSHOT response — point-in-time retrieval retur"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "STV-05"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-STV-06
+    description: "STV-06 passes L1+L2 — ArsiaAuditRecord — single 'request' event with EU-AI-AC"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "STV-06"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-STV-07
+    description: "STV-07 passes L1+L2 — ArsiaAuditRecord oversight chain — 4 linked records (re"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "STV-07"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-ATV-01
+    description: "ATV-01 passes L1+L2 — AssetTransferReceipt — status 'completed' under MiFID I"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ATV-01"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-ATV-02
+    description: "ATV-02 passes L1+L2 — AssetTransferReceipt — status 'failed' with explicit fa"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ATV-02"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-ATV-03
+    description: "ATV-03 passes L1+L2 — AssetTransferReceipt — status 'escrowed' (held pending "
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ATV-03"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-ATV-04
+    description: "ATV-04 passes L1+L2 — AssetTransferReversal request — partial reversal of a c"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ATV-04"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-ATV-05
+    description: "ATV-05 passes L1+L2 — Escrow release trigger — release_agent signals that the"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ATV-05"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-ATV-06
+    description: "ATV-06 passes L1+L2 — Escrow timeout event — funds returned to sender after t"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ATV-06"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-ITV-01
+    description: "ITV-01 passes L1+L2 — IdentityRecord with L2 certificate_chain (2 PEM certifi"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ITV-01"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-ITV-02
+    description: "ITV-02 passes L1+L2 — IdentityRecord with L3 eIDAS qualified certificate_chai"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ITV-02"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-ITV-03
+    description: "ITV-03 passes L1+L2 — Onboarding decision (approved) — Phase 5 response in th"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ITV-03"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-ITV-04
+    description: "ITV-04 passes L1+L2 — Onboarding decision (denied) — Phase 1 identity verific"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ITV-04"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-RTV-01
+    description: "RTV-01 passes L1+L2 — Broker relay receipt — Compliance Broker confirms succe"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "RTV-01"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-RTV-02
+    description: "RTV-02 passes L1+L2 — Broker relay audit record — ArsiaAuditRecord with event"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "RTV-02"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-ACTV-01
+    description: "ACTV-01 passes L1+L2 — Response with complete Explanation object (all 6 fields"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ACTV-01"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-ACTV-02
+    description: "ACTV-02 passes L1+L2 — Capability downgrading response — the receiving agent a"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ACTV-02"
+    expected:
+      valid: true
+  - id: CORE-VALIDATION-VALID-ACTV-03
+    description: "ACTV-03 passes L1+L2 — Rollback request — reverses a previously executed rever"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Core §4"
+    input:
+      vector_id: "ACTV-03"
+    expected:
+      valid: true
+
+  # ---- Identity consistency (Identity §1.1) ----------------------------------
+
+  - id: IDENT-CONSISTENCY-ALL-MATCH
+    description: "Three-layer identity is consistent when from, kid prefix, and identity_agent_id all match"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Identity §1.1"
+    rtm_ids:
+      - "IDENT-§1.1-02"
+    input:
+      operation: validate_identity_consistency
+      from_agent: "agent:acme.billing"
+      kid: "agent:acme.billing#key-1"
+      identity_agent_id: "agent:acme.billing"
+    expected:
+      consistent: true
+
+  - id: IDENT-CONSISTENCY-KID-MISMATCH
+    description: "Inconsistent kid prefix vs from field is detected"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Identity §1.1"
+    rtm_ids:
+      - "IDENT-§1.1-02"
+    input:
+      operation: validate_identity_consistency
+      from_agent: "agent:acme.billing"
+      kid: "agent:contoso.crm#key-1"
+      identity_agent_id: "agent:acme.billing"
+    expected:
+      consistent: false
+      warning_contains: "kid prefix"
+      warning_count: 2
+
+  - id: IDENT-CONSISTENCY-IDENTITY-MISMATCH
+    description: "Inconsistent IdentityRecord agent_id vs from field is detected"
+    category: validation
+    level: core
+    spec_ref: "ARSIA-Identity §1.1"
+    rtm_ids:
+      - "IDENT-§1.1-02"
+    input:
+      operation: validate_identity_consistency
+      from_agent: "agent:acme.billing"
+      kid: "agent:acme.billing#key-1"
+      identity_agent_id: "agent:contoso.crm"
+    expected:
+      consistent: false
+      warning_contains: "IdentityRecord"

@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/jwt-claims/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA JWT Access Token Claims",
+  "description": "Schema for decoded ARSIA access token JWT claims per ARSIA-Core.md \u00a76.1, and the OAuth 2.0 token response envelope per \u00a76.2.",
+  "type": "object",
+  "properties": {
+    "iss": {
+      "type": "string",
+      "description": "Identifier of the Authorization Server that issued the token. ARSIA-Core.md \u00a76.1."
+    },
+    "sub": {
+      "$ref": "arsia-common.schema.json#/$defs/agent-id",
+      "description": "Agent identifier of the requesting agent. MUST match the 'from' field of any message presented with this token. ARSIA-Core.md \u00a76.1."
+    },
+    "aud": {
+      "$ref": "arsia-common.schema.json#/$defs/agent-id",
+      "description": "Agent identifier of the target agent. MUST match the 'to' field of any message presented with this token. ARSIA-Core.md \u00a76.1."
+    },
+    "exp": {
+      "type": "number",
+      "description": "Expiration time as NumericDate per RFC 7519 \u00a72. Token lifetime SHOULD be max 3600s; for high-risk profiles, max 300s is RECOMMENDED. ARSIA-Core.md \u00a76.1."
+    },
+    "iat": {
+      "type": "number",
+      "description": "Issued-at time as NumericDate per RFC 7519 \u00a72. ARSIA-Core.md \u00a76.1."
+    },
+    "jti": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+        },
+        {
+          "description": "Unique token identifier (UUID v4). ARSIA-Core.md \u00a76.1."
+        }
+      ]
+    },
+    "scope": {
+      "type": "string",
+      "pattern": "^\\S+(\\s+\\S+)*$",
+      "description": "Space-separated list of capability identifiers. MUST cover all capabilities listed in the 'capabilities' field of any message presented with this token. ARSIA-Core.md \u00a76.1."
+    },
+    "cnf": {
+      "type": "object",
+      "description": "Confirmation claim for proof-of-possession per RFC 9449. Contains the JWK Thumbprint of the DPoP key. ARSIA-Core.md \u00a76.1, \u00a76.3.",
+      "properties": {
+        "jkt": {
+          "type": "string",
+          "description": "JWK Thumbprint (base64url) of the agent's DPoP key per RFC 9449."
+        }
+      },
+      "required": [
+        "jkt"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "iss",
+    "sub",
+    "aud",
+    "exp",
+    "iat",
+    "jti",
+    "scope"
+  ],
+  "additionalProperties": true,
+  "$defs": {
+    "token-request": {
+      "type": "object",
+      "title": "ARSIA Token Request",
+      "description": "OAuth 2.0 client credentials token request parameters per ARSIA-Core.md \u00a76.2.",
+      "properties": {
+        "grant_type": {
+          "type": "string",
+          "const": "client_credentials",
+          "description": "MUST be 'client_credentials'. ARSIA-Core.md \u00a76.2."
+        },
+        "client_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The requesting agent's identifier (URL-encoded agent-id). ARSIA-Core.md \u00a76.2."
+        },
+        "scope": {
+          "type": "string",
+          "pattern": "^\\S+(\\s+\\S+)*$",
+          "description": "Space-separated list of requested capabilities. ARSIA-Core.md \u00a76.2."
+        },
+        "audience": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The target agent's identifier (URL-encoded agent-id). ARSIA-Core.md \u00a76.2."
+        }
+      },
+      "required": [
+        "grant_type",
+        "client_id",
+        "scope",
+        "audience"
+      ],
+      "additionalProperties": true
+    },
+    "token-response": {
+      "type": "object",
+      "title": "ARSIA Token Response",
+      "description": "OAuth 2.0 token response envelope per ARSIA-Core.md \u00a76.2.",
+      "properties": {
+        "access_token": {
+          "type": "string",
+          "description": "The JWT access token. ARSIA-Core.md \u00a76.2."
+        },
+        "token_type": {
+          "type": "string",
+          "enum": [
+            "Bearer",
+            "DPoP"
+          ],
+          "description": "Token type. MUST be 'Bearer' or 'DPoP'. ARSIA-Core.md \u00a76.2."
+        },
+        "expires_in": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Token lifetime in seconds. ARSIA-Core.md \u00a76.2."
+        },
+        "scope": {
+          "type": "string",
+          "pattern": "^\\S+(\\s+\\S+)*$",
+          "description": "The granted scope (may differ from requested scope). ARSIA-Core.md \u00a76.2."
+        }
+      },
+      "required": [
+        "access_token",
+        "token_type",
+        "expires_in",
+        "scope"
+      ],
+      "additionalProperties": false
+    },
+    "verify-token-request": {
+      "type": "object",
+      "title": "ARSIA Verify Token Request",
+      "description": "Request body for POST /v1/arsia/verify-token. The infrastructure router calls this endpoint to verify an external agent's token. Per ARSIA-Identity.md \u00a77.7.",
+      "required": [
+        "token"
+      ],
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The JWT access token to be verified. Per ARSIA-Identity.md \u00a77.7."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

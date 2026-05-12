@@ -1,0 +1,737 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/audit-query-response/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Audit Query Response",
+  "description": "Cursor-paginated response from the audit trail query endpoint (GET /.well-known/arsia/audit). Contains ArsiaAuditRecord objects ordered by processed_at ascending with pagination metadata. Defined in ARSIA-State.md \u00a77.4. Requires arsiaprotocol.audit.read capability. The endpoint supports 10 query parameters: from_agent, to_agent, after (RFC 3339), before (RFC 3339), event_type, compliance_profile, human_oversight_status, payment_reference, limit (integer, default 100, max 1000), after_record_id (cursor-based pagination).",
+  "type": "object",
+  "required": [
+    "records",
+    "total",
+    "has_more"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "AuditRecord": {
+      "type": "object",
+      "description": "Immutable audit record for a compliance-relevant event. Defined in ARSIA-State.md \u00a77.1.",
+      "required": [
+        "record_id",
+        "message_id",
+        "event_type",
+        "from_agent",
+        "to_agent",
+        "intent",
+        "payload_type",
+        "payload_hash",
+        "compliance_profile",
+        "processed_at",
+        "retained_until",
+        "operator_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "record_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+            },
+            {
+              "description": "Unique identifier for this audit record (UUID v4). Per ARSIA-State.md \u00a77.1."
+            }
+          ]
+        },
+        "message_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+            },
+            {
+              "description": "The id field of the ARSIA message that this record documents (UUID v4). Per ARSIA-State.md \u00a77.1."
+            }
+          ]
+        },
+        "event_type": {
+          "type": "string",
+          "enum": [
+            "approval_decision",
+            "approval_expired",
+            "asset_transfer",
+            "broker_relay",
+            "dora_incident",
+            "error",
+            "event",
+            "key_rotation",
+            "pending_approval",
+            "request",
+            "response",
+            "rollback",
+            "state_delete",
+            "state_grant",
+            "state_purge",
+            "state_revoke",
+            "state_set"
+          ],
+          "description": "The type of event being audited. Per ARSIA-State.md \u00a77.1."
+        },
+        "from_agent": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "The agent-id of the message sender. Per ARSIA-State.md \u00a77.1."
+        },
+        "to_agent": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "The agent-id of the message recipient. Per ARSIA-State.md \u00a77.1."
+        },
+        "intent": {
+          "type": "string",
+          "description": "The intent field from the originating message (ARSIA-Core.md \u00a74.1). Per ARSIA-State.md \u00a77.1."
+        },
+        "payload_type": {
+          "type": "string",
+          "description": "The payload.type field from the originating message. Per ARSIA-State.md \u00a77.1."
+        },
+        "payload_hash": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/sha256-hex"
+            },
+            {
+              "description": "SHA-256 hash (lowercase hex) of the payload from the originating message. When security.encrypted is false or absent: SHA-256(RFC8785(payload)). When security.encrypted is true: SHA-256(UTF-8(JWE string)). Verifiable without decryption keys. Per ARSIA-State.md \u00a77.1 and ARSIA-Core.md \u00a75.3.1."
+            }
+          ]
+        },
+        "plaintext_hash": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/sha256-hex"
+            },
+            {
+              "description": "SHA-256 hash (lowercase hex) of the RFC 8785 canonicalized plaintext payload. Present ONLY when the originating message has security.encrypted=true. Enables dispute resolution over encrypted content. MUST NOT be present when security.encrypted is false or absent. See ARSIA-Core.md \u00a75.3.1."
+            }
+          ]
+        },
+        "compliance_profile": {
+          "type": "string",
+          "description": "The compliance profile name from the message's compliance.profile field, or 'none'. Per ARSIA-State.md \u00a77.1."
+        },
+        "human_oversight_status": {
+          "type": "string",
+          "enum": [
+            "not_required",
+            "pending",
+            "approved",
+            "denied",
+            "expired"
+          ],
+          "description": "Status of human oversight for this event. Per ARSIA-State.md \u00a77.1."
+        },
+        "approver_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "The agent-id of the agent that issued the approval_decision. Per ARSIA-State.md \u00a77.1."
+        },
+        "processed_at": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "description": "RFC 3339 timestamp with millisecond precision (UTC). Per ARSIA-State.md \u00a77.1."
+            }
+          ]
+        },
+        "retained_until": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "description": "Date until which this record MUST be retained. Per ARSIA-State.md \u00a77.1."
+            }
+          ]
+        },
+        "data_residency": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/iso-3166-1-alpha-2"
+            },
+            {
+              "description": "ISO 3166-1 alpha-2 country code for audit record storage location. Per ARSIA-State.md \u00a77.1."
+            }
+          ]
+        },
+        "operator_id": {
+          "type": "string",
+          "description": "The owner_id from the IdentityRecord of the agent that owns this audit log. Per ARSIA-State.md \u00a77.1."
+        },
+        "hash_chain": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/sha256-hex"
+            },
+            {
+              "description": "SHA-256 of previous record's record_id concatenated with payload_hash. Tamper detection. Per ARSIA-State.md \u00a77.2."
+            }
+          ]
+        },
+        "sub_type": {
+          "type": "string",
+          "enum": [
+            "escrow_created",
+            "escrow_released",
+            "escrow_returned",
+            "escrow_disputed"
+          ],
+          "description": "Escrow sub-type. Present when event_type is 'asset_transfer'. Per ARSIA-Assets.md \u00a74.3."
+        },
+        "payment_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Payment reference from the originating AssetTransferRequest. Per ARSIA-Assets.md \u00a74.3."
+        },
+        "amount": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The escrowed or transferred amount. Per ARSIA-Assets.md \u00a74.3.1."
+        },
+        "currency_or_unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "description": "Currency code or unit identifier. Per ARSIA-Assets.md \u00a74.3.1."
+        },
+        "release_agent": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "Agent-id of the authorised escrow release agent. Per ARSIA-Assets.md \u00a74.3.1."
+        },
+        "timeout_at": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "description": "Escrow deadline timestamp. Per ARSIA-Assets.md \u00a74.3.1, \u00a74.3.3."
+            }
+          ]
+        },
+        "released_by": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "Agent-id of the agent that triggered escrow release. Per ARSIA-Assets.md \u00a74.3.2."
+        },
+        "release_trigger": {
+          "type": "string",
+          "description": "The payload.type of the release message. Per ARSIA-Assets.md \u00a74.3.2."
+        },
+        "original_audit_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+            },
+            {
+              "description": "UUID v4 referencing the escrow creation record. Per ARSIA-Assets.md \u00a74.3.2\u2013\u00a74.3.4."
+            }
+          ]
+        },
+        "actual_timeout": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "description": "Actual time the escrow timeout was processed. Per ARSIA-Assets.md \u00a74.3.3."
+            }
+          ]
+        },
+        "disputed_by": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "Agent-id of the party that raised the dispute. Per ARSIA-Assets.md \u00a74.3.4."
+        },
+        "dispute_reason": {
+          "type": "string",
+          "description": "Human-readable reason for the escrow dispute. Per ARSIA-Assets.md \u00a74.3.4."
+        },
+        "arbitration_agent": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "Agent-id of the arbitration agent. Per ARSIA-Assets.md \u00a74.3.4."
+        },
+        "risk_level": {
+          "type": "integer",
+          "description": "Risk level from the ActionDescriptor. Per ARSIA-Actions.md \u00a73.5 Record 1."
+        },
+        "correlation_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+            },
+            {
+              "description": "UUID v4 linking oversight audit records to the originating request. Per ARSIA-Actions.md \u00a73.5."
+            }
+          ]
+        },
+        "approval_deadline": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "description": "Approval deadline timestamp from the pending_approval message. Per ARSIA-Actions.md \u00a73.5 Record 2."
+            }
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason field. Present when event_type is 'approval_decision' (ARSIA-Actions.md \u00a73.5 Record 3) or 'state_purge' (ARSIA-State.md \u00a73.2.2)."
+        },
+        "key": {
+          "type": "string",
+          "description": "State entry key. Present in state_set, state_delete, and state_purge audit records. Per ARSIA-State.md \u00a73.1.2, \u00a73.1.3, \u00a73.2.2."
+        },
+        "owner_agent_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "Agent-id of the state entry owner. Present in state_set, state_delete, and state_purge audit records. Per ARSIA-State.md \u00a73.1.2, \u00a73.1.3, \u00a73.2.2."
+        },
+        "actor_agent_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "Agent-id of the agent that performed the operation. May differ from owner_agent_id when operating via a grant. Present in state_set and state_delete audit records. Per ARSIA-State.md \u00a73.1.2, \u00a73.1.3."
+        },
+        "initiator_agent_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "Agent-id of the agent that initiated the purge operation. Present in state_purge audit records. Per ARSIA-State.md \u00a73.2.2."
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "State entry version after the operation. Present in state_set and state_delete audit records. Per ARSIA-State.md \u00a73.1.2, \u00a73.1.3."
+        },
+        "pii_classification": {
+          "type": "string",
+          "enum": [
+            "none",
+            "pseudonymised",
+            "personal"
+          ],
+          "description": "GDPR classification of the state entry data. Present in state_set and state_purge audit records. Per ARSIA-State.md \u00a73.1.2, \u00a73.2.2."
+        },
+        "legal_basis": {
+          "type": "string",
+          "enum": [
+            "consent",
+            "contract",
+            "legal_obligation",
+            "vital_interests",
+            "public_task",
+            "legitimate_interests"
+          ],
+          "description": "GDPR Art. 6(1) legal basis from the message's compliance.legal_basis field. Present in state_set audit records when pii_classification is 'personal'. Not stored on the StateEntry \u2014 recorded only in the audit event for GDPR Art. 6(1) traceability. Per ARSIA-State.md \u00a78.3 Rule 3."
+        },
+        "timestamp": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "description": "Event time \u2014 when the operation occurred at the origin. Distinct from processed_at (ingestion time). Present in state_set, state_delete, state_grant, and state_revoke audit records. Per ARSIA-State.md \u00a73.1.2, \u00a73.1.3, \u00a73.3.1, \u00a73.3.2."
+            }
+          ]
+        },
+        "purged_at": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "description": "Timestamp of actual data destruction. Distinct from processed_at (ingestion time) and timestamp (event time). Has autonomous legal significance for GDPR Art. 5(2) accountability. Present in state_purge audit records. Per ARSIA-State.md \u00a73.2.2."
+            }
+          ]
+        },
+        "grant_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/uuid"
+            },
+            {
+              "description": "UUID identifier of the access grant. Present in state_grant and state_revoke audit records. Per ARSIA-State.md \u00a73.3.1, \u00a73.3.2."
+            }
+          ]
+        },
+        "key_pattern": {
+          "type": "string",
+          "description": "Key or key prefix pattern for the grant. Present in state_grant audit records. Per ARSIA-State.md \u00a73.3.1."
+        },
+        "grantor_agent_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "Agent-id of the agent granting access. Present in state_grant and state_revoke audit records. Per ARSIA-State.md \u00a73.3.1, \u00a73.3.2."
+        },
+        "grantee_agent_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "Agent-id of the agent receiving access. Present in state_grant and state_revoke audit records. Per ARSIA-State.md \u00a73.3.1, \u00a73.3.2."
+        },
+        "access_level": {
+          "type": "string",
+          "enum": [
+            "read",
+            "read_write"
+          ],
+          "description": "Access level of the grant. Present in state_grant audit records. Per ARSIA-State.md \u00a73.3.1."
+        },
+        "valid_until": {
+          "oneOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Grant expiry timestamp or null for no expiry. Present in state_grant audit records. Per ARSIA-State.md \u00a73.3.1."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "human_oversight_status": {
+                "enum": [
+                  "approved",
+                  "denied"
+                ]
+              }
+            },
+            "required": [
+              "human_oversight_status"
+            ]
+          },
+          "then": {
+            "required": [
+              "approver_id"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "sub_type": {
+                "const": "escrow_created"
+              }
+            },
+            "required": [
+              "sub_type"
+            ]
+          },
+          "then": {
+            "required": [
+              "payment_reference",
+              "amount",
+              "currency_or_unit",
+              "release_agent",
+              "timeout_at"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "sub_type": {
+                "const": "escrow_released"
+              }
+            },
+            "required": [
+              "sub_type"
+            ]
+          },
+          "then": {
+            "required": [
+              "payment_reference",
+              "released_by",
+              "release_trigger",
+              "original_audit_id"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "sub_type": {
+                "const": "escrow_returned"
+              }
+            },
+            "required": [
+              "sub_type"
+            ]
+          },
+          "then": {
+            "required": [
+              "payment_reference",
+              "timeout_at",
+              "actual_timeout",
+              "original_audit_id"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "sub_type": {
+                "const": "escrow_disputed"
+              }
+            },
+            "required": [
+              "sub_type"
+            ]
+          },
+          "then": {
+            "required": [
+              "payment_reference",
+              "disputed_by",
+              "dispute_reason",
+              "arbitration_agent",
+              "original_audit_id"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event_type": {
+                "const": "pending_approval"
+              }
+            },
+            "required": [
+              "event_type"
+            ]
+          },
+          "then": {
+            "required": [
+              "correlation_id",
+              "approval_deadline"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event_type": {
+                "enum": [
+                  "approval_decision",
+                  "approval_expired"
+                ]
+              }
+            },
+            "required": [
+              "event_type"
+            ]
+          },
+          "then": {
+            "required": [
+              "correlation_id"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event_type": {
+                "const": "state_set"
+              }
+            },
+            "required": [
+              "event_type"
+            ]
+          },
+          "then": {
+            "required": [
+              "key",
+              "owner_agent_id",
+              "actor_agent_id",
+              "version",
+              "pii_classification",
+              "timestamp"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event_type": {
+                "const": "state_set"
+              },
+              "pii_classification": {
+                "const": "personal"
+              }
+            },
+            "required": [
+              "event_type",
+              "pii_classification"
+            ]
+          },
+          "then": {
+            "required": [
+              "legal_basis"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event_type": {
+                "const": "state_delete"
+              }
+            },
+            "required": [
+              "event_type"
+            ]
+          },
+          "then": {
+            "required": [
+              "key",
+              "owner_agent_id",
+              "actor_agent_id",
+              "version",
+              "timestamp"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event_type": {
+                "const": "state_purge"
+              }
+            },
+            "required": [
+              "event_type"
+            ]
+          },
+          "then": {
+            "required": [
+              "key",
+              "owner_agent_id",
+              "initiator_agent_id",
+              "purged_at",
+              "pii_classification"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event_type": {
+                "const": "state_grant"
+              }
+            },
+            "required": [
+              "event_type"
+            ]
+          },
+          "then": {
+            "required": [
+              "grant_id",
+              "key_pattern",
+              "grantor_agent_id",
+              "grantee_agent_id",
+              "access_level",
+              "valid_until",
+              "timestamp"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event_type": {
+                "const": "state_revoke"
+              }
+            },
+            "required": [
+              "event_type"
+            ]
+          },
+          "then": {
+            "required": [
+              "grant_id",
+              "grantor_agent_id",
+              "grantee_agent_id",
+              "timestamp"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "properties": {
+    "records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AuditRecord"
+      },
+      "description": "Array of ArsiaAuditRecord objects ordered by processed_at ascending. Per ARSIA-State.md \u00a77.4."
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of records matching the query filters regardless of limit. Per ARSIA-State.md \u00a77.4."
+    },
+    "has_more": {
+      "type": "boolean",
+      "description": "Whether additional records exist beyond the current page. Per ARSIA-State.md \u00a77.4."
+    },
+    "next_cursor": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+        },
+        {
+          "description": "The record_id (UUID v4) of the last record in the current page. Pass as after_record_id in the next request for cursor-based pagination. Present when has_more is true. Per ARSIA-State.md \u00a77.4."
+        }
+      ]
+    }
+  }
+}

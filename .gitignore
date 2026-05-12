@@ -1,0 +1,39 @@
+# ── Python ────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.whl
+
+# ── Node / TypeScript ────────────────────────────────────────────────
+node_modules/
+.turbo/
+
+# ── Virtual environments ─────────────────────────────────────────────
+.venv/
+.env
+
+# ── Testing ──────────────────────────────────────────────────────────
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+
+# ── Linting / Type checking ─────────────────────────────────────────
+.mypy_cache/
+.ruff_cache/
+
+# ── Generated reports ────────────────────────────────────────────────
+results/
+!results/.gitkeep
+python/docs/audit*
+python/docs/conformance*
+python/docs/smoke*
+docs/suggested*.md
+site/
+
+# ── OS ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/dora-incident/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA DORA Incident Event Payload",
+  "description": "Validates the payload object of a DORA incident event message (ARSIA-Assets.md \u00a76.2.2). Generated when an infrastructure failure occurs during a financial operation \u2014 provider timeout, network error, database failure, broker relay failure, or TLS handshake failure. The payload feeds into the operator's DORA (Regulation 2022/2554/EU) incident classification and reporting process per Articles 17-19. Business logic failures (insufficient funds, compliance rejection, etc.) do NOT trigger DORA incidents per \u00a76.2.1.",
+  "type": "object",
+  "required": [
+    "type",
+    "version",
+    "data"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "arsiaprotocol.dora/incident",
+      "description": "Payload type identifier for DORA incident events. Per ARSIA-Assets.md \u00a76.2.2."
+    },
+    "version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Payload version. Per ARSIA-Assets.md \u00a76.2.2."
+    },
+    "data": {
+      "type": "object",
+      "description": "DORA incident report data fields. Per ARSIA-Assets.md \u00a76.2.2.",
+      "required": [
+        "incident_type",
+        "affected_service",
+        "started_at",
+        "estimated_impact",
+        "severity",
+        "original_payment_reference"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "incident_type": {
+          "type": "string",
+          "enum": [
+            "provider_unavailable",
+            "network_failure",
+            "database_failure",
+            "broker_failure",
+            "tls_failure",
+            "unknown"
+          ],
+          "description": "Classifies the nature of the ICT-related incident per DORA Article 17(1). Infrastructure failures only \u2014 business logic failures do not trigger DORA incidents (\u00a76.2.1). Per ARSIA-Assets.md \u00a76.2.2."
+        },
+        "affected_service": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "The agent-id of the component that failed. For provider timeouts, the provider's agent-id; for database failures, the agent's own agent-id; for broker failures, the broker's agent-id. Per ARSIA-Assets.md \u00a76.2.2."
+        },
+        "started_at": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            }
+          ],
+          "description": "When the incident was first detected \u2014 typically the timestamp of the first failed operation. Per ARSIA-Assets.md \u00a76.2.2."
+        },
+        "resolved_at": {
+          "oneOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "When the incident was resolved. Null or absent if the incident is ongoing. A subsequent event with the same original_payment_reference and non-null resolved_at SHOULD be sent when resolved. Per ARSIA-Assets.md \u00a76.2.2."
+        },
+        "estimated_impact": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "Human-readable description of estimated impact. SHOULD include number of affected transfers, estimated financial impact, services affected, and geographic scope. Per ARSIA-Assets.md \u00a76.2.2."
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ],
+          "description": "Severity classification of the incident. low: transient single-transfer failure, retry expected. medium: persistent multi-transfer or high-value failure. high: sustained outage of critical service. critical: total loss of payment processing capability. Per ARSIA-Assets.md \u00a76.2.2."
+        },
+        "original_payment_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "The payment_reference of the transfer that triggered the incident detection. Links the DORA incident event to the MiFID II audit trail for correlation. Per ARSIA-Assets.md \u00a76.2.2."
+        }
+      }
+    }
+  }
+}

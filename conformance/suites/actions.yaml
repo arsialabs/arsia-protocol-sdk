@@ -1,0 +1,758 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Capability model, descriptor validation, risk mapping, and lifecycle
+# per ARSIA-Actions.md §1, §2, §4.1, §5.2.
+#
+# Offline cases are language-agnostic: any runner that imports the SDK
+# as an external consumer can execute them. Cases whose operations map
+# to pure SDK functions run directly; remaining HTTP-dependent cases
+# are marked skip_until: http-harness.
+name: actions
+description: 'ARSIA Actions: capability model, descriptors, risk, lifecycle, explainability'
+level: core
+cases:
+
+  # ---- §1.1 Capability validation -----------------------------------------
+
+  - id: ACTIONS-CAP-01
+    description: "Simple two-segment capability is valid"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.1"
+    rtm_ids:
+      - "ACT-§1.1-01"
+    input:
+      operation: validate_capability
+      capability: "notes.read"
+    expected:
+      valid: true
+
+  - id: ACTIONS-CAP-02
+    description: "Trailing wildcard with one preceding segment is valid (§1.1 rule 4)"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.1 rule 4"
+    rtm_ids:
+      - "ACT-§1.1-09"
+    input:
+      operation: validate_capability
+      capability: "notes.*"
+    expected:
+      valid: true
+
+  - id: ACTIONS-CAP-03
+    description: "Multi-segment capability is valid"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.1"
+    rtm_ids:
+      - "ACT-§1.1-01"
+    input:
+      operation: validate_capability
+      capability: "eu.mifid.risk.assess"
+    expected:
+      valid: true
+
+  - id: ACTIONS-CAP-04
+    description: "Single-segment capability rejected (§1.1 rule 1)"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.1 rule 1"
+    rtm_ids:
+      - "ACT-§1.1-02"
+    input:
+      operation: validate_capability
+      capability: "read"
+    expected:
+      valid: false
+      error_contains: grammar
+
+  - id: ACTIONS-CAP-05
+    description: "Hyphen in segment rejected (§1.1 rule 6)"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.1 rule 6"
+    rtm_ids:
+      - "ACT-§1.1-12"
+    input:
+      operation: validate_capability
+      capability: "notes.read-all"
+    expected:
+      valid: false
+
+  - id: ACTIONS-CAP-06
+    description: "Wildcard in the middle rejected (§1.1 rule 4)"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.1 rule 4"
+    rtm_ids:
+      - "ACT-§1.1-07"
+    input:
+      operation: validate_capability
+      capability: "notes.*.read"
+    expected:
+      valid: false
+
+  - id: ACTIONS-CAP-07
+    description: "Reserved prefix misuse rejected (§1.1 rule 5)"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.1 rule 5, §1.4"
+    rtm_ids:
+      - "ACT-§1.1-10"
+      - "ACT-§1.1-11"
+    input:
+      operation: validate_capability
+      capability: "arsiaprotocol.custom.thing"
+    expected:
+      valid: false
+      error_contains: reserved
+
+  - id: ACTIONS-CAP-08
+    description: "Reserved capability 'arsiaprotocol.audit.read' is valid (§1.4)"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.4"
+    rtm_ids:
+      - "ACT-§1.4-02"
+    input:
+      operation: validate_capability
+      capability: "arsiaprotocol.audit.read"
+    expected:
+      valid: true
+
+  # ---- §1.4 Reserved membership -------------------------------------------
+
+  - id: ACTIONS-RES-01
+    description: "'arsiaprotocol.oversight.approve' is a reserved capability"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.4"
+    rtm_ids:
+      - "ACT-§1.4-02"
+    input:
+      operation: is_reserved_capability
+      capability: "arsiaprotocol.oversight.approve"
+    expected:
+      reserved: true
+
+  - id: ACTIONS-RES-02
+    description: "'notes.read' is not a reserved capability"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.4"
+    rtm_ids:
+      - "ACT-§1.4-02"
+    input:
+      operation: is_reserved_capability
+      capability: "notes.read"
+    expected:
+      reserved: false
+
+  # ---- §1.2 Capability matching -------------------------------------------
+
+  - id: ACTIONS-MATCH-01
+    description: "Exact match"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.2"
+    rtm_ids:
+      - "ACT-§1.2-01"
+    input:
+      operation: match_capability
+      scope_entry: "notes.read"
+      requested: "notes.read"
+    expected:
+      matches: true
+
+  - id: ACTIONS-MATCH-02
+    description: "Wildcard scope covers specific request"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.2"
+    rtm_ids:
+      - "ACT-§1.2-01"
+    input:
+      operation: match_capability
+      scope_entry: "notes.*"
+      requested: "notes.read"
+    expected:
+      matches: true
+
+  - id: ACTIONS-MATCH-03
+    description: "Specific scope does NOT satisfy wildcard request (direction)"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.2 'Direction of matching'"
+    rtm_ids:
+      - "ACT-§1.2-01"
+    input:
+      operation: match_capability
+      scope_entry: "notes.read"
+      requested: "notes.*"
+    expected:
+      matches: false
+
+  - id: ACTIONS-MATCH-04
+    description: "Different domains do not match"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.2"
+    rtm_ids:
+      - "ACT-§1.2-01"
+    input:
+      operation: match_capability
+      scope_entry: "notes.*"
+      requested: "billing.read"
+    expected:
+      matches: false
+
+  - id: ACTIONS-MATCH-05
+    description: "Deep wildcard covers descendants at arbitrary depth"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.2"
+    rtm_ids:
+      - "ACT-§1.2-01"
+    input:
+      operation: match_capability
+      scope_entry: "eu.mifid.*"
+      requested: "eu.mifid.risk.assess"
+    expected:
+      matches: true
+
+  - id: ACTIONS-MATCH-06
+    description: "Multi-capability request: all satisfied by a single wildcard"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.2 'Multi-capability requests'"
+    rtm_ids:
+      - "ACT-§1.2-01"
+    input:
+      operation: match_capabilities
+      scope: ["notes.*"]
+      requested: ["notes.read", "notes.write"]
+    expected:
+      matches: true
+
+  - id: ACTIONS-MATCH-07
+    description: "Multi-capability request: one unsatisfied entry rejects"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.2"
+    rtm_ids:
+      - "ACT-§1.2-01"
+    input:
+      operation: match_capabilities
+      scope: ["notes.read"]
+      requested: ["notes.read", "notes.write"]
+    expected:
+      matches: false
+
+  # ---- §1.3 Capability downgrading ----------------------------------------
+
+  - id: ACTIONS-DOWN-01
+    description: "Downgrading preserves the subset satisfied by scope"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.3"
+    rtm_ids:
+      - "ACT-§1.3-02"
+      - "ACT-§1.3-04"
+    input:
+      operation: downgrade_capabilities
+      requested: ["notes.read", "notes.write", "notes.delete"]
+      scope: ["notes.read", "notes.write"]
+    expected:
+      effective: ["notes.read", "notes.write"]
+
+  - id: ACTIONS-DOWN-02
+    description: "Wildcard scope grants the full requested set"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §1.3"
+    rtm_ids:
+      - "ACT-§1.3-02"
+      - "ACT-§1.3-03"
+    input:
+      operation: downgrade_capabilities
+      requested: ["notes.read", "notes.write"]
+      scope: ["notes.*"]
+    expected:
+      effective: ["notes.read", "notes.write"]
+
+  # ---- §2.1 ActionDescriptor schema validation ----------------------------
+
+  - id: ACTIONS-DESC-01
+    description: "Minimal valid ActionDescriptor passes L1 schema"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §2.1"
+    rtm_ids:
+      - "ACT-§2.1-01"
+      - "ACT-§2.1-03"
+      - "ACT-§2.1-04"
+      - "ACT-§2.1-07"
+    input:
+      operation: validate_action_descriptor
+      descriptor:
+        action_id: "com.example.notes/read"
+        category: "data"
+        description: "Read notes owned by the requesting agent."
+        risk_level: 2
+        reversible: false
+        idempotent: true
+        required_capabilities: ["notes.read"]
+        human_oversight_required: false
+        audit_required: false
+        explainability_required: false
+    expected:
+      valid: true
+
+  - id: ACTIONS-DESC-02
+    description: "Missing required field rejected by L1 schema"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §2.1"
+    rtm_ids:
+      - "ACT-§2.1-07"
+    input:
+      operation: validate_action_descriptor
+      descriptor:
+        action_id: "com.example.notes/read"
+        category: "data"
+        description: "Read notes."
+        reversible: false
+        idempotent: true
+        required_capabilities: ["notes.read"]
+        human_oversight_required: false
+        audit_required: false
+        explainability_required: false
+    expected:
+      valid: false
+      error_contains: risk_level
+
+  - id: ACTIONS-DESC-03
+    description: "Out-of-range risk_level rejected by L1 schema"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §2.1"
+    rtm_ids:
+      - "ACT-§2.1-07"
+    input:
+      operation: validate_action_descriptor
+      descriptor:
+        action_id: "com.example.notes/read"
+        category: "data"
+        description: "Read notes."
+        risk_level: 11
+        reversible: false
+        idempotent: true
+        required_capabilities: ["notes.read"]
+        human_oversight_required: false
+        audit_required: false
+        explainability_required: false
+    expected:
+      valid: false
+      error_contains: risk_level
+
+  # ---- §2.2 Risk → EU AI Act classification -------------------------------
+
+  - id: ACTIONS-RISK-01
+    description: "risk_level 0 → minimal-risk"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §2.2"
+    rtm_ids:
+      - "ACT-§2.2-02"
+      - "ACT-§2.2-05"
+    input:
+      operation: get_risk_classification
+      risk_level: 0
+    expected:
+      classification: "minimal-risk"
+
+  - id: ACTIONS-RISK-02
+    description: "risk_level 3 → limited-risk"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §2.2"
+    rtm_ids:
+      - "ACT-§2.2-02"
+      - "ACT-§2.2-07"
+    input:
+      operation: get_risk_classification
+      risk_level: 3
+    expected:
+      classification: "limited-risk"
+
+  - id: ACTIONS-RISK-03
+    description: "risk_level 5 → elevated-risk (the bucket your intuition forgets)"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §2.2"
+    rtm_ids:
+      - "ACT-§2.2-02"
+      - "ACT-§2.2-11"
+    input:
+      operation: get_risk_classification
+      risk_level: 5
+    expected:
+      classification: "elevated-risk"
+
+  - id: ACTIONS-RISK-04
+    description: "risk_level 8 → high-risk"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §2.2"
+    rtm_ids:
+      - "ACT-§2.2-02"
+      - "ACT-§2.2-15"
+    input:
+      operation: get_risk_classification
+      risk_level: 8
+    expected:
+      classification: "high-risk"
+
+  - id: ACTIONS-RISK-05
+    description: "risk_level 10 → critical-risk (NOT 'unacceptable-risk')"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §2.2"
+    rtm_ids:
+      - "ACT-§2.2-02"
+      - "ACT-§2.2-18"
+    input:
+      operation: get_risk_classification
+      risk_level: 10
+    expected:
+      classification: "critical-risk"
+
+  - id: ACTIONS-RISK-06
+    description: "risk_level 11 raises ValueError"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §2.1"
+    rtm_ids:
+      - "ACT-§2.1-07"
+    input:
+      operation: get_risk_classification
+      risk_level: 11
+    expected:
+      raises: true
+
+  # ---- §4.1 Execution lifecycle -------------------------------------------
+
+  - id: ACTIONS-STATE-01
+    description: "requested → pending_approval is valid"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §4.1"
+    rtm_ids:
+      - "ACT-§3.2-01"
+    input:
+      operation: is_valid_transition
+      from_state: "requested"
+      to_state: "pending_approval"
+    expected:
+      valid: true
+
+  - id: ACTIONS-STATE-02
+    description: "pending_approval → executing is valid (approval granted)"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §4.1"
+    rtm_ids:
+      - "ACT-§3.4-11"
+    input:
+      operation: is_valid_transition
+      from_state: "pending_approval"
+      to_state: "executing"
+    expected:
+      valid: true
+
+  - id: ACTIONS-STATE-03
+    description: "executing → completed is valid"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §4.1"
+    rtm_ids:
+      - "ACT-§4.1-01"
+    input:
+      operation: is_valid_transition
+      from_state: "executing"
+      to_state: "completed"
+    expected:
+      valid: true
+
+  - id: ACTIONS-STATE-04
+    description: "completed → rolled_back is valid (§4.2)"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §4.1, §4.2"
+    rtm_ids:
+      - "ACT-§4.1-05"
+    input:
+      operation: is_valid_transition
+      from_state: "completed"
+      to_state: "rolled_back"
+    expected:
+      valid: true
+
+  - id: ACTIONS-STATE-05
+    description: "requested → completed is invalid (skips approval/execution)"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §4.1"
+    rtm_ids:
+      - "ACT-§3.2-02"
+    input:
+      operation: is_valid_transition
+      from_state: "requested"
+      to_state: "completed"
+    expected:
+      valid: false
+
+  - id: ACTIONS-STATE-06
+    description: "failed → rolled_back is invalid (FAILED is terminal)"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §4.1"
+    # TODO: map to RTM — no explicit "FAILED is terminal" row
+    input:
+      operation: is_valid_transition
+      from_state: "failed"
+      to_state: "rolled_back"
+    expected:
+      valid: false
+
+  # ---- §5.2 Explanation schema --------------------------------------------
+
+  - id: ACTIONS-EXPLAIN-01
+    description: "Minimal valid Explanation passes L1 schema"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §5.2"
+    rtm_ids:
+      - "ACT-§5.2-01"
+      - "ACT-§5.2-05"
+      - "ACT-§5.2-09"
+    input:
+      operation: validate_explanation
+      explanation:
+        reasoning: "Matched the notes.read scope exactly."
+        confidence: 0.93
+        inputs_used: ["state:notes/42"]
+    expected:
+      valid: true
+
+  - id: ACTIONS-EXPLAIN-02
+    description: "Missing reasoning rejected by L1 schema"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §5.2"
+    rtm_ids:
+      - "ACT-§5.2-01"
+    input:
+      operation: validate_explanation
+      explanation:
+        confidence: 0.93
+        inputs_used: ["state:notes/42"]
+    expected:
+      valid: false
+      error_contains: reasoning
+
+  # ---- §6 Spec tests -------------------------------------------------------
+  # Cases whose operations map to pure SDK functions (validate_action_descriptor,
+  # match_capabilities, validate_explanation, etc.) run directly. Cases that
+  # require a live ARSIA agent endpoint remain skip_until: http-harness.
+
+  - id: ACTIONS-01
+    description: "Action discovery endpoint returns valid descriptors"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §6 ACTIONS-01"
+    rtm_ids:
+      - "ACT-§6-01"
+    input:
+      operation: validate_action_descriptor
+      descriptor:
+        action_id: "eu.mifid.risk/assess"
+        category: "financial"
+        description: "Assess client risk tolerance under MiFID II suitability rules."
+        risk_level: 9
+        reversible: false
+        idempotent: true
+        required_capabilities: ["eu.mifid.risk.assess", "eu.mifid.client.read"]
+        human_oversight_required: true
+        audit_required: true
+        explainability_required: true
+        retention_days: 1825
+        max_execution_ms: 30000
+        required_approvals: 2
+    expected:
+      valid: true
+
+  - id: ACTIONS-02
+    description: "Capability enforcement rejects missing required capability"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §6 ACTIONS-02"
+    rtm_ids:
+      - "ACT-§6-02"
+    input:
+      operation: match_capabilities
+      scope: ["notes.*", "billing.read"]
+      requested: ["notes.write", "billing.read", "billing.export"]
+    expected:
+      matches: false
+
+  - id: ACTIONS-03
+    description: "Wildcard capability satisfies specific capability request"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §6 ACTIONS-03"
+    rtm_ids:
+      - "ACT-§1.2-01"
+    input:
+      operation: match_capability
+      scope_entry: "notes.*"
+      requested: "notes.read"
+    expected:
+      matches: true
+
+  - id: ACTIONS-04
+    description: "Human oversight triggered for high-risk action"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §6 ACTIONS-04"
+    rtm_ids:
+      - "ACT-§3.2-01"
+      - "ACT-§3.2-02"
+    input:
+      operation: is_valid_transition
+      from_state: "requested"
+      to_state: "pending_approval"
+    expected:
+      valid: true
+
+  - id: ACTIONS-05
+    description: "Approval granted leads to action execution"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §6 ACTIONS-05"
+    rtm_ids:
+      - "ACT-§3.4-11"
+    input:
+      operation: is_valid_transition
+      from_state: "pending_approval"
+      to_state: "executing"
+    expected:
+      valid: true
+
+  - id: ACTIONS-06
+    description: "Approval denied blocks action execution"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §6 ACTIONS-06"
+    rtm_ids:
+      - "ACT-§3.3-04"
+    input:
+      operation: is_valid_transition
+      from_state: "pending_approval"
+      to_state: "failed"
+    expected:
+      valid: true
+
+  - id: ACTIONS-07
+    description: "Approval deadline expiry blocks action execution"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §6 ACTIONS-07"
+    rtm_ids:
+      - "ACT-§3.4-20"
+    input:
+      operation: is_valid_transition
+      from_state: "pending_approval"
+      to_state: "failed"
+    expected:
+      valid: true
+
+  - id: ACTIONS-08
+    description: "Explainability field present when required"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §6 ACTIONS-08"
+    rtm_ids:
+      - "ACT-§5.1-01"
+    input:
+      operation: validate_explanation
+      explanation:
+        reasoning: "Selected conservative portfolio based on client risk profile and current market volatility. Low risk tolerance combined with approaching retirement date strongly favours fixed-income allocation."
+        confidence: 0.87
+        inputs_used: ["state:client-profile/risk-tolerance", "external:bloomberg/VIX", "state:client-profile/retirement-date"]
+        alternatives_considered:
+          - option: "Balanced growth portfolio with 60/40 equity/bond split"
+            reason_rejected: "Exceeds client stated risk tolerance of 3/10"
+            confidence: 0.62
+          - option: "Pure equity growth portfolio"
+            reason_rejected: "Incompatible with retirement timeline under 5 years"
+            confidence: 0.15
+        model_version: "risk-model-v2.3.1-abc123"
+        decision_timestamp: "2026-05-07T10:30:00.000Z"
+    expected:
+      valid: true
+
+  - id: ACTIONS-09
+    description: "Rollback of reversible action"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §6 ACTIONS-09"
+    rtm_ids:
+      - "ACT-§4.1-05"
+    input:
+      operation: is_valid_transition
+      from_state: "completed"
+      to_state: "rolled_back"
+    expected:
+      valid: true
+
+  - id: ACTIONS-10
+    description: "Complete audit trail for oversight cycle"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §6 ACTIONS-10"
+    rtm_ids:
+      - "ACT-§3.5-01"
+    input:
+      operation: is_valid_transition
+      from_state: "requested"
+      to_state: "pending_approval"
+    expected:
+      valid: true
+
+  - id: ACTIONS-11
+    description: "Sandboxing enforced for risk level 8 action"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §6 ACTIONS-11"
+    rtm_ids:
+      - "ACT-§2.2-15"
+    input:
+      operation: get_risk_classification
+      risk_level: 8
+    expected:
+      classification: "high-risk"
+
+  - id: ACTIONS-12
+    description: "Capability downgrading in response"
+    category: actions
+    level: core
+    spec_ref: "ARSIA-Actions §6 ACTIONS-12"
+    rtm_ids:
+      - "ACT-§1.3-02"
+    input:
+      operation: downgrade_capabilities
+      requested: ["notes.read"]
+      scope: ["notes.read"]
+    expected:
+      effective: ["notes.read"]

@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/test-vectors/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Protocol Test Vectors",
+  "description": "Meta-schema validating the structure of arsia-test-vectors.json",
+  "type": "object",
+  "required": [
+    "$schema",
+    "version",
+    "generated",
+    "vectors"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "https://arsiaprotocol.org/schemas/test-vectors/v1.0.json"
+    },
+    "$comment": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "generated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "vectors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/test-vector"
+      }
+    }
+  },
+  "$defs": {
+    "test-vector": {
+      "type": "object",
+      "required": [
+        "id",
+        "description",
+        "expected_error"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z]+-\\d+$"
+        },
+        "description": {
+          "type": "string"
+        },
+        "expected_error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "core",
+            "identity",
+            "actions",
+            "state",
+            "routing",
+            "assets"
+          ]
+        },
+        "crypto": {
+          "type": "object",
+          "required": [
+            "private_key_hex",
+            "public_key_hex",
+            "canonical_bytes_hex",
+            "signature_base64url"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "private_key_hex": {
+              "type": "string"
+            },
+            "public_key_hex": {
+              "type": "string"
+            },
+            "canonical_bytes_hex": {
+              "type": "string"
+            },
+            "signature_base64url": {
+              "type": "string"
+            }
+          }
+        },
+        "skip_schema": {
+          "type": "boolean",
+          "const": true
+        },
+        "skip_reason": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "expected": {
+          "type": "string",
+          "enum": [
+            "valid",
+            "invalid"
+          ]
+        },
+        "message": {
+          "type": "object"
+        },
+        "data": {
+          "type": "object"
+        },
+        "schema_ref": {
+          "type": "string"
+        },
+        "test_metadata": {
+          "type": "object",
+          "description": "Auxiliary context for runtime-only test vectors (e.g., token_scope, authorization context). Not used by schema validation."
+        }
+      },
+      "dependentRequired": {
+        "skip_schema": [
+          "skip_reason"
+        ]
+      },
+      "oneOf": [
+        {
+          "title": "message-only",
+          "description": "Full message validated against arsia-message.schema.json",
+          "required": [
+            "message",
+            "valid"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "schema_ref"
+                ]
+              },
+              {
+                "required": [
+                  "data"
+                ]
+              },
+              {
+                "required": [
+                  "expected"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "schema-ref",
+          "description": "Data payload validated against a named schema",
+          "required": [
+            "schema_ref",
+            "data",
+            "expected"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "message"
+                ]
+              },
+              {
+                "required": [
+                  "valid"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "hybrid",
+          "description": "Full message validated against a named schema (e.g. sub-schema)",
+          "required": [
+            "schema_ref",
+            "message",
+            "expected"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "data"
+                ]
+              },
+              {
+                "required": [
+                  "valid"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

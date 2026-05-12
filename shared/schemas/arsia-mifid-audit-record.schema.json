@@ -1,0 +1,289 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/mifid-audit-record/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA MiFID II Audit Record",
+  "description": "MiFID II audit record for asset transfers involving EU-regulated entities or MIFID-II compliance profile. Generated for every qualifying AssetTransferRequest per ARSIA-Assets.md \u00a76.1. Contains financial-specific fields \u2014 transaction amounts, provider references, settlement timestamps, and human oversight status \u2014 that extend the base audit concept for MiFID II Article 16(7) record-keeping. Records are immutable and retained for minimum 1827 days (5 years) per \u00a76.1.2.",
+  "type": "object",
+  "required": [
+    "audit_id",
+    "message_id",
+    "from_agent",
+    "to_agent",
+    "amount",
+    "currency_or_unit",
+    "asset_type",
+    "payment_reference",
+    "initiated_at",
+    "status",
+    "compliance_profile",
+    "payload_hash",
+    "human_oversight_status",
+    "created_at",
+    "updated_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "audit_id": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+        }
+      ],
+      "description": "Unique identifier for this audit record (UUID v4). Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "message_id": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+        }
+      ],
+      "description": "The id of the AssetTransferRequest message (UUID v4). Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "receipt_message_id": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+        }
+      ],
+      "description": "The id of the AssetTransferReceipt message (UUID v4). OPTIONAL \u2014 absent if the receipt has not yet been generated. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "from_agent": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "The payer's agent-id. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "to_agent": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "The payee's agent-id. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "amount": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "The requested transfer amount. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "actual_amount": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "The actual amount processed. OPTIONAL \u2014 absent if the transfer has not yet completed. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "currency_or_unit": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "description": "The currency code or unit identifier. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": [
+        "currency",
+        "token",
+        "entitlement",
+        "service_unit"
+      ],
+      "description": "The asset type enum value. Per ARSIA-Assets.md \u00a76.1.1, \u00a72."
+    },
+    "payment_reference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "The unique payment reference. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "provider_reference": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "The external provider's transaction ID. OPTIONAL \u2014 absent if the provider has not yet responded. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "initiated_at": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+        }
+      ],
+      "description": "When the transfer was initiated at the provider. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "settled_at": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+        }
+      ],
+      "description": "When the transfer was settled. OPTIONAL \u2014 absent if not yet settled. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed",
+        "failed",
+        "escrowed"
+      ],
+      "description": "The transfer status. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "failure_reason": {
+      "type": "string",
+      "maxLength": 512,
+      "description": "The reason for failure. OPTIONAL \u2014 present only when status is 'failed'. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "compliance_profile": {
+      "type": "string",
+      "description": "The compliance profile applied to this transfer. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "data_residency": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/iso-3166-1-alpha-2"
+        },
+        {
+          "description": "The data residency zone (ISO 3166-1 alpha-2 or supranational identifier). OPTIONAL. Per ARSIA-Assets.md \u00a76.1.1."
+        }
+      ]
+    },
+    "payload_hash": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/sha256-hex"
+        },
+        {
+          "description": "SHA-256 hash (lowercase hex) of the payload from the originating message. When security.encrypted is false or absent: SHA-256(RFC8785(payload)). When security.encrypted is true: SHA-256(UTF-8(JWE string)). Verifiable without decryption keys. Per ARSIA-Assets.md \u00a76.1.1 and ARSIA-Core.md \u00a75.3.1."
+        }
+      ]
+    },
+    "plaintext_hash": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/sha256-hex"
+        },
+        {
+          "description": "SHA-256 hash (lowercase hex) of the RFC 8785 canonicalized plaintext payload. Present ONLY when the originating message has security.encrypted=true. Enables dispute resolution over encrypted content. MUST NOT be present when security.encrypted is false or absent. See ARSIA-Core.md \u00a75.3.1."
+        }
+      ]
+    },
+    "human_oversight_status": {
+      "type": "string",
+      "enum": [
+        "not_required",
+        "pending",
+        "approved",
+        "rejected",
+        "timeout"
+      ],
+      "description": "Whether human oversight was triggered and its outcome. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "approver_id": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "The agent-id of the agent that approved the transfer. OPTIONAL \u2014 present only when oversight was required and approval was granted. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "approval_timestamp": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+        }
+      ],
+      "description": "When the approval was granted. OPTIONAL \u2014 present only when approver_id is present. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "exemption_reason": {
+      "type": "string",
+      "description": "SCA exemption justification. Present when the transfer was exempt from Strong Customer Authentication per ARSIA-Assets.md \u00a76.3. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "created_at": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+        }
+      ],
+      "description": "When this audit record was created. Per ARSIA-Assets.md \u00a76.1.1."
+    },
+    "updated_at": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+        }
+      ],
+      "description": "When this audit record was last updated. Updated when the receipt is received. Per ARSIA-Assets.md \u00a76.1.1."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "failure_reason"
+        ],
+        "properties": {
+          "settled_at": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "completed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failure_reason": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "pending",
+              "escrowed"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failure_reason": false,
+          "settled_at": false
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "approver_id"
+        ]
+      },
+      "then": {
+        "required": [
+          "approval_timestamp"
+        ]
+      }
+    }
+  ]
+}

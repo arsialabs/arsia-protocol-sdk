@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/asset-transfer-receipt/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Asset Transfer Receipt",
+  "description": "Validates the payload.result object of an AssetTransferReceipt message (ARSIA-Assets.md \u00a73.2). Confirms or denies an AssetTransferRequest and links the ARSIA transaction to the external provider's transaction identifier. Defined in ARSIA-Assets.md \u00a73.2.1. Note: payment_reference MUST match the originating request byte-for-byte, and currency_or_unit MUST match exactly \u2014 these cross-message invariants are enforced programmatically.",
+  "type": "object",
+  "$defs": {
+    "reversal-payment-reference": {
+      "type": "string",
+      "description": "RECOMMENDED format for reversal receipt payment_reference: {original}-REV-{seq}. Per ARSIA-Assets.md \u00a73.3.2.",
+      "pattern": "^.+-REV-\\d+$"
+    }
+  },
+  "required": [
+    "status",
+    "payment_reference",
+    "amount",
+    "currency_or_unit",
+    "initiated_at",
+    "audit_id"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed",
+        "failed",
+        "escrowed"
+      ],
+      "description": "Terminal state of the transfer from the ARSIA protocol's perspective. 'pending': accepted and forwarded to the provider, not yet settled. 'completed': executed and settled \u2014 funds credited to to_agent. 'failed': rejected or failed during execution \u2014 failure_reason MUST be present. 'escrowed': accepted and held in escrow pending release conditions (\u00a74). Per ARSIA-Assets.md \u00a73.2.1 'status'."
+    },
+    "payment_reference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Echoed from the AssetTransferRequest. MUST match exactly (byte-for-byte string comparison). Provides the stable identifier that links the receipt to the request across the audit trail. Per ARSIA-Assets.md \u00a73.2.1 'payment_reference'."
+    },
+    "provider_reference": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "The external payment provider's transaction identifier (e.g. SEPA end-to-end identification, SWIFT UETR). Links the ARSIA audit record to the provider's records for reconciliation. Format is provider-specific. Per ARSIA-Assets.md \u00a73.2.1 'provider_reference'."
+    },
+    "amount": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "The actual amount processed by the provider. Normally equals the requested amount; MAY differ in cases of partial execution. When different, metadata SHOULD include a partial_execution_reason. Per ARSIA-Assets.md \u00a73.2.1 'amount'."
+    },
+    "currency_or_unit": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "description": "Echoed from the AssetTransferRequest. MUST match exactly. Per ARSIA-Assets.md \u00a73.2.1 'currency_or_unit'."
+    },
+    "initiated_at": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+        },
+        {
+          "description": "RFC 3339 timestamp with millisecond precision and UTC designator. The provider's timestamp recording when the provider began processing the transfer. For MiFID II audit purposes (\u00a76.1), this is the transaction timestamp. Per ARSIA-Assets.md \u00a73.2.1 'initiated_at'."
+        }
+      ]
+    },
+    "settled_at": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+        },
+        {
+          "description": "RFC 3339 timestamp with millisecond precision and UTC designator. When the transfer was settled \u2014 value definitively credited to to_agent's account. REQUIRED when status='completed'. MUST be absent when status='failed', 'pending', or 'escrowed'. Per ARSIA-Assets.md \u00a73.2.1 'settled_at'."
+        }
+      ]
+    },
+    "failure_reason": {
+      "type": "string",
+      "maxLength": 512,
+      "description": "Human-readable explanation of why the transfer failed. REQUIRED when status='failed'. MUST be absent when status='completed', 'pending', or 'escrowed'. Logged in the audit trail and visible to compliance officers. Per ARSIA-Assets.md \u00a73.2.1 'failure_reason'."
+    },
+    "audit_id": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/uuid-v4"
+        },
+        {
+          "description": "UUID v4 referencing the audit record for this transfer in the agent's audit trail. For asset transfers that meet the conditions in ARSIA-Assets.md \u00a76.1, an audit record MUST be generated regardless of the audit_required flag. Per ARSIA-Assets.md \u00a73.2.1 'audit_id'."
+        }
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Receipt metadata. SHOULD include partial_execution_reason when amount differs from request. ARSIA-Assets.md \u00a73.2.1."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "failed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "failure_reason"
+        ],
+        "properties": {
+          "settled_at": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "completed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failure_reason": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "pending",
+              "escrowed"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failure_reason": false,
+          "settled_at": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "currency_or_unit": {
+            "pattern": "^[A-Z]{3}$"
+          }
+        },
+        "required": [
+          "currency_or_unit"
+        ]
+      },
+      "then": {
+        "properties": {
+          "amount": {
+            "multipleOf": 0.01
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Wire protocol version parsing and compatibility negotiation — §4.1.1, §7.4.
+# Hand-authored — language-agnostic.
+name: version
+description: 'ARSIA wire version parsing and negotiation (ARSIA-Core §4.1.1, §7.4)'
+level: core
+cases:
+
+  # ---- parse_version -------------------------------------------------------
+
+  - id: VER-PARSE-1-0
+    description: "'1.0' parses to (1, 0)"
+    category: version
+    level: core
+    spec_ref: "ARSIA-Core §4.1.1"
+    input:
+      operation: parse_version
+      value: "1.0"
+    expected:
+      major: 1
+      minor: 0
+
+  - id: VER-PARSE-MAJOR-ONLY
+    description: "'1' (missing minor) is rejected"
+    category: version
+    level: core
+    spec_ref: "ARSIA-Core §4.1.1"
+    input:
+      operation: parse_version
+      value: "1"
+    expected:
+      raises: true
+
+  - id: VER-PARSE-PATCH
+    description: "'1.0.0' (patch component) is rejected"
+    category: version
+    level: core
+    spec_ref: "ARSIA-Core §4.1.1"
+    input:
+      operation: parse_version
+      value: "1.0.0"
+    expected:
+      raises: true
+
+  # ---- compare_versions ----------------------------------------------------
+
+  - id: VER-COMPARE-MINOR-LESS
+    description: "'1.0' < '1.1' → -1"
+    category: version
+    level: core
+    spec_ref: "ARSIA-Core §7.4"
+    input:
+      operation: compare_versions
+      a: "1.0"
+      b: "1.1"
+    expected:
+      result: -1
+
+  - id: VER-COMPARE-EQUAL
+    description: "'1.0' == '1.0' → 0"
+    category: version
+    level: core
+    spec_ref: "ARSIA-Core §7.4"
+    input:
+      operation: compare_versions
+      a: "1.0"
+      b: "1.0"
+    expected:
+      result: 0
+
+  # ---- is_compatible -------------------------------------------------------
+
+  - id: VER-COMPAT-SAME-MAJOR
+    description: "Same major (1.0 vs 1.0) is compatible"
+    category: version
+    level: core
+    spec_ref: "ARSIA-Core §7.4"
+    input:
+      operation: is_compatible
+      our_version: "1.0"
+      their_version: "1.0"
+    expected:
+      compatible: true
+
+  - id: VER-COMPAT-DIFFERENT-MAJOR
+    description: "Different majors (1.0 vs 2.0) are incompatible"
+    category: version
+    level: core
+    spec_ref: "ARSIA-Core §7.4"
+    input:
+      operation: is_compatible
+      our_version: "1.0"
+      their_version: "2.0"
+    expected:
+      compatible: false
+
+  - id: VER-COMPAT-MIN-V-SATISFIED
+    description: "min_v=1.0 and ours=1.0 → compatible"
+    category: version
+    level: core
+    spec_ref: "ARSIA-Core §7.4"
+    input:
+      operation: is_compatible
+      our_version: "1.0"
+      their_version: "1.5"
+      their_min_v: "1.0"
+    expected:
+      compatible: true
+
+  - id: VER-COMPAT-MIN-V-UNSATISFIED
+    description: "min_v=1.2 and ours=1.0 → incompatible (we cannot meet the floor)"
+    category: version
+    level: core
+    spec_ref: "ARSIA-Core §7.4"
+    input:
+      operation: is_compatible
+      our_version: "1.0"
+      their_version: "1.5"
+      their_min_v: "1.2"
+    expected:
+      compatible: false

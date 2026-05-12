@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/identity-record/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Identity Record",
+  "description": "Identity record for an ARSIA Protocol agent, binding technical identity, cryptographic identity, and compliance identity into a single verifiable object. Defined in ARSIA-Identity.md \u00a71.2.",
+  "type": "object",
+  "required": [
+    "agent_id",
+    "owner_id",
+    "owner_name",
+    "jurisdiction",
+    "ai_system_classification",
+    "created_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "agent_id": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "Agent identifier (same format as from/to in ARSIA message envelope)"
+    },
+    "owner_id": {
+      "type": "string",
+      "minLength": 3,
+      "description": "Legal entity identifier. The identity layer is jurisdiction-agnostic. Accepted formats include: EU VAT number (e.g. 'PT501234567'), US EIN (e.g. '84-1234567'), LEI URN (e.g. 'urn:lei:5493001KJTIIGC8Y1R12'), DUNS URN (e.g. 'urn:duns:123456789'), or any national company registration number."
+    },
+    "owner_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable legal name of the entity that owns and operates the agent"
+    },
+    "jurisdiction": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/iso-3166-1-alpha-2"
+        },
+        {
+          "description": "ISO 3166-1 alpha-2 country code of the entity's legal registration"
+        }
+      ]
+    },
+    "ai_system_classification": {
+      "type": "string",
+      "enum": [
+        "minimal-risk",
+        "limited-risk",
+        "high-risk",
+        "unacceptable-risk"
+      ],
+      "description": "Agent-level classification per EU AI Act Annex III. Worst-case across all intended uses."
+    },
+    "deployer_id": {
+      "type": "string",
+      "minLength": 3,
+      "description": "Legal entity identifier of the deploying entity, when different from the owner"
+    },
+    "deployer_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable legal name of the deploying entity"
+    },
+    "created_at": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+        },
+        {
+          "description": "When this identity record was created (RFC 3339 with milliseconds)"
+        }
+      ]
+    },
+    "valid_until": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+        },
+        {
+          "description": "Expiry date of this identity record (RFC 3339 with milliseconds). Recommended: 90 days from created_at."
+        }
+      ]
+    },
+    "contact_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Operational contact for this agent (role-based address, not personal). Used for incident reporting per DORA."
+    },
+    "certificate_chain": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^-----BEGIN CERTIFICATE-----"
+      },
+      "description": "PEM-encoded X.509 certificate chain for Level 2/3 trust. Leaf certificate first, intermediates next, root last (or omitted if well-known). Defined in ARSIA-Identity.md \u00a76.5.1."
+    }
+  },
+  "if": {
+    "required": [
+      "deployer_id"
+    ]
+  },
+  "then": {
+    "required": [
+      "deployer_name"
+    ]
+  },
+  "examples": [
+    {
+      "agent_id": "agent:acme.billing",
+      "owner_id": "PT501234567",
+      "owner_name": "Acme Corp",
+      "jurisdiction": "PT",
+      "ai_system_classification": "minimal-risk",
+      "created_at": "2026-03-24T10:00:00.000Z"
+    },
+    {
+      "agent_id": "agent:arsialabs.demo.risk-assessor",
+      "owner_id": "PT509876543",
+      "owner_name": "Arsia Labs",
+      "jurisdiction": "PT",
+      "ai_system_classification": "high-risk",
+      "deployer_id": "DE812345678",
+      "deployer_name": "Frankfurt Financial Services GmbH",
+      "created_at": "2026-03-24T10:00:00.000Z",
+      "valid_until": "2026-06-22T10:00:00.000Z",
+      "contact_email": "ops@arsialabs.example"
+    }
+  ]
+}

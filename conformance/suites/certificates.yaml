@@ -1,0 +1,201 @@
+# SPDX-License-Identifier: BUSL-1.1
+# X.509 trust-level classification and eIDAS QcStatements detection
+# per ARSIA-Identity.md §6.
+#
+# Offline cases are language-agnostic: any runner that imports the SDK
+# as an external consumer can execute them. Full chain verification
+# (verify_certificate_chain) is exercised by the SDK unit tests — the
+# conformance runner covers the classifier surface and the eIDAS OID
+# probe. Spec-level live-issuance cases (CERT-*) are recorded as
+# skipped until the identity workflow slice wires them up.
+name: certificates
+description: 'ARSIA Identity §6: X.509 trust level classification and QcStatements detection'
+level: core
+cases:
+
+  # ---- §6.1 L1 self-signed ------------------------------------------------
+
+  - id: CERT-TRUST-01
+    description: "Identity record without cert_chain classifies as L1"
+    category: certificates
+    level: core
+    spec_ref: "ARSIA-Identity §6.1"
+    input:
+      operation: compute_trust_level
+      identity_record:
+        agent_id: "agent:acme.bot"
+        public_key: "stub"
+    expected:
+      trust_level: L1
+
+  - id: CERT-TRUST-02
+    description: "Empty cert_chain classifies as L1"
+    category: certificates
+    level: core
+    spec_ref: "ARSIA-Identity §6.1"
+    input:
+      operation: compute_trust_level
+      identity_record:
+        agent_id: "agent:acme.bot"
+        public_key: "stub"
+        certificate_chain: []
+    expected:
+      trust_level: L1
+
+  - id: CERT-TRUST-03
+    description: "Malformed PEM in chain falls back to L1 (permissive classifier)"
+    category: certificates
+    level: core
+    spec_ref: "ARSIA-Identity §6.1"
+    input:
+      operation: compute_trust_level
+      identity_record:
+        agent_id: "agent:acme.bot"
+        public_key: "stub"
+        certificate_chain:
+          - "not a pem"
+    expected:
+      trust_level: L1
+
+  # ---- §6.2 L2 CA-signed --------------------------------------------------
+
+  - id: CERT-TRUST-04
+    description: "Well-formed non-QC certificate classifies as L2"
+    category: certificates
+    level: core
+    spec_ref: "ARSIA-Identity §6.2"
+    input:
+      operation: compute_trust_level
+      identity_record:
+        agent_id: "agent:acme.bot"
+        public_key: "stub"
+        certificate_chain:
+          - |
+            -----BEGIN CERTIFICATE-----
+            MIIBIjCB1aADAgECAggSNFZ4kKvN7zAFBgMrZXAwGTEXMBUGA1UEAwwOYWdlbnQ6
+            YWNtZS5ib3QwHhcNMjUwMTAxMDAwMDAwWhcNMzUwMTAxMDAwMDAwWjAZMRcwFQYD
+            VQQDDA5hZ2VudDphY21lLmJvdDAqMAUGAytlcAMhAIqI4910CfGV/VLbLTy6XXLK
+            Zwm/HZQSG/N0iAG0D29cozswOTAZBgNVHREEEjAQhg5hZ2VudDphY21lLmJvdDAM
+            BgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAFBgMrZXADQQAQCJocCHDqCbrz
+            lUJgs9CE9b0Wum76W4zJcXldlaxUDgTRs3ZUlXO99SRmRHqXaQVHvaB8A75pBDXB
+            X3nVYzEB
+            -----END CERTIFICATE-----
+    expected:
+      trust_level: L2
+
+  # ---- §6.3 L3 eIDAS qualified --------------------------------------------
+
+  - id: CERT-TRUST-05
+    description: "Certificate with QcStatements extension classifies as L3"
+    category: certificates
+    level: core
+    spec_ref: "ARSIA-Identity §6.3"
+    rtm_ids:
+      - "IDENT-§6-03"
+    input:
+      operation: compute_trust_level
+      identity_record:
+        agent_id: "agent:acme.bot"
+        public_key: "stub"
+        certificate_chain:
+          - |
+            -----BEGIN CERTIFICATE-----
+            MIIBPDCB76ADAgECAggSNFZ4kKvN7zAFBgMrZXAwGTEXMBUGA1UEAwwOYWdlbnQ6
+            YWNtZS5ib3QwHhcNMjUwMTAxMDAwMDAwWhcNMzUwMTAxMDAwMDAwWjAZMRcwFQYD
+            VQQDDA5hZ2VudDphY21lLmJvdDAqMAUGAytlcAMhAIqI4910CfGV/VLbLTy6XXLK
+            Zwm/HZQSG/N0iAG0D29co1UwUzAZBgNVHREEEjAQhg5hZ2VudDphY21lLmJvdDAM
+            BgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAYBggrBgEFBQcBAwQMMAswCQYH
+            KooiBwEBMAUGAytlcANBAP1EnQwTwecUSxGgGV7WLckHZYVh3Bhb5wxwtEvGbhlC
+            GMieyPKL4VN+xLc/3jbt+i1669Ni7DQXL1T9Hdo6ewg=
+            -----END CERTIFICATE-----
+    expected:
+      trust_level: L3
+
+  # ---- has_qc_statements probe --------------------------------------------
+
+  - id: CERT-QC-01
+    description: "has_qc_statements returns true when extension is present"
+    category: certificates
+    level: core
+    spec_ref: "ETSI EN 319 412-5"
+    input:
+      operation: has_qc_statements
+      cert_pem: |
+        -----BEGIN CERTIFICATE-----
+        MIIBPDCB76ADAgECAggSNFZ4kKvN7zAFBgMrZXAwGTEXMBUGA1UEAwwOYWdlbnQ6
+        YWNtZS5ib3QwHhcNMjUwMTAxMDAwMDAwWhcNMzUwMTAxMDAwMDAwWjAZMRcwFQYD
+        VQQDDA5hZ2VudDphY21lLmJvdDAqMAUGAytlcAMhAIqI4910CfGV/VLbLTy6XXLK
+        Zwm/HZQSG/N0iAG0D29co1UwUzAZBgNVHREEEjAQhg5hZ2VudDphY21lLmJvdDAM
+        BgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAYBggrBgEFBQcBAwQMMAswCQYH
+        KooiBwEBMAUGAytlcANBAP1EnQwTwecUSxGgGV7WLckHZYVh3Bhb5wxwtEvGbhlC
+        GMieyPKL4VN+xLc/3jbt+i1669Ni7DQXL1T9Hdo6ewg=
+        -----END CERTIFICATE-----
+    expected:
+      present: true
+
+  - id: CERT-QC-02
+    description: "has_qc_statements returns false when extension is absent"
+    category: certificates
+    level: core
+    spec_ref: "ETSI EN 319 412-5"
+    input:
+      operation: has_qc_statements
+      cert_pem: |
+        -----BEGIN CERTIFICATE-----
+        MIIBIjCB1aADAgECAggSNFZ4kKvN7zAFBgMrZXAwGTEXMBUGA1UEAwwOYWdlbnQ6
+        YWNtZS5ib3QwHhcNMjUwMTAxMDAwMDAwWhcNMzUwMTAxMDAwMDAwWjAZMRcwFQYD
+        VQQDDA5hZ2VudDphY21lLmJvdDAqMAUGAytlcAMhAIqI4910CfGV/VLbLTy6XXLK
+        Zwm/HZQSG/N0iAG0D29cozswOTAZBgNVHREEEjAQhg5hZ2VudDphY21lLmJvdDAM
+        BgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAFBgMrZXADQQAQCJocCHDqCbrz
+        lUJgs9CE9b0Wum76W4zJcXldlaxUDgTRs3ZUlXO99SRmRHqXaQVHvaB8A75pBDXB
+        X3nVYzEB
+        -----END CERTIFICATE-----
+    expected:
+      present: false
+
+  - id: CERT-QC-03
+    description: "has_qc_statements raises on malformed PEM"
+    category: certificates
+    level: core
+    spec_ref: "ETSI EN 319 412-5"
+    input:
+      operation: has_qc_statements
+      cert_pem: "not a pem"
+    expected:
+      raises: true
+
+  # ---- Spec-level cases reserved for the identity workflow slice ----------
+
+  - id: CERT-01
+    description: "Live L2 issuance via a real CA — gated on Slice 4 identity flow"
+    category: certificates
+    level: full
+    spec_ref: "ARSIA-Identity §6.2"
+    rtm_ids:
+      - "IDENT-§6.2-01"
+    skip_until: "certificate-authority"
+    # Requires: Real Certificate Authority infrastructure for L2 issuance.
+    # The SDK computes trust levels from identity records but does not
+    # interact with CAs. This case tests end-to-end L2 certificate issuance.
+    input:
+      operation: compute_trust_level
+      identity_record: {}
+    expected:
+      trust_level: L2
+
+  - id: CERT-02
+    description: "Live L3 issuance via eIDAS qualified provider — gated on Slice 4 identity flow"
+    category: certificates
+    level: full
+    spec_ref: "ARSIA-Identity §6.3"
+    rtm_ids:
+      - "IDENT-§6.3-01"
+    skip_until: "certificate-authority"
+    # Requires: eIDAS qualified trust service provider for L3 issuance.
+    # The SDK computes trust levels but does not interact with eIDAS
+    # providers. This case tests end-to-end L3 qualified certificate issuance.
+    input:
+      operation: compute_trust_level
+      identity_record: {}
+    expected:
+      trust_level: L3

@@ -1,0 +1,411 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/asset-transfer-request/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Asset Transfer Request",
+  "description": "Validates the payload.args object of an AssetTransferRequest message (ARSIA-Assets.md \u00a73.1). Expresses an agent's intent to transfer value to another agent. Defined in ARSIA-Assets.md \u00a73.1.1. Decimal precision constraints are enforced via allOf/if/then multipleOf per asset_type (currency \u22642dp, token \u22648dp, entitlement \u22642dp, service_unit \u22644dp). The currency_or_unit ISO 4217 pattern for currency is enforced via if/then. Non-currency currency_or_unit format constraints are application-defined and MUST be enforced programmatically \u2014 implementations MUST reject violations with error code 'invalid_request'.",
+  "type": "object",
+  "$defs": {
+    "iso-4217-code": {
+      "type": "string",
+      "description": "ISO 4217 alphabetic currency code. Implementations SHOULD validate against this enumeration per ARSIA-Assets.md \u00a73.1.1.",
+      "pattern": "^[A-Z]{3}$",
+      "enum": [
+        "AED",
+        "AFN",
+        "ALL",
+        "AMD",
+        "ANG",
+        "AOA",
+        "ARS",
+        "AUD",
+        "AWG",
+        "AZN",
+        "BAM",
+        "BBD",
+        "BDT",
+        "BGN",
+        "BHD",
+        "BIF",
+        "BMD",
+        "BND",
+        "BOB",
+        "BOV",
+        "BRL",
+        "BSD",
+        "BTN",
+        "BWP",
+        "BYN",
+        "BZD",
+        "CAD",
+        "CDF",
+        "CHE",
+        "CHF",
+        "CHW",
+        "CLF",
+        "CLP",
+        "CNY",
+        "COP",
+        "COU",
+        "CRC",
+        "CUP",
+        "CVE",
+        "CZK",
+        "DJF",
+        "DKK",
+        "DOP",
+        "DZD",
+        "EGP",
+        "ERN",
+        "ETB",
+        "EUR",
+        "FJD",
+        "FKP",
+        "GBP",
+        "GEL",
+        "GHS",
+        "GIP",
+        "GMD",
+        "GNF",
+        "GTQ",
+        "GYD",
+        "HKD",
+        "HNL",
+        "HTG",
+        "HUF",
+        "IDR",
+        "ILS",
+        "INR",
+        "IQD",
+        "IRR",
+        "ISK",
+        "JMD",
+        "JOD",
+        "JPY",
+        "KES",
+        "KGS",
+        "KHR",
+        "KMF",
+        "KPW",
+        "KRW",
+        "KWD",
+        "KYD",
+        "KZT",
+        "LAK",
+        "LBP",
+        "LKR",
+        "LRD",
+        "LSL",
+        "LYD",
+        "MAD",
+        "MDL",
+        "MGA",
+        "MKD",
+        "MMK",
+        "MNT",
+        "MOP",
+        "MRU",
+        "MUR",
+        "MVR",
+        "MWK",
+        "MXN",
+        "MXV",
+        "MYR",
+        "MZN",
+        "NAD",
+        "NGN",
+        "NIO",
+        "NOK",
+        "NPR",
+        "NZD",
+        "OMR",
+        "PAB",
+        "PEN",
+        "PGK",
+        "PHP",
+        "PKR",
+        "PLN",
+        "PYG",
+        "QAR",
+        "RON",
+        "RSD",
+        "RUB",
+        "RWF",
+        "SAR",
+        "SBD",
+        "SCR",
+        "SDG",
+        "SEK",
+        "SGD",
+        "SHP",
+        "SLE",
+        "SOS",
+        "SRD",
+        "SSP",
+        "STN",
+        "SVC",
+        "SYP",
+        "SZL",
+        "THB",
+        "TJS",
+        "TMT",
+        "TND",
+        "TOP",
+        "TRY",
+        "TTD",
+        "TWD",
+        "TZS",
+        "UAH",
+        "UGX",
+        "USD",
+        "USN",
+        "UYI",
+        "UYU",
+        "UYW",
+        "UZS",
+        "VED",
+        "VES",
+        "VND",
+        "VUV",
+        "WST",
+        "XAF",
+        "XAG",
+        "XAU",
+        "XBA",
+        "XBB",
+        "XBC",
+        "XBD",
+        "XCD",
+        "XDR",
+        "XOF",
+        "XPD",
+        "XPF",
+        "XPT",
+        "XSU",
+        "XTS",
+        "XUA",
+        "XXX",
+        "YER",
+        "ZAR",
+        "ZMW",
+        "ZWG",
+        "ZWL"
+      ]
+    }
+  },
+  "required": [
+    "amount",
+    "currency_or_unit",
+    "asset_type",
+    "from_agent",
+    "to_agent",
+    "payment_reference",
+    "description",
+    "idempotency_key"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "amount": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "A positive number representing the value to transfer. MUST be strictly greater than zero. Precision constraints depend on asset_type and are enforced via allOf/if/then multipleOf (currency: \u22642dp; token: \u22648dp; entitlement: \u22642dp if fractional; service_unit: \u22644dp). Per ARSIA-Assets.md \u00a73.1.1 'amount'."
+    },
+    "currency_or_unit": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "description": "Currency code or unit identifier. For asset_type='currency', MUST be a valid ISO 4217 alphabetic code (three uppercase ASCII letters, e.g. 'EUR', 'USD'). For other asset types, an application-defined identifier matching ^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]$, which MUST NOT collide with any ISO 4217 code. The per-asset-type pattern is enforced programmatically. Per ARSIA-Assets.md \u00a73.1.1 'currency_or_unit'."
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": [
+        "currency",
+        "token",
+        "entitlement",
+        "service_unit"
+      ],
+      "description": "Determines precision requirements, regulatory applicability, and audit obligations for this transfer, as defined in ARSIA-Assets.md \u00a72. Per ARSIA-Assets.md \u00a73.1.1 'asset_type'."
+    },
+    "from_agent": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "The agent-id of the payer \u2014 the entity from which value is debited. In the common case matches the envelope's 'from' field; MAY differ when the sender is acting on behalf of the payer under delegated authority. Per ARSIA-Assets.md \u00a73.1.1 'from_agent'."
+    },
+    "to_agent": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "The agent-id of the payee \u2014 the entity to which value is credited. MAY differ from the envelope's 'to' field (e.g. when the message is addressed to a transfer processing agent). Per ARSIA-Assets.md \u00a73.1.1 'to_agent'."
+    },
+    "payment_reference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "A unique reference for this transfer, used for MiFID II traceability, audit correlation, and reconciliation with the external provider. MUST be unique within the deployment scope. Echoed in the AssetTransferReceipt (\u00a73.2) and AssetTransferReversal (\u00a73.3). Per ARSIA-Assets.md \u00a73.1.1 'payment_reference'."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Human-readable description of the purpose of this transfer. Logged in the audit trail (\u00a76.1) and visible to human oversight approvers (\u00a75.2). SHOULD be specific enough for an auditor or compliance officer to understand the business purpose. Per ARSIA-Assets.md \u00a73.1.1 'description'."
+    },
+    "provider": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/agent-id"
+        }
+      ],
+      "description": "Agent-id of the licensed payment provider to route the transfer through. When absent, the receiving agent selects the provider. MUST be a licensed payment institution for currency transfers (PSD2 Art. 11). Per ARSIA-Assets.md \u00a73.1.1 'provider'."
+    },
+    "escrow_conditions": {
+      "$ref": "arsia-escrow-conditions.schema.json",
+      "description": "When present, the transfer is held in escrow until the conditions defined in the EscrowConditions object are met. See arsia-escrow-conditions.schema.json for the full definition (ARSIA-Assets.md \u00a74.1). When present, the initial AssetTransferReceipt MUST have status='escrowed'. Per ARSIA-Assets.md \u00a73.1.1 'escrow_conditions'."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Idempotency key for this transfer. REQUIRED for ALL asset transfers (stricter than the general ARSIA idempotency mechanism) because duplicate execution has direct financial consequences. MUST also be placed in the envelope's idempotency.key field (ARSIA-Core.md \u00a74.3.2). Per ARSIA-Assets.md \u00a73.1.1 'idempotency_key'."
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "if": {
+          "type": "string"
+        },
+        "then": {
+          "allOf": [
+            {
+              "not": {
+                "pattern": "^[A-Z]{2}\\d{2}[A-Z0-9]{4,}$"
+              }
+            },
+            {
+              "not": {
+                "pattern": "^\\d{13,19}$"
+              }
+            },
+            {
+              "not": {
+                "pattern": "^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$"
+              }
+            }
+          ]
+        }
+      },
+      "description": "Additional application-specific data that travels with the transfer request. Opaque to the ARSIA protocol. Subject to audit logging via payload_hash. MUST NOT contain financial account identifiers, payment card data, or banking credentials (\u00a71.3). String values are validated against IBAN, card number, and SWIFT/BIC patterns. Per ARSIA-Assets.md \u00a73.1.1 'metadata'."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "asset_type": {
+            "const": "currency"
+          }
+        },
+        "required": [
+          "asset_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "currency_or_unit": {
+            "$ref": "#/$defs/iso-4217-code"
+          },
+          "amount": {
+            "multipleOf": 0.01
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "asset_type": {
+            "const": "token"
+          }
+        },
+        "required": [
+          "asset_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "amount": {
+            "multipleOf": 1e-08
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "asset_type": {
+            "const": "entitlement"
+          }
+        },
+        "required": [
+          "asset_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "amount": {
+            "multipleOf": 0.01
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "asset_type": {
+            "const": "service_unit"
+          }
+        },
+        "required": [
+          "asset_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "amount": {
+            "multipleOf": 0.0001
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "asset_type": {
+            "enum": [
+              "token",
+              "entitlement",
+              "service_unit"
+            ]
+          }
+        },
+        "required": [
+          "asset_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "currency_or_unit": {
+            "pattern": "^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]$",
+            "not": {
+              "pattern": "^[A-Z]{3}$"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

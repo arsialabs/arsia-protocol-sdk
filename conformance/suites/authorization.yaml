@@ -1,0 +1,543 @@
+# SPDX-License-Identifier: BUSL-1.1
+# JWT access-token and DPoP proof validation per ARSIA-Core.md §6
+# and ARSIA-Identity.md §3.2–§3.3.
+#
+# All cases are offline: the runner builds signed tokens and DPoP
+# proofs at execution time using the shared Ed25519 test keypairs
+# (shared/test-vectors/keypairs.json), then validates them with the
+# matching public key. A fixed ``now_unix`` makes timing cases
+# deterministic across languages and runs.
+#
+# HTTP-dependent cases (IDENTITY-03, IDENTITY-07, IDENTITY-08) require a
+# live Authorization Server and are tagged ``skip_until: authorization-server``.
+name: authorization
+description: 'ARSIA authorization: JWT validation, DPoP proofs, scope enforcement'
+level: core
+cases:
+
+  # ---- Access token validation (§6.4) -------------------------------------
+
+  - id: AUTH-JWT-01
+    description: "Valid token with all 7 required claims is accepted (§6.4)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Core §6.4"
+    rtm_ids:
+      - "CORE-§6.4-01"
+      - "CORE-§6.1-17"
+      - "IDENT-§3.2-02"
+    input:
+      operation: validate_token
+      signer_agent_id: "agent:acme.echo-client"
+      now_unix: 1775995200
+      expected_sub: "agent:acme.echo-client"
+      expected_aud: "agent:contoso.crm"
+      required_capabilities: ["notes.read", "notes.write"]
+      claims:
+        iss: "https://as.example.com"
+        sub: "agent:acme.echo-client"
+        aud: "agent:contoso.crm"
+        exp: 1775998800
+        iat: 1775995200
+        jti: "11111111-1111-1111-1111-111111111111"
+        scope: "notes.read notes.write"
+    expected:
+      valid: true
+
+  - id: AUTH-JWT-02
+    description: "Expired token is rejected beyond clock skew (§6.4 step 3)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Core §6.4, §8.3"
+    rtm_ids:
+      - "CORE-§6.4-01"
+      - "IDENT-§3.2-02"
+    input:
+      operation: validate_token
+      signer_agent_id: "agent:acme.echo-client"
+      now_unix: 1775995200
+      claims:
+        iss: "https://as.example.com"
+        sub: "agent:acme.echo-client"
+        aud: "agent:contoso.crm"
+        exp: 1775990000
+        iat: 1775989000
+        jti: "22222222-2222-2222-2222-222222222222"
+        scope: "notes.read"
+    expected:
+      valid: false
+      error_contains: expired
+
+  - id: AUTH-JWT-03
+    description: "iat in the future is rejected (§6.4 step 3)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Core §6.4"
+    rtm_ids:
+      - "CORE-§6.4-01"
+      - "IDENT-§3.2-02"
+    input:
+      operation: validate_token
+      signer_agent_id: "agent:acme.echo-client"
+      now_unix: 1775995200
+      claims:
+        iss: "https://as.example.com"
+        sub: "agent:acme.echo-client"
+        aud: "agent:contoso.crm"
+        exp: 2000000000
+        iat: 1780000000
+        jti: "33333333-3333-3333-3333-333333333333"
+        scope: "notes.read"
+    expected:
+      valid: false
+      error_contains: iat is in the future
+
+  - id: AUTH-JWT-04
+    description: "Wrong sub is rejected (§6.4 step 3)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Core §6.4"
+    rtm_ids:
+      - "CORE-§6.4-01"
+      - "IDENT-§3.2-02"
+    input:
+      operation: validate_token
+      signer_agent_id: "agent:acme.echo-client"
+      now_unix: 1775995200
+      expected_sub: "agent:acme.echo-client"
+      claims:
+        iss: "https://as.example.com"
+        sub: "agent:acme.imposter"
+        aud: "agent:contoso.crm"
+        exp: 1775998800
+        iat: 1775995200
+        jti: "44444444-4444-4444-4444-444444444444"
+        scope: "notes.read"
+    expected:
+      valid: false
+      error_contains: sub
+
+  - id: AUTH-JWT-05
+    description: "Wrong aud is rejected (§6.4 step 3)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Core §6.4"
+    rtm_ids:
+      - "CORE-§6.4-01"
+      - "IDENT-§3.2-02"
+    input:
+      operation: validate_token
+      signer_agent_id: "agent:acme.echo-client"
+      now_unix: 1775995200
+      expected_aud: "agent:contoso.crm"
+      claims:
+        iss: "https://as.example.com"
+        sub: "agent:acme.echo-client"
+        aud: "agent:other.target"
+        exp: 1775998800
+        iat: 1775995200
+        jti: "55555555-5555-5555-5555-555555555555"
+        scope: "notes.read"
+    expected:
+      valid: false
+      error_contains: aud
+
+  - id: AUTH-JWT-06
+    description: "Insufficient scope is rejected with missing list (§6.4 step 5)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Core §6.4 step 5"
+    rtm_ids:
+      - "CORE-§6.4-01"
+      - "IDENT-§3.2-02"
+    input:
+      operation: validate_token
+      signer_agent_id: "agent:acme.echo-client"
+      now_unix: 1775995200
+      required_capabilities: ["notes.read", "notes.write", "notes.delete"]
+      claims:
+        iss: "https://as.example.com"
+        sub: "agent:acme.echo-client"
+        aud: "agent:contoso.crm"
+        exp: 1775998800
+        iat: 1775995200
+        jti: "66666666-6666-6666-6666-666666666666"
+        scope: "notes.read"
+    expected:
+      valid: false
+      error_contains: notes.write
+
+  - id: AUTH-JWT-07
+    description: "Expired 100s (within ±300s skew) is accepted (§8.3)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Core §8.3"
+    rtm_ids:
+      - "CORE-§6.4-01"
+      - "IDENT-§3.2-02"
+    input:
+      operation: validate_token
+      signer_agent_id: "agent:acme.echo-client"
+      now_unix: 1775995200
+      claims:
+        iss: "https://as.example.com"
+        sub: "agent:acme.echo-client"
+        aud: "agent:contoso.crm"
+        exp: 1775995100
+        iat: 1775994800
+        jti: "77777777-7777-7777-7777-777777777777"
+        scope: "notes.read"
+    expected:
+      valid: true
+
+  - id: AUTH-JWT-08
+    description: "Missing required claim is rejected (§6.1)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Core §6.1"
+    rtm_ids:
+      - "IDENT-§3.2-02"
+    input:
+      operation: validate_token
+      signer_agent_id: "agent:acme.echo-client"
+      now_unix: 1775995200
+      claims:
+        iss: "https://as.example.com"
+        sub: "agent:acme.echo-client"
+        aud: "agent:contoso.crm"
+        exp: 1775998800
+        iat: 1775995200
+        scope: "notes.read"
+    expected:
+      valid: false
+      error_contains: "'jti'"
+
+  # ---- Scope enforcement (exact match, §6.4 step 5) -----------------------
+
+  - id: AUTH-SCOPE-01
+    description: "Exact match covers required capabilities"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Core §6.4 step 5"
+    rtm_ids:
+      - "CORE-§6.4-01"
+    input:
+      operation: check_scope_coverage
+      scope: ["notes.read", "notes.write", "notes.delete"]
+      required: ["notes.read", "notes.write"]
+    expected:
+      covered: true
+      missing: []
+
+  - id: AUTH-SCOPE-02
+    description: "Partial coverage reports missing list preserving request order"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Core §6.4 step 5"
+    rtm_ids:
+      - "CORE-§6.4-01"
+    input:
+      operation: check_scope_coverage
+      scope: ["notes.read"]
+      required: ["notes.read", "notes.write", "notes.delete"]
+    expected:
+      covered: false
+      missing: ["notes.write", "notes.delete"]
+
+  - id: AUTH-SCOPE-03
+    description: "Wildcard in scope does NOT satisfy a specific request (§6.4 step 5)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Core §6.4 step 5"
+    rtm_ids:
+      - "CORE-§6.4-01"
+    input:
+      operation: check_scope_coverage
+      scope: ["notes.*"]
+      required: ["notes.read"]
+    expected:
+      covered: false
+      missing: ["notes.read"]
+
+  # ---- JWK Thumbprint (RFC 7638) ------------------------------------------
+
+  - id: AUTH-JKT-01
+    description: "JWK Thumbprint of the acme echo-client public key"
+    category: authorization
+    level: core
+    spec_ref: "RFC 7638 §3.2, ARSIA-Identity §3.3"
+    input:
+      operation: compute_jwk_thumbprint
+      jwk:
+        kty: "OKP"
+        crv: "Ed25519"
+        x: "2yBga3e_Y0iNdj9COkyqEcksOlTLhF7ySNaR3IxyIL0"
+    expected:
+      thumbprint: "EokVh4xzjb5Ynb7coQLVYCvcbkPySMsVzyAsBEE8DMM"
+
+  - id: AUTH-JKT-02
+    description: "Thumbprint ignores optional 'kid' and 'use' members"
+    category: authorization
+    level: core
+    spec_ref: "RFC 7638 §3.2"
+    input:
+      operation: compute_jwk_thumbprint
+      jwk:
+        kty: "OKP"
+        crv: "Ed25519"
+        x: "2yBga3e_Y0iNdj9COkyqEcksOlTLhF7ySNaR3IxyIL0"
+        kid: "agent:acme.echo-client#key1"
+        use: "sig"
+    expected:
+      thumbprint: "EokVh4xzjb5Ynb7coQLVYCvcbkPySMsVzyAsBEE8DMM"
+
+  # ---- DPoP proof validation (Identity §3.3) ------------------------------
+
+  - id: AUTH-DPOP-01
+    description: "Valid DPoP proof with correct htm/htu/iat/ath is accepted"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Identity §3.3"
+    rtm_ids:
+      - "IDENT-§9.2-03"
+    input:
+      operation: validate_dpop
+      signer_agent_id: "agent:arsialabs.demo.risk-assessor"
+      now_unix: 1775995200
+      access_token: "test-access-token"
+      expected_htm: "POST"
+      expected_htu: "https://contoso.crm/arsia/inbox"
+      proof:
+        htm: "POST"
+        htu: "https://contoso.crm/arsia/inbox"
+        iat: 1775995200
+        jti: "dpop-jti-01"
+    expected:
+      valid: true
+
+  - id: AUTH-DPOP-02
+    description: "Wrong htm is rejected (§3.3 step 3)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Identity §3.3 step 3"
+    rtm_ids:
+      - "IDENT-§9.2-03"
+    input:
+      operation: validate_dpop
+      signer_agent_id: "agent:arsialabs.demo.risk-assessor"
+      now_unix: 1775995200
+      access_token: "test-access-token"
+      expected_htm: "POST"
+      expected_htu: "https://contoso.crm/arsia/inbox"
+      proof:
+        htm: "GET"
+        htu: "https://contoso.crm/arsia/inbox"
+        iat: 1775995200
+        jti: "dpop-jti-02"
+    expected:
+      valid: false
+      error_contains: htm
+
+  - id: AUTH-DPOP-03
+    description: "Wrong htu is rejected (§3.3 step 2)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Identity §3.3 step 2"
+    rtm_ids:
+      - "IDENT-§9.2-03"
+    input:
+      operation: validate_dpop
+      signer_agent_id: "agent:arsialabs.demo.risk-assessor"
+      now_unix: 1775995200
+      access_token: "test-access-token"
+      expected_htu: "https://contoso.crm/arsia/inbox"
+      proof:
+        htm: "POST"
+        htu: "https://other.example/inbox"
+        iat: 1775995200
+        jti: "dpop-jti-03"
+    expected:
+      valid: false
+      error_contains: htu
+
+  - id: AUTH-DPOP-04
+    description: "Replayed jti is rejected (§3.3 step 8)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Identity §3.3"
+    rtm_ids:
+      - "IDENT-§9.2-03"
+    input:
+      operation: validate_dpop
+      signer_agent_id: "agent:arsialabs.demo.risk-assessor"
+      now_unix: 1775995200
+      access_token: "test-access-token"
+      expected_htu: "https://contoso.crm/arsia/inbox"
+      seen_jti: ["dpop-jti-04"]
+      proof:
+        htm: "POST"
+        htu: "https://contoso.crm/arsia/inbox"
+        iat: 1775995200
+        jti: "dpop-jti-04"
+    expected:
+      valid: false
+      error_contains: replay
+
+  - id: AUTH-DPOP-05
+    description: "ath mismatch is rejected (§3.3 step 5)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Identity §3.3 step 5"
+    rtm_ids:
+      - "IDENT-§9.2-03"
+    input:
+      operation: validate_dpop
+      signer_agent_id: "agent:arsialabs.demo.risk-assessor"
+      now_unix: 1775995200
+      # The proof is built bound to `other-token`, then validated
+      # against `real-token`, so ath does not match.
+      access_token: "real-token"
+      bind_token: "other-token"
+      expected_htu: "https://contoso.crm/arsia/inbox"
+      proof:
+        htm: "POST"
+        htu: "https://contoso.crm/arsia/inbox"
+        iat: 1775995200
+        jti: "dpop-jti-05"
+    expected:
+      valid: false
+      error_contains: ath
+
+  - id: AUTH-DPOP-06
+    description: "iat too old (beyond ±300s) is rejected (§3.3 step 4)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Identity §3.3 step 4"
+    rtm_ids:
+      - "IDENT-§9.2-03"
+    input:
+      operation: validate_dpop
+      signer_agent_id: "agent:arsialabs.demo.risk-assessor"
+      now_unix: 1775995200
+      access_token: "test-access-token"
+      expected_htu: "https://contoso.crm/arsia/inbox"
+      proof:
+        htm: "POST"
+        htu: "https://contoso.crm/arsia/inbox"
+        iat: 1775994000
+        jti: "dpop-jti-06"
+    expected:
+      valid: false
+      error_contains: iat is too old
+
+  # ---- DPoP binding (cnf.jkt) ---------------------------------------------
+
+  - id: AUTH-BIND-01
+    description: "Matching cnf.jkt and DPoP JWK are bound"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Identity §3.3 step 6, §9.2"
+    rtm_ids:
+      - "IDENT-§9.2-03"
+    input:
+      operation: verify_dpop_binding
+      token_cnf_jkt: "EokVh4xzjb5Ynb7coQLVYCvcbkPySMsVzyAsBEE8DMM"
+      dpop_jwk:
+        kty: "OKP"
+        crv: "Ed25519"
+        x: "2yBga3e_Y0iNdj9COkyqEcksOlTLhF7ySNaR3IxyIL0"
+    expected:
+      bound: true
+
+  - id: AUTH-BIND-02
+    description: "Different key in DPoP proof breaks the binding (§9.2)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Identity §9.2"
+    rtm_ids:
+      - "IDENT-§9.2-03"
+    input:
+      operation: verify_dpop_binding
+      token_cnf_jkt: "EokVh4xzjb5Ynb7coQLVYCvcbkPySMsVzyAsBEE8DMM"
+      dpop_jwk:
+        kty: "OKP"
+        crv: "Ed25519"
+        x: "DFxiTkz44vYHADKGGE4qD7vLCx35-4jMz0lz5NASyLk"
+    expected:
+      bound: false
+
+  # ---- HTTP-gated (live AS / live discovery) ------------------------------
+
+  - id: IDENTITY-03
+    description: "OAuth2 client_credentials flow (requires live AS)"
+    category: authorization
+    level: full
+    spec_ref: "ARSIA-Identity §3, ARSIA-Core §6.2"
+    rtm_ids:
+      - "CORE-§6.2-01"
+    skip_until: "authorization-server"
+    # Requires: Live Authorization Server supporting client_credentials grant.
+    # The SDK validates token structure (JWT claims, DPoP proofs) but does not
+    # issue tokens. This case tests the full OAuth2 flow end-to-end.
+    input:
+      operation: live_token_request
+    expected:
+      valid: true
+
+  - id: IDENTITY-07
+    description: "AS metadata discovery from /.well-known (requires transport)"
+    category: authorization
+    level: full
+    spec_ref: "ARSIA-Identity §3"
+    rtm_ids:
+      - "IDENT-§3.1-01"
+    skip_until: "authorization-server"
+    # Requires: Live Authorization Server with /.well-known/oauth-authorization-server
+    # metadata endpoint. The SDK does not perform HTTP discovery — this case tests
+    # that the AS publishes correct metadata per RFC 8414.
+    input:
+      operation: live_as_metadata
+    expected:
+      valid: true
+
+  - id: IDENTITY-08
+    description: "Token introspection (requires live AS)"
+    category: authorization
+    level: full
+    spec_ref: "ARSIA-Core §6"
+    rtm_ids:
+      - "CORE-§6.4-01"
+    skip_until: "authorization-server"
+    # Requires: Live Authorization Server with RFC 7662 introspection endpoint.
+    # The SDK does not call introspection — this case tests that the AS correctly
+    # reports token active/inactive status for ARSIA tokens.
+    input:
+      operation: live_token_introspection
+    expected:
+      valid: true
+
+  # ---- §6.1 Token lifetime (SHOULD) -----------------------------------------
+
+  - id: AUTH-JWT-LIFETIME-LONG
+    description: "Token with lifetime > 3600s is accepted (SHOULD, not MUST)"
+    category: authorization
+    level: core
+    spec_ref: "ARSIA-Core §6.1"
+    rtm_ids:
+      - "CORE-§6.1-12"
+    input:
+      operation: validate_token
+      signer_agent_id: "agent:acme.echo-client"
+      now_unix: 1775995200
+      expected_sub: "agent:acme.echo-client"
+      expected_aud: "agent:contoso.crm"
+      claims:
+        iss: "https://as.example.com"
+        sub: "agent:acme.echo-client"
+        aud: "agent:contoso.crm"
+        exp: 1776002400
+        iat: 1775995200
+        jti: "22222222-2222-2222-2222-222222222222"
+        scope: "notes.read"
+    expected:
+      valid: true

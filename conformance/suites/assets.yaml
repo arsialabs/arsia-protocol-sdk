@@ -1,0 +1,934 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Assets primitive (Slice 6) — §2 asset types + precision, §3 messages,
+# §4 escrow lifecycle, §5 capabilities + two-party auth, §6.1 MiFID II,
+# §6.2 DORA, §6.3 PSD2 SCA. Invalid vectors INV-09 / INV-12 / INV-13
+# are routed through the assets Layer-4 validators (not validate_envelope):
+# Core §4 / §4.3.8 does not know about precision, reversal preconditions,
+# or escrow-conditions coupling.
+name: assets
+description: 'Assets primitive: transfer request/receipt/reversal, escrow machine, two-party auth, DORA/MiFID/PSD2 helpers.'
+level: compliance
+cases:
+
+  # ---- §2 Precision + §3.1 transfer request (INV-09) ------------------
+
+  - id: ASSETS-TRANSFER-VALID-01
+    description: "well-formed currency transfer passes Layer-4 validation"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §3.1.1"
+    input:
+      operation: validate_transfer_request
+      args:
+        amount: 100.50
+        currency_or_unit: "EUR"
+        asset_type: "currency"
+        from_agent: "agent:acme.alpha"
+        to_agent: "agent:acme.beta"
+        payment_reference: "pay-ref-valid-01"
+        description: "Well-formed transfer for conformance test"
+        idempotency_key: "idem-valid-01"
+    expected:
+      valid: true
+
+  - id: ASSETS-TRANSFER-INV-09
+    description: "INV-09 — currency amount 150.123 exceeds 2-decimal precision"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §2.1"
+    input:
+      operation: validate_transfer_request
+      vector_id: "INV-09"
+    expected:
+      valid: false
+      error_contains: "precision"
+
+  - id: ASSETS-PRECISION-TOKEN-OK
+    description: "token allows 8 decimal places"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §2.2"
+    input:
+      operation: validate_transfer_request
+      args:
+        amount: 0.12345678
+        currency_or_unit: "api-credits"
+        asset_type: "token"
+        from_agent: "agent:acme.alpha"
+        to_agent: "agent:acme.beta"
+        payment_reference: "pay-ref-token-01"
+        description: "Token transfer at 8-place precision"
+        idempotency_key: "idem-token-01"
+    expected:
+      valid: true
+
+  - id: ASSETS-INVALID-ISO4217
+    description: "currency_or_unit 'eur' (lowercase) fails ISO 4217 pattern"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §2.1"
+    input:
+      operation: validate_transfer_request
+      args:
+        amount: 10.0
+        currency_or_unit: "eur"
+        asset_type: "currency"
+        from_agent: "agent:acme.alpha"
+        to_agent: "agent:acme.beta"
+        payment_reference: "pay-ref-iso-bad"
+        description: "Lowercase ISO code should fail"
+        idempotency_key: "idem-iso-bad"
+    expected:
+      valid: false
+      error_contains: "ISO 4217"
+
+  # ---- §3.2 Transfer receipt -----------------------------------------
+
+  - id: ASSETS-RECEIPT-COMPLETED
+    description: "completed receipt carries settled_at and no failure_reason"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §3.2.1"
+    input:
+      operation: validate_transfer_receipt
+      result:
+        status: "completed"
+        payment_reference: "pay-ref-receipt-01"
+        audit_id: "11111111-1111-4111-8111-111111111111"
+        amount: 100.50
+        currency_or_unit: "EUR"
+        provider_reference: "prov-ref-01"
+        initiated_at: "2026-04-13T10:00:00.000Z"
+        settled_at: "2026-04-13T10:00:05.000Z"
+    expected:
+      valid: true
+
+  # ---- §3.3 Reversal + precondition (INV-12) --------------------------
+
+  - id: ASSETS-TRANSFER-INV-12
+    description: "INV-12 — reversal requires original status completed"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §3.3"
+    input:
+      operation: validate_transfer_reversal
+      vector_id: "INV-12"
+      precondition:
+        original_status: "pending"
+    expected:
+      valid: false
+      error_contains: "reversal"
+
+  - id: ASSETS-REVERSAL-PRECOND-OK
+    description: "reversal precondition accepts a completed original transfer"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §3.3.2"
+    input:
+      operation: validate_reversal_precondition
+      reversal_args:
+        original_payment_reference: "pay-001"
+        reversal_reason: "Duplicate charge"
+        requested_by: "agent:acme.alpha"
+      original_status: "completed"
+    expected:
+      valid: true
+
+  - id: ASSETS-REVERSAL-CUMULATIVE-EXCEEDED
+    description: "cumulative reversals exceeding original_amount are rejected"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §3.3.2"
+    input:
+      operation: validate_reversal_precondition
+      reversal_args:
+        original_payment_reference: "pay-001"
+        reversal_reason: "Second partial"
+        requested_by: "agent:acme.alpha"
+        reversal_amount: 60.00
+      original_status: "completed"
+      original_amount: 100.00
+      already_reversed_total: 50.00
+    expected:
+      valid: false
+      error_contains: "cumulative"
+
+  # ---- §4 Escrow coupling (INV-13) + state machine -------------------
+
+  - id: ASSETS-TRANSFER-INV-13
+    description: "INV-13 — escrow_conditions present but release_agent missing"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.1"
+    input:
+      operation: validate_transfer_request
+      vector_id: "INV-13"
+    expected:
+      valid: false
+      error_contains: "release_agent"
+
+  - id: ASSETS-ESCROW-TIMEOUT-BEFORE-TS
+    description: "escrow timeout_at earlier than envelope.ts is rejected"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.1"
+    input:
+      operation: validate_escrow_conditions
+      conditions:
+        release_agent: "agent:acme.release"
+        release_condition: "Goods delivered"
+        timeout_at: "2026-04-13T09:59:59.000Z"
+        timeout_action: "return"
+      envelope_ts: "2026-04-13T10:00:00.000Z"
+    expected:
+      valid: false
+      error_contains: "later than envelope.ts"
+
+  - id: ASSETS-ESCROW-TRANSITION-VALID
+    description: "ESCROWED → RELEASED is an allowed transition"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.2"
+    input:
+      operation: escrow_transition
+      from_state: "ESCROWED"
+      to_state: "RELEASED"
+    expected:
+      valid: true
+
+  - id: ASSETS-ESCROW-TRANSITION-FROM-TERMINAL
+    description: "RELEASED is terminal — no outgoing transitions"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.2"
+    rtm_ids:
+      - "ASSETS-§4.2.4-03"
+    input:
+      operation: escrow_transition
+      from_state: "RELEASED"
+      to_state: "RETURNED"
+    expected:
+      valid: false
+
+  - id: ASSETS-ESCROW-TRANSITION-SKIP-DISPUTED
+    description: "RETURNED is terminal — cannot reach DISPUTED"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.2"
+    input:
+      operation: escrow_transition
+      from_state: "RETURNED"
+      to_state: "DISPUTED"
+    expected:
+      valid: false
+
+  # ---- §5.2 Two-party auth --------------------------------------------
+
+  - id: ASSETS-TWO-PARTY-OK
+    description: "distinct approver with both required capabilities passes"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §5.2"
+    rtm_ids:
+      - "ASSETS-§5.1.2-07"
+    input:
+      operation: two_party_auth
+      initiator_agent_id: "agent:acme.alpha"
+      approver_agent_id: "agent:acme.approver"
+      approver_capabilities:
+        - "arsiaprotocol.assets.transfer.approve"
+        - "arsiaprotocol.oversight.approve"
+    expected:
+      valid: true
+
+  - id: ASSETS-TWO-PARTY-SAME-AGENT
+    description: "initiator and approver must be distinct"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §5.2"
+    input:
+      operation: two_party_auth
+      initiator_agent_id: "agent:acme.alpha"
+      approver_agent_id: "agent:acme.alpha"
+      approver_capabilities:
+        - "arsiaprotocol.assets.transfer.approve"
+        - "arsiaprotocol.oversight.approve"
+    expected:
+      valid: false
+      error_contains: "distinct"
+
+  - id: ASSETS-TWO-PARTY-MISSING-CAP
+    description: "approver missing oversight.approve is rejected"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §5.2"
+    input:
+      operation: two_party_auth
+      initiator_agent_id: "agent:acme.alpha"
+      approver_agent_id: "agent:acme.approver"
+      approver_capabilities:
+        - "arsiaprotocol.assets.transfer.approve"
+    expected:
+      valid: false
+      error_contains: "missing"
+
+  # ---- §5.2 Risk-level threshold (SCA / oversight) -------------------
+
+  - id: ASSETS-SCA-BELOW-THRESHOLD
+    description: "risk_level 6 does not require PSD2 SCA"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §5.2, §6.3"
+    input:
+      operation: requires_psd2_sca
+      risk_level: 6
+    expected:
+      required: false
+
+  - id: ASSETS-SCA-AT-THRESHOLD
+    description: "risk_level 7 triggers PSD2 SCA"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §5.2, §6.3"
+    input:
+      operation: requires_psd2_sca
+      risk_level: 7
+    expected:
+      required: true
+
+  # ---- §6.2 DORA ------------------------------------------------------
+
+  - id: ASSETS-DORA-CLASSIFY-TLS
+    description: "'TLS handshake failed' classifies as tls_failure"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §6.2.1"
+    rtm_ids:
+      - "ASSETS-§6.2.1-01"
+      - "ASSETS-§6.2.1-02"
+    input:
+      operation: classify_dora_incident
+      failure_reason: "TLS handshake failed at upstream provider"
+    expected:
+      incident_type: "tls_failure"
+
+  - id: ASSETS-DORA-CLASSIFY-UNKNOWN
+    description: "reason without known keyword returns None — caller must apply 'unknown'"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §6.2.1"
+    input:
+      operation: classify_dora_incident
+      failure_reason: "something weird happened"
+    expected:
+      incident_type: null
+
+  - id: ASSETS-DORA-BUILD-OK
+    description: "build_dora_incident_event returns the 7 §6.2.2 fields"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §6.2.2"
+    input:
+      operation: build_dora_incident
+      fields:
+        incident_type: "network_failure"
+        affected_service: "agent:acme.payments"
+        started_at: "2026-04-13T10:00:00.000Z"
+        estimated_impact: "2 transfers delayed"
+        severity: "medium"
+        original_payment_reference: "pay-ref-abc"
+    expected:
+      valid: true
+      incident_type: "network_failure"
+      severity: "medium"
+      required_keys:
+        - "incident_type"
+        - "affected_service"
+        - "started_at"
+        - "resolved_at"
+        - "estimated_impact"
+        - "severity"
+        - "original_payment_reference"
+
+  - id: ASSETS-DORA-BUILD-INVALID-SEVERITY
+    description: "build_dora_incident_event rejects unknown severity"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §6.2.2"
+    input:
+      operation: build_dora_incident
+      fields:
+        incident_type: "network_failure"
+        affected_service: "agent:acme.payments"
+        started_at: "2026-04-13T10:00:00.000Z"
+        estimated_impact: "trivial"
+        severity: "catastrophic"
+        original_payment_reference: "pay-ref-abc"
+    expected:
+      valid: false
+      error_contains: "severity"
+
+  # ---- §6.3 PSD2 SCA factors -----------------------------------------
+
+  - id: ASSETS-PSD2-OPTION-A-OK
+    description: "Option A with both factors present passes"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §6.3.1"
+    input:
+      operation: validate_psd2_sca_factors
+      knowledge_factor_present: true
+      possession_factor_present: true
+    expected:
+      valid: true
+
+  - id: ASSETS-PSD2-OPTION-A-MISSING-POSSESSION
+    description: "Option A missing possession factor is rejected"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §6.3.1"
+    input:
+      operation: validate_psd2_sca_factors
+      knowledge_factor_present: true
+      possession_factor_present: false
+    expected:
+      valid: false
+      error_contains: "possession"
+
+  - id: ASSETS-PSD2-OPTION-B-MISSING-JKT
+    description: "Option B cnf claim without jkt is rejected"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §6.3.2"
+    input:
+      operation: validate_psd2_sca_factors
+      knowledge_factor_present: true
+      possession_factor_present: true
+      cnf_claim: {}
+    expected:
+      valid: false
+      error_contains: "jkt"
+
+  # ---- §6.1.2 MiFID retention floor -----------------------------------
+
+  - id: ASSETS-MIFID-RETENTION-FLOOR-VIOLATED
+    description: "effective retention below 1825 days is rejected"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §6.1.2"
+    input:
+      operation: enforce_mifid_retention
+      envelope:
+        compliance:
+          retention_days: 365
+    expected:
+      valid: false
+      error_contains: "MiFID"
+
+  - id: ASSETS-MIFID-RETENTION-FLOOR-OK
+    description: "effective retention ≥ 1825 days passes the MiFID floor"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §6.1.2"
+    input:
+      operation: enforce_mifid_retention
+      envelope:
+        compliance:
+          profile: "MIFID-II"
+          retention_days: 1825
+    expected:
+      valid: true
+
+  # ---- §4.3 Escrow audit builders (G-1) -------------------------------
+
+  - id: ASSETS-ESCROW-AUDIT-CREATED
+    description: "build_escrow_created_audit returns the §4.3.1 11-field shape"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.3.1"
+    rtm_ids:
+      - "ASSETS-§5.1.4-01"
+    input:
+      operation: build_escrow_audit
+      sub_type: "escrow_created"
+      fields:
+        audit_id: "11111111-1111-4111-8111-111111111111"
+        timestamp: "2026-04-13T10:00:00.000Z"
+        payment_reference: "pay-escrow-01"
+        amount: 100.00
+        currency_or_unit: "EUR"
+        from_agent: "agent:acme.alpha"
+        to_agent: "agent:acme.beta"
+        release_agent: "agent:acme.release"
+        timeout_at: "2026-04-14T10:00:00.000Z"
+    expected:
+      event_type: "asset_transfer"
+      sub_type: "escrow_created"
+      required_keys:
+        - "event_type"
+        - "sub_type"
+        - "payment_reference"
+        - "amount"
+        - "currency_or_unit"
+        - "from_agent"
+        - "to_agent"
+        - "release_agent"
+        - "timeout_at"
+        - "audit_id"
+        - "timestamp"
+
+  - id: ASSETS-ESCROW-AUDIT-RELEASED
+    description: "build_escrow_released_audit returns the §4.3.2 shape with original_audit_id linkage"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.3.2"
+    rtm_ids:
+      - "ASSETS-§5.1.5-01"
+    input:
+      operation: build_escrow_audit
+      sub_type: "escrow_released"
+      fields:
+        audit_id: "22222222-2222-4222-8222-222222222222"
+        timestamp: "2026-04-13T10:05:00.000Z"
+        payment_reference: "pay-escrow-01"
+        released_by: "agent:acme.release"
+        release_trigger: "com.example.delivery/confirmed"
+        original_audit_id: "11111111-1111-4111-8111-111111111111"
+    expected:
+      event_type: "asset_transfer"
+      sub_type: "escrow_released"
+      required_keys:
+        - "event_type"
+        - "sub_type"
+        - "payment_reference"
+        - "released_by"
+        - "release_trigger"
+        - "original_audit_id"
+        - "audit_id"
+        - "timestamp"
+      values:
+        original_audit_id: "11111111-1111-4111-8111-111111111111"
+        release_trigger: "com.example.delivery/confirmed"
+
+  - id: ASSETS-ESCROW-AUDIT-RETURNED
+    description: "build_escrow_returned_audit returns the §4.3.3 shape including actual_timeout"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.3.3"
+    input:
+      operation: build_escrow_audit
+      sub_type: "escrow_returned"
+      fields:
+        audit_id: "33333333-3333-4333-8333-333333333333"
+        timestamp: "2026-04-14T10:00:05.000Z"
+        payment_reference: "pay-escrow-01"
+        timeout_at: "2026-04-14T10:00:00.000Z"
+        actual_timeout: "2026-04-14T10:00:05.000Z"
+        original_audit_id: "11111111-1111-4111-8111-111111111111"
+    expected:
+      event_type: "asset_transfer"
+      sub_type: "escrow_returned"
+      required_keys:
+        - "event_type"
+        - "sub_type"
+        - "payment_reference"
+        - "timeout_at"
+        - "actual_timeout"
+        - "original_audit_id"
+        - "audit_id"
+        - "timestamp"
+
+  - id: ASSETS-ESCROW-AUDIT-DISPUTED
+    description: "build_escrow_disputed_audit returns the §4.3.4 shape with arbitration_agent"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.3.4"
+    input:
+      operation: build_escrow_audit
+      sub_type: "escrow_disputed"
+      fields:
+        audit_id: "44444444-4444-4444-8444-444444444444"
+        timestamp: "2026-04-13T11:00:00.000Z"
+        payment_reference: "pay-escrow-01"
+        disputed_by: "agent:acme.alpha"
+        dispute_reason: "Goods not delivered as specified"
+        arbitration_agent: "agent:acme.arbitrator"
+        original_audit_id: "11111111-1111-4111-8111-111111111111"
+    expected:
+      event_type: "asset_transfer"
+      sub_type: "escrow_disputed"
+      required_keys:
+        - "event_type"
+        - "sub_type"
+        - "payment_reference"
+        - "disputed_by"
+        - "dispute_reason"
+        - "arbitration_agent"
+        - "original_audit_id"
+        - "audit_id"
+        - "timestamp"
+
+  # ---- §4.2.3 / §5.1.6 Escrow dispute + cancel (G-3) ------------------
+
+  - id: ASSETS-ESCROW-DISPUTE-VALID
+    description: "dispute args with payment_reference + dispute_reason + disputed_by passes"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.2.3"
+    rtm_ids:
+      - "ASSETS-§4.2.3-02"
+    input:
+      operation: validate_escrow_dispute
+      args:
+        payment_reference: "pay-escrow-01"
+        dispute_reason: "Goods not delivered"
+        disputed_by: "agent:acme.alpha"
+    expected:
+      valid: true
+
+  - id: ASSETS-ESCROW-DISPUTE-MISSING
+    description: "dispute args missing dispute_reason is rejected"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.2.3"
+    input:
+      operation: validate_escrow_dispute
+      args:
+        payment_reference: "pay-escrow-01"
+        disputed_by: "agent:acme.alpha"
+    expected:
+      valid: false
+      error_contains: "dispute_reason"
+
+  - id: ASSETS-ESCROW-CANCEL-VALID
+    description: "cancel args with payment_reference + cancellation_reason passes"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §5.1.6"
+    rtm_ids:
+      - "ASSETS-§5.1.6-01"
+    input:
+      operation: validate_escrow_cancel
+      args:
+        payment_reference: "pay-escrow-01"
+        cancellation_reason: "Counterparty agreement to unwind"
+    expected:
+      valid: true
+
+  # ---- §4.2.3 / §4.2.4 Dispute party + cancel sender verification -----
+
+  - id: ASSETS-ESCROW-DISPUTE-PARTY-01
+    description: "dispute from agent not party to escrow is rejected with forbidden"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.2.3"
+    rtm_ids:
+      - "ASSETS-§4.2.3-04"
+    input:
+      operation: validate_escrow_dispute
+      args:
+        payment_reference: "pay-escrow-01"
+        dispute_reason: "Goods not delivered"
+        disputed_by: "agent:outsider.evil"
+      sender_agent_id: "agent:outsider.evil"
+      escrow_parties:
+        - "agent:acme.alpha"
+        - "agent:acme.beta"
+    expected:
+      valid: false
+      error_code: "forbidden"
+
+  - id: ASSETS-ESCROW-DISPUTE-PARTY-02
+    description: "dispute from from_agent (payer) is accepted"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.2.3"
+    rtm_ids:
+      - "ASSETS-§4.2.3-03"
+    input:
+      operation: validate_escrow_dispute
+      args:
+        payment_reference: "pay-escrow-01"
+        dispute_reason: "Goods not delivered"
+        disputed_by: "agent:acme.alpha"
+      sender_agent_id: "agent:acme.alpha"
+      escrow_parties:
+        - "agent:acme.alpha"
+        - "agent:acme.beta"
+    expected:
+      valid: true
+
+  - id: ASSETS-ESCROW-DISPUTE-PARTY-03
+    description: "dispute from to_agent (payee) is accepted"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.2.3"
+    rtm_ids:
+      - "ASSETS-§4.2.3-03"
+    input:
+      operation: validate_escrow_dispute
+      args:
+        payment_reference: "pay-escrow-01"
+        dispute_reason: "Overcharged"
+        disputed_by: "agent:acme.beta"
+      sender_agent_id: "agent:acme.beta"
+      escrow_parties:
+        - "agent:acme.alpha"
+        - "agent:acme.beta"
+    expected:
+      valid: true
+
+  - id: ASSETS-ESCROW-CANCEL-SENDER-01
+    description: "cancel from from_agent (escrow creator) is accepted"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.2.4"
+    rtm_ids:
+      - "ASSETS-§4.2.4-01"
+    input:
+      operation: validate_escrow_cancel
+      args:
+        payment_reference: "pay-escrow-01"
+        cancellation_reason: "Changed my mind"
+      sender_agent_id: "agent:acme.alpha"
+      from_agent: "agent:acme.alpha"
+    expected:
+      valid: true
+
+  - id: ASSETS-ESCROW-CANCEL-SENDER-02
+    description: "cancel from agent other than from_agent is rejected with forbidden"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §4.2.4"
+    rtm_ids:
+      - "ASSETS-§4.2.4-02"
+    input:
+      operation: validate_escrow_cancel
+      args:
+        payment_reference: "pay-escrow-01"
+        cancellation_reason: "I want to cancel"
+      sender_agent_id: "agent:other.agent"
+      from_agent: "agent:acme.alpha"
+    expected:
+      valid: false
+      error_code: "forbidden"
+
+  # ---- §3.3.2 Reversal audit linkage (G-2) ----------------------------
+
+  - id: ASSETS-REVERSAL-AUDIT-LINKAGE
+    description: "build_reversal_audit_fields preserves original_audit_id + original_payment_reference"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §3.3.2"
+    rtm_ids:
+      - "ASSETS-§3.3.2-08"
+      - "ASSETS-§3.3.2-09"
+      - "ASSETS-§5.1.3-01"
+      - "ASSETS-§5.1.3-03"
+    input:
+      operation: build_reversal_audit
+      fields:
+        audit_id: "55555555-5555-4555-8555-555555555555"
+        created_at: "2026-04-13T12:00:00.000Z"
+        original_audit_id: "11111111-1111-4111-8111-111111111111"
+        original_payment_reference: "pay-001"
+        reversal_payment_reference: "pay-001-REV-1"
+        reversal_reason: "Duplicate charge"
+        requested_by: "agent:acme.alpha"
+    expected:
+      required_keys:
+        - "audit_id"
+        - "created_at"
+        - "original_audit_id"
+        - "original_payment_reference"
+        - "reversal_payment_reference"
+        - "reversal_amount"
+        - "is_full_reversal"
+        - "reversal_reason"
+        - "requested_by"
+      values:
+        original_audit_id: "11111111-1111-4111-8111-111111111111"
+        original_payment_reference: "pay-001"
+        reversal_payment_reference: "pay-001-REV-1"
+        is_full_reversal: true
+
+  # ---- §3.2.1 Cross-message receipt/request check (G-6) ---------------
+
+  - id: ASSETS-RECEIPT-MATCH
+    description: "receipt with matching payment_reference + currency passes cross-check"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §3.2.1"
+    input:
+      operation: validate_receipt_match
+      request_args:
+        amount: 100.00
+        currency_or_unit: "EUR"
+        asset_type: "currency"
+        from_agent: "agent:acme.alpha"
+        to_agent: "agent:acme.beta"
+        payment_reference: "pay-match-01"
+        description: "Cross-message conformance"
+        idempotency_key: "idem-match-01"
+      receipt_result:
+        status: "completed"
+        payment_reference: "pay-match-01"
+        audit_id: "66666666-6666-4666-8666-666666666666"
+        amount: 100.00
+        currency_or_unit: "EUR"
+        initiated_at: "2026-04-13T10:00:00.000Z"
+        settled_at: "2026-04-13T10:00:05.000Z"
+    expected:
+      valid: true
+
+  - id: ASSETS-RECEIPT-MISMATCH
+    description: "receipt with a different payment_reference is rejected"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §3.2.1"
+    input:
+      operation: validate_receipt_match
+      request_args:
+        amount: 100.00
+        currency_or_unit: "EUR"
+        asset_type: "currency"
+        from_agent: "agent:acme.alpha"
+        to_agent: "agent:acme.beta"
+        payment_reference: "pay-match-01"
+        description: "Cross-message conformance"
+        idempotency_key: "idem-match-01"
+      receipt_result:
+        status: "completed"
+        payment_reference: "pay-match-02"
+        audit_id: "77777777-7777-4777-8777-777777777777"
+        amount: 100.00
+        currency_or_unit: "EUR"
+        initiated_at: "2026-04-13T10:00:00.000Z"
+        settled_at: "2026-04-13T10:00:05.000Z"
+    expected:
+      valid: false
+      error_contains: "payment_reference"
+
+  # ---- §5.1 Capability risk levels (G-5) ------------------------------
+
+  - id: ASSETS-CAPABILITY-RISK-LEVELS
+    description: "ASSETS_CAPABILITY_RISK_LEVELS matches §5.1 exactly (7 entries)"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §5.1"
+    input:
+      operation: capability_risk_levels
+    expected:
+      levels:
+        arsiaprotocol.assets.transfer.initiate: 5
+        arsiaprotocol.assets.transfer.approve: 7
+        arsiaprotocol.assets.transfer.reverse: 6
+        arsiaprotocol.assets.escrow.create: 5
+        arsiaprotocol.assets.escrow.release: 7
+        arsiaprotocol.assets.escrow.cancel: 6
+        arsiaprotocol.assets.audit.read: 3
+
+  # ---- §6.3.3 PSD2 SCA exemptions (G-11) ------------------------------
+
+  - id: ASSETS-SCA-EXEMPT-LOW-VALUE
+    description: "EUR amount ≤ 30 triggers the low-value exemption"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §6.3.3"
+    rtm_ids:
+      - "ASSETS-§6.3.3-02"
+    input:
+      operation: is_sca_exempt
+      amount: 25.00
+      currency: "EUR"
+    expected:
+      exempt: true
+      reason: "low_value"
+
+  - id: ASSETS-SCA-EXEMPT-RECURRING
+    description: "recurring=true triggers the recurring-transactions exemption"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §6.3.3"
+    input:
+      operation: is_sca_exempt
+      amount: 500.00
+      currency: "EUR"
+      recurring: true
+    expected:
+      exempt: true
+      reason: "recurring"
+
+  # ---- §5.1.2 Token scope separation of duties (G-12) ----------------
+
+  - id: ASSETS-TOKEN-SCOPE-CONFLICT
+    description: "token scope containing both initiate + approve is rejected"
+    category: assets
+    level: compliance
+    spec_ref: "ARSIA-Assets §5.1.2"
+    input:
+      operation: validate_token_scope
+      scope:
+        - "arsiaprotocol.assets.transfer.initiate"
+        - "arsiaprotocol.assets.transfer.approve"
+    expected:
+      valid: false
+      error_contains: "separation of duties"
+
+  # ---- §3.1.1 Metadata included in audit payload_hash (P3.2) ----------
+  # NOTE: RTM ASSETS-§3.1.1-40 says metadata is included in payload_hash
+  # "when audit_required is true", implying conditional exclusion when false.
+  # However, compute_payload_hash always hashes the full payload including
+  # metadata — the audit_required conditional is the caller's responsibility
+  # (e.g., the gateway decides whether to include metadata before hashing).
+  # A counterpart ASSETS-META-HASH-NO-AUDIT case is therefore not applicable
+  # at the SDK level; the SDK hashes whatever payload it receives.
+
+  - id: ASSETS-META-HASH-01
+    description: "payload_hash SHA-256 includes metadata when audit_required is true"
+    category: state
+    level: compliance
+    spec_ref: "ARSIA-Assets §3.1.1"
+    rtm_ids:
+      - "ASSETS-§3.1.1-40"
+    input:
+      operation: compute_payload_hash
+      payload:
+        type: "arsiaprotocol.assets/transfer-request"
+        args:
+          amount: "100.00"
+          currency_or_unit: "EUR"
+          from_agent: "agent:acme.alpha"
+          to_agent: "agent:acme.beta"
+          asset_type: "currency"
+          metadata:
+            invoice_id: "INV-001"
+            department: "finance"
+    expected:
+      sha256_hex: "838aa32b394e679f08d9ac233d5a7bca352f6230e0e955209867c07d0ccdd529"
+
+  # ---- §5.1.2 transfer.approve audit requirement (P3.2) ---------------
+
+  - id: ASSETS-APPROVE-AUDIT-01
+    description: "action descriptor for transfer.approve with audit_required=false is rejected"
+    category: actions
+    level: compliance
+    spec_ref: "ARSIA-Assets §5.1.2"
+    rtm_ids:
+      - "ASSETS-§5.1.2-01"
+    input:
+      operation: validate_action_descriptor
+      descriptor:
+        action_id: "arsiaprotocol.assets.transfer.approve"
+        category: "financial"
+        description: "Approve asset transfer"
+        risk_level: 7
+        reversible: false
+        idempotent: false
+        required_capabilities: ["arsiaprotocol.assets.transfer.approve"]
+        human_oversight_required: false
+        audit_required: false
+        explainability_required: true
+    expected:
+      valid: false
+      error_contains: "audit_required"

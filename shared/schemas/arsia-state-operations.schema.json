@@ -1,0 +1,940 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/state-operations/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA State Operations",
+  "description": "Validates payload.args and payload.result for the 8 state operations defined in ARSIA-State.md \u00a73. Base operations: GET, SET, DELETE, REVOKE (\u00a73.1, \u00a73.3.2). Complex operations: QUERY (\u00a73.1.4), SNAPSHOT (\u00a73.2.1), PURGE (\u00a73.2.2), GRANT (\u00a73.3.1). Discriminated by the payload.type field. Only enforces MUST-level structural constraints. Runtime constraints (namespace matching, legal_basis for personal PII, optimistic concurrency, value size limit, limit clamping to 1000, access control, elevated capabilities, key_pattern ownership, purge procedure, audit events) MUST be enforced programmatically.",
+  "type": "object",
+  "$defs": {
+    "state-key": {
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^[a-zA-Z0-9:._/\\-]+$",
+      "description": "Namespaced state key in format {agent-id}/{scope}/{local-key} per ARSIA-State.md \u00a72.1.1."
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "session",
+        "agent",
+        "shared",
+        "global"
+      ],
+      "description": "State entry scope per ARSIA-State.md \u00a71."
+    },
+    "set-scope": {
+      "type": "string",
+      "enum": [
+        "session",
+        "agent",
+        "shared"
+      ],
+      "description": "Scope for SET operations. MUST NOT be 'global' \u2014 agents cannot create global-scoped entries through SET. Per ARSIA-State.md \u00a73.1.2."
+    },
+    "pii-classification": {
+      "type": "string",
+      "enum": [
+        "none",
+        "pseudonymised",
+        "personal",
+        "sensitive"
+      ],
+      "description": "GDPR data classification per ARSIA-State.md \u00a72.1.10."
+    },
+    "query-filter": {
+      "type": "object",
+      "description": "Filter criteria shared between QUERY (\u00a73.1.4) and SNAPSHOT (\u00a73.2.1). All fields combined with AND logic. Per ARSIA-State.md \u00a73.1.4.",
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/scope"
+            }
+          ],
+          "description": "Filter by scope."
+        },
+        "owner_agent_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "Filter by owning agent."
+        },
+        "key_prefix": {
+          "type": "string",
+          "description": "Filter by key prefix (prefix match)."
+        },
+        "pii_classification": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/pii-classification"
+            }
+          ],
+          "description": "Filter by PII classification."
+        },
+        "created_after": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            }
+          ],
+          "description": "RFC 3339 \u2014 entries created after this time."
+        },
+        "created_before": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            }
+          ],
+          "description": "RFC 3339 \u2014 entries created before this time."
+        }
+      }
+    },
+    "get-args": {
+      "type": "object",
+      "description": "Arguments for the GET operation per ARSIA-State.md \u00a73.1.1.",
+      "required": [
+        "key"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/state-key"
+            }
+          ],
+          "description": "Full namespaced key of the entry to retrieve."
+        }
+      }
+    },
+    "get-result": {
+      "description": "Result for the GET operation: complete StateEntry object if found, null if the key does not exist, has been logically deleted, or has expired. Per ARSIA-State.md \u00a73.1.1.",
+      "oneOf": [
+        {
+          "$ref": "https://arsiaprotocol.org/schemas/state-entry/v1.0.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "set-args": {
+      "type": "object",
+      "description": "Arguments for the SET operation per ARSIA-State.md \u00a73.1.2. When pii_classification is 'personal', the compliance envelope of the request message MUST contain legal_basis (enforced programmatically). The serialized value MUST NOT exceed 1,048,576 bytes (enforced programmatically).",
+      "required": [
+        "key",
+        "value",
+        "scope",
+        "pii_classification"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/state-key"
+            },
+            {
+              "not": {
+                "pattern": "/(session|agent|shared)/arsiaprotocol\\."
+              }
+            }
+          ],
+          "description": "Full namespaced key. Agent-id prefix MUST match the request's 'from' field. Scope segment MUST match the scope field. Local-key MUST NOT start with the reserved 'arsiaprotocol.' prefix. Per ARSIA-State.md \u00a73.1.2, \u00a72.2."
+        },
+        "value": {
+          "type": [
+            "object",
+            "array",
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ],
+          "description": "The data to store. Any valid JSON value (object, array, string, number, boolean, or null). Maximum serialized size 1,048,576 bytes (enforced programmatically). Per ARSIA-State.md \u00a72.1.2, \u00a72.3."
+        },
+        "scope": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/set-scope"
+            }
+          ],
+          "description": "Entry scope. MUST NOT be 'global'. MUST match the scope segment of the key. Per ARSIA-State.md \u00a73.1.2."
+        },
+        "pii_classification": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/pii-classification"
+            }
+          ],
+          "description": "GDPR classification of the data. When 'personal' or 'sensitive', legal_basis MUST be present in the compliance envelope (enforced programmatically). When 'sensitive', pii_special_categories MUST be present. Per ARSIA-State.md \u00a73.1.2 rule 3."
+        },
+        "pii_special_categories": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "health",
+              "biometric",
+              "genetic",
+              "racial_ethnic",
+              "political",
+              "religious",
+              "trade_union",
+              "sexual_orientation"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "GDPR Art. 9(1) special category types. REQUIRED when pii_classification is 'sensitive'. MUST NOT be present otherwise. Per ARSIA-State.md \u00a72.1.11."
+        },
+        "expires_at": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            }
+          ],
+          "description": "Optional RFC 3339 expiry timestamp. Per ARSIA-State.md \u00a72.1.7."
+        },
+        "retention_days": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Optional retention period override in days. Per ARSIA-State.md \u00a72.1.8."
+        },
+        "data_residency": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/iso-3166-1-alpha-2"
+            },
+            {
+              "description": "ISO 3166-1 alpha-2 zone where the entry MUST be stored. Per ARSIA-State.md \u00a72.1.9."
+            }
+          ]
+        },
+        "expected_version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "For optimistic concurrency control. If set and does not match the current version, SET MUST be rejected with error code 'conflict'. Per ARSIA-State.md \u00a73.1.2 rule 4."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "session"
+              }
+            },
+            "required": [
+              "scope"
+            ]
+          },
+          "then": {
+            "properties": {
+              "key": {
+                "pattern": "/session/"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "agent"
+              }
+            },
+            "required": [
+              "scope"
+            ]
+          },
+          "then": {
+            "properties": {
+              "key": {
+                "pattern": "/agent/"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "shared"
+              }
+            },
+            "required": [
+              "scope"
+            ]
+          },
+          "then": {
+            "properties": {
+              "key": {
+                "pattern": "/shared/"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "pii_classification": {
+                "enum": [
+                  "personal",
+                  "sensitive"
+                ]
+              }
+            },
+            "required": [
+              "pii_classification"
+            ]
+          },
+          "then": {
+            "required": [
+              "data_residency"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "pii_classification": {
+                "const": "sensitive"
+              }
+            },
+            "required": [
+              "pii_classification"
+            ]
+          },
+          "then": {
+            "required": [
+              "pii_special_categories"
+            ]
+          }
+        }
+      ]
+    },
+    "set-result": {
+      "description": "Result for the SET operation: complete StateEntry object with updated version, updated_at, and implementation-set fields. Per ARSIA-State.md \u00a73.1.2.",
+      "$ref": "https://arsiaprotocol.org/schemas/state-entry/v1.0.json"
+    },
+    "delete-args": {
+      "type": "object",
+      "description": "Arguments for the DELETE (logical delete) operation per ARSIA-State.md \u00a73.1.3.",
+      "required": [
+        "key"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/state-key"
+            }
+          ],
+          "description": "Full namespaced key of the entry to logically delete."
+        }
+      }
+    },
+    "delete-result": {
+      "type": "object",
+      "description": "Result for the DELETE operation per ARSIA-State.md \u00a73.1.3.",
+      "required": [
+        "deleted",
+        "key"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "deleted": {
+          "type": "boolean",
+          "const": true,
+          "description": "Always true on successful logical deletion."
+        },
+        "key": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/state-key"
+            }
+          ],
+          "description": "The key of the deleted entry."
+        }
+      }
+    },
+    "query-args": {
+      "type": "object",
+      "description": "Arguments for the QUERY operation per ARSIA-State.md \u00a73.1.4. All fields are OPTIONAL \u2014 when no filters are provided, returns all entries accessible to the requesting agent. Limit values exceeding 1000 MUST be clamped to 1000 (not rejected) \u2014 enforced at runtime. Access control (agent can only see authorised entries) enforced at runtime.",
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/scope"
+            }
+          ],
+          "description": "Filter by scope."
+        },
+        "owner_agent_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "Filter by owning agent."
+        },
+        "key_prefix": {
+          "type": "string",
+          "description": "Filter by key prefix (prefix match). Expected to be the most frequently used filter. Per ARSIA-State.md \u00a73.1.4."
+        },
+        "pii_classification": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/pii-classification"
+            }
+          ],
+          "description": "Filter by PII classification."
+        },
+        "created_after": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            }
+          ],
+          "description": "RFC 3339 \u2014 entries created after this time."
+        },
+        "created_before": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            }
+          ],
+          "description": "RFC 3339 \u2014 entries created before this time."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum entries to return. Default: 100. Values exceeding 1000 are clamped (not rejected) at runtime. Per ARSIA-State.md \u00a73.1.4."
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of entries to skip. Default: 0. Per ARSIA-State.md \u00a73.1.4."
+        }
+      }
+    },
+    "query-result": {
+      "type": "object",
+      "description": "Result for the QUERY operation. Results MUST be ordered by created_at ascending (enforced at runtime). Per ARSIA-State.md \u00a73.1.4.",
+      "required": [
+        "entries",
+        "total",
+        "limit",
+        "offset"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "https://arsiaprotocol.org/schemas/state-entry/v1.0.json"
+          },
+          "description": "Array of StateEntry objects matching the filters."
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of matching entries (before pagination)."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The limit used for this query."
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The offset used for this query."
+        }
+      }
+    },
+    "snapshot-args": {
+      "type": "object",
+      "description": "Arguments for the SNAPSHOT operation per ARSIA-State.md \u00a73.2.1. Requires elevated capability arsiaprotocol.state.snapshot (enforced at runtime). MUST NOT be included in wildcard grants. The as_of timestamp MUST NOT be in the future (\u00b1300s clock skew tolerance) and MUST NOT predate the oldest retained version \u2014 enforced at runtime.",
+      "required": [
+        "as_of"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            }
+          ],
+          "description": "RFC 3339 timestamp \u2014 the point in time to snapshot. MUST NOT be in the future. Per ARSIA-State.md \u00a73.2.1."
+        },
+        "filter": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/query-filter"
+            }
+          ],
+          "description": "Same filter fields as QUERY (\u00a73.1.4). OPTIONAL."
+        }
+      }
+    },
+    "snapshot-result": {
+      "type": "object",
+      "description": "Result for the SNAPSHOT operation. Returns entries as they existed at the as_of timestamp. Per ARSIA-State.md \u00a73.2.1. Snapshot responses MUST include the timestamp of the snapshot and a cryptographic hash of the state data for integrity verification per ARSIA-Actions.md \u00a71.4 (arsiaprotocol.state.snapshot).",
+      "required": [
+        "as_of",
+        "entries",
+        "timestamp",
+        "hash"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            }
+          ],
+          "description": "The as_of timestamp from the request (echoed back)."
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "https://arsiaprotocol.org/schemas/state-entry/v1.0.json"
+          },
+          "description": "Array of StateEntry objects as they existed at as_of."
+        },
+        "timestamp": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            }
+          ],
+          "description": "Timestamp of when the snapshot was generated. Per ARSIA-Actions.md \u00a71.4."
+        },
+        "hash": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Cryptographic hash of the state data for integrity verification. Per ARSIA-Actions.md \u00a71.4."
+        }
+      }
+    },
+    "purge-args": {
+      "type": "object",
+      "description": "Arguments for the PURGE operation per ARSIA-State.md \u00a73.2.2. Requires elevated capability arsiaprotocol.state.purge and ownership of the entry (enforced at runtime). PURGE permanently deletes the entry and all historical versions. A PURGE audit event MUST be generated regardless of audit_required (enforced at runtime). The capability MUST NOT be included in wildcard grants.",
+      "required": [
+        "key"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/state-key"
+            }
+          ],
+          "description": "Full namespaced key of the entry to permanently purge."
+        }
+      }
+    },
+    "purge-result": {
+      "type": "object",
+      "description": "Result for the PURGE operation. Idempotent \u2014 purging an already-purged key returns success with the original purged_at timestamp. Per ARSIA-State.md \u00a73.2.2.",
+      "required": [
+        "purged",
+        "key",
+        "purged_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "purged": {
+          "type": "boolean",
+          "const": true,
+          "description": "Always true on successful purge."
+        },
+        "key": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/state-key"
+            }
+          ],
+          "description": "The key of the purged entry."
+        },
+        "purged_at": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            }
+          ],
+          "description": "RFC 3339 timestamp of the purge operation."
+        }
+      }
+    },
+    "grant-args": {
+      "type": "object",
+      "description": "Arguments for the GRANT operation per ARSIA-State.md \u00a73.3.1. Creates an access grant allowing another agent to read or read-write specific state entries. The key_pattern MUST start with the granting agent's agent-id prefix (enforced at runtime). Requires arsiaprotocol.state.write capability.",
+      "required": [
+        "key_pattern",
+        "grantee_agent_id",
+        "access_level"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "key_pattern": {
+          "type": "string",
+          "maxLength": 513,
+          "pattern": "^agent:[a-zA-Z0-9][a-zA-Z0-9:._/\\-]*\\*?$",
+          "description": "Key or key prefix to share. Without trailing '*': exact match. With trailing '*': prefix match. MUST start with the granting agent's agent-id prefix. Per ARSIA-State.md \u00a73.3.1."
+        },
+        "grantee_agent_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "Agent identifier of the grant recipient."
+        },
+        "access_level": {
+          "type": "string",
+          "enum": [
+            "read",
+            "read_write"
+          ],
+          "description": "Access level: 'read' permits GET/QUERY, 'read_write' also permits SET. Per ARSIA-State.md \u00a73.3.1."
+        },
+        "valid_until": {
+          "oneOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "RFC 3339 expiry timestamp for the grant. null means no expiry (revoke manually). Per ARSIA-State.md \u00a73.3.1."
+        }
+      }
+    },
+    "grant-result": {
+      "type": "object",
+      "description": "Result for the GRANT operation. Returns the created grant with a UUID v4 identifier. Per ARSIA-State.md \u00a73.3.1.",
+      "required": [
+        "grant_id",
+        "key_pattern",
+        "grantee_agent_id",
+        "access_level",
+        "valid_until",
+        "created_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "grant_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/uuid"
+            },
+            {
+              "description": "UUID v4 identifier for this grant."
+            }
+          ]
+        },
+        "key_pattern": {
+          "type": "string",
+          "description": "The key pattern (echoed from request)."
+        },
+        "grantee_agent_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/agent-id"
+            }
+          ],
+          "description": "The grantee agent (echoed from request)."
+        },
+        "access_level": {
+          "type": "string",
+          "enum": [
+            "read",
+            "read_write"
+          ],
+          "description": "The access level (echoed from request)."
+        },
+        "valid_until": {
+          "oneOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The grant expiry (echoed from request, or null)."
+        },
+        "created_at": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+            }
+          ],
+          "description": "RFC 3339 timestamp of grant creation."
+        }
+      }
+    },
+    "revoke-args": {
+      "type": "object",
+      "description": "Arguments for the REVOKE operation per ARSIA-State.md \u00a73.3.2.",
+      "required": [
+        "grant_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "grant_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/uuid"
+            },
+            {
+              "description": "UUID of the grant to revoke."
+            }
+          ]
+        }
+      }
+    },
+    "revoke-result": {
+      "type": "object",
+      "description": "Result for the REVOKE operation. Idempotent \u2014 revoking a non-existent or already-revoked grant returns success. Per ARSIA-State.md \u00a73.3.2.",
+      "required": [
+        "revoked",
+        "grant_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "revoked": {
+          "type": "boolean",
+          "const": true,
+          "description": "Always true on successful revocation."
+        },
+        "grant_id": {
+          "allOf": [
+            {
+              "$ref": "arsia-common.schema.json#/$defs/uuid"
+            },
+            {
+              "description": "UUID of the revoked grant."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "type"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "arsiaprotocol.state/get",
+        "arsiaprotocol.state/set",
+        "arsiaprotocol.state/delete",
+        "arsiaprotocol.state/query",
+        "arsiaprotocol.state/snapshot",
+        "arsiaprotocol.state/purge",
+        "arsiaprotocol.state/grant",
+        "arsiaprotocol.state/revoke"
+      ],
+      "description": "The payload.type field identifying the state operation. Per ARSIA-State.md \u00a73."
+    },
+    "args": {
+      "description": "Operation arguments (present in request messages)."
+    },
+    "result": {
+      "description": "Operation result (present in response messages)."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "arsiaprotocol.state/get"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "args": {
+            "$ref": "#/$defs/get-args"
+          },
+          "result": {
+            "$ref": "#/$defs/get-result"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "arsiaprotocol.state/set"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "args": {
+            "$ref": "#/$defs/set-args"
+          },
+          "result": {
+            "$ref": "#/$defs/set-result"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "arsiaprotocol.state/delete"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "args": {
+            "$ref": "#/$defs/delete-args"
+          },
+          "result": {
+            "$ref": "#/$defs/delete-result"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "arsiaprotocol.state/query"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "args": {
+            "$ref": "#/$defs/query-args"
+          },
+          "result": {
+            "$ref": "#/$defs/query-result"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "arsiaprotocol.state/snapshot"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "args": {
+            "$ref": "#/$defs/snapshot-args"
+          },
+          "result": {
+            "$ref": "#/$defs/snapshot-result"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "arsiaprotocol.state/purge"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "args": {
+            "$ref": "#/$defs/purge-args"
+          },
+          "result": {
+            "$ref": "#/$defs/purge-result"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "arsiaprotocol.state/grant"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "args": {
+            "$ref": "#/$defs/grant-args"
+          },
+          "result": {
+            "$ref": "#/$defs/grant-result"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "arsiaprotocol.state/revoke"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "args": {
+            "$ref": "#/$defs/revoke-args"
+          },
+          "result": {
+            "$ref": "#/$defs/revoke-result"
+          }
+        }
+      }
+    }
+  ]
+}

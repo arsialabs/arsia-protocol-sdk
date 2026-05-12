@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arsiaprotocol.org/schemas/explanation/v1.0.json",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "title": "ARSIA Explanation",
+  "description": "Structured account of the agent's reasoning, included in response messages as payload.explanation when the action's explainability_required flag is true. Implements EU AI Act Article 13 transparency obligations. Defined in ARSIA-Actions.md \u00a75.2. Note: when alternatives_considered is present (RECOMMENDED for risk_level \u2265 7), each element supports Article 14(4)(c) by showing what the agent decided and what it considered and rejected.",
+  "type": "object",
+  "required": [
+    "reasoning",
+    "confidence",
+    "inputs_used"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "reasoning": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "description": "Human-readable explanation of why this action was taken or this result was produced, written in plain language a non-technical person can understand. SHOULD describe inputs considered, logic applied, and conclusion reached. MUST NOT contain raw model outputs, token probabilities, or other machine-readable representations not meaningful to a human reader. Per ARSIA-Actions.md \u00a75.2 'reasoning'."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "The agent's confidence in the decision or recommendation, expressed as a decimal between 0.0 (no confidence) and 1.0 (absolute confidence). MUST reflect the agent's actual assessment \u2014 MUST NOT be hardcoded. When the internal model does not produce a confidence score, a calibrated estimate SHOULD be used. Per ARSIA-Actions.md \u00a75.2 'confidence'."
+    },
+    "inputs_used": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "List of identifiers for the inputs that influenced the decision. Each string SHOULD be traceable to a specific data source, state entry, or external input (e.g. 'state:client-profile/risk-tolerance', 'message:a1b2c3d4-...', 'external:bloomberg/AAPL/price'). Per ARSIA-Actions.md \u00a75.2 'inputs_used'."
+    },
+    "alternatives_considered": {
+      "type": "array",
+      "description": "Alternative options the agent evaluated and chose not to pursue. OPTIONAL but RECOMMENDED for risk_level \u2265 7. Supports EU AI Act Article 14(4)(c) interpretability by showing not just what the agent decided, but what it considered and rejected. Per ARSIA-Actions.md \u00a75.2 'alternatives_considered'.",
+      "items": {
+        "type": "object",
+        "required": [
+          "option",
+          "reason_rejected",
+          "confidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "option": {
+            "type": "string",
+            "description": "Description of the alternative option. Per ARSIA-Actions.md \u00a75.2 'alternatives_considered.option'."
+          },
+          "reason_rejected": {
+            "type": "string",
+            "description": "Why this alternative was not chosen. Per ARSIA-Actions.md \u00a75.2 'alternatives_considered.reason_rejected'."
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "The agent's confidence in this alternative (0.0 to 1.0), enabling comparison with the chosen option. Per ARSIA-Actions.md \u00a75.2 'alternatives_considered.confidence'."
+          }
+        }
+      }
+    },
+    "model_version": {
+      "type": "string",
+      "description": "Version identifier of the machine learning model used to make this decision, if any. Aids reproducibility and audit. Format is implementation-defined but SHOULD include a model name and a version or commit hash (e.g. 'gpt-4o-2025-08-06', 'risk-model-v2.3.1-abc123'). Per ARSIA-Actions.md \u00a75.2 'model_version'."
+    },
+    "decision_timestamp": {
+      "allOf": [
+        {
+          "$ref": "arsia-common.schema.json#/$defs/rfc3339-ms-utc"
+        },
+        {
+          "description": "RFC 3339 timestamp with millisecond precision and UTC designator. When the agent made the decision, which may differ from the message's 'ts' field if there was a delay between decision and response construction. When present, MUST be earlier than or equal to the message's 'ts' value (enforced programmatically). Per ARSIA-Actions.md \u00a75.2 'decision_timestamp'."
+        }
+      ]
+    }
+  }
+}

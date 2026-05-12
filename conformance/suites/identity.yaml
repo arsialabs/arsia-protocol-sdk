@@ -1,0 +1,262 @@
+# SPDX-License-Identifier: BUSL-1.1
+# Agent identifier parsing and validation — ARSIA-Core §3.
+# Hand-authored — language-agnostic. Inputs are raw strings; no SDK helpers.
+name: identity
+description: 'Agent identifier grammar and validation rules (ARSIA-Core §3)'
+level: core
+cases:
+
+  # ---- Valid identifiers ---------------------------------------------------
+
+  - id: IDENT-VALID-SIMPLE
+    description: "Minimal agent:org.name is valid"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "agent:acme.echo-client"
+    expected:
+      valid: true
+      parsed:
+        org: acme
+        name: echo-client
+        sub: []
+        resource: null
+
+  - id: IDENT-VALID-MULTI-SUB
+    description: "Multi-segment sub (agent:org.app.v1.instance) is valid"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "agent:arsialabs.demo.risk-assessor"
+    expected:
+      valid: true
+      parsed:
+        org: arsialabs
+        name: demo
+        sub:
+          - risk-assessor
+        resource: null
+
+  - id: IDENT-VALID-RESOURCE
+    description: "Resource segment after '/' is valid"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "agent:acme.bot/key1"
+    expected:
+      valid: true
+      parsed:
+        org: acme
+        name: bot
+        sub: []
+        resource: key1
+
+  - id: IDENT-VALID-RESOURCE-UNDERSCORE
+    description: "Resource segment permits underscores"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3 Rule 6"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "agent:acme.bot/session_abc"
+    expected:
+      valid: true
+      parsed:
+        org: acme
+        name: bot
+        sub: []
+        resource: session_abc
+
+  - id: IDENT-VALID-DIGITS
+    description: "Digits are permitted within segments"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "agent:org1.app2.v3"
+    expected:
+      valid: true
+
+  # ---- Invalid identifiers -------------------------------------------------
+
+  - id: IDENT-INVALID-NO-PREFIX
+    description: "Missing 'agent:' prefix is rejected"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3 Rule 5"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "acme.echo-client"
+    expected:
+      valid: false
+      error_contains: "prefix"
+
+  - id: IDENT-INVALID-SINGLE-SEGMENT
+    description: "Single segment (no dot) is rejected"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "agent:acme"
+    expected:
+      valid: false
+      error_contains: "segment"
+
+  - id: IDENT-INVALID-LEADING-HYPHEN
+    description: "Segment with leading hyphen is rejected"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3 Rule 6"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "agent:-acme.bot"
+    expected:
+      valid: false
+      error_contains: "hyphen"
+
+  - id: IDENT-INVALID-TRAILING-HYPHEN
+    description: "Segment with trailing hyphen is rejected"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3 Rule 6"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "agent:acme-.bot"
+    expected:
+      valid: false
+      error_contains: "hyphen"
+
+  - id: IDENT-INVALID-UNICODE
+    description: "Non-ASCII characters are rejected"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3 Rule 6"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "agent:açme.bot"
+    expected:
+      valid: false
+
+  - id: IDENT-INVALID-UNDERSCORE-IN-SUB
+    description: "Underscore in sub-segment is rejected (only resource permits _)"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3 Rule 6"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "agent:acme.my_bot"
+    expected:
+      valid: false
+
+  - id: IDENT-INVALID-EMPTY-SEGMENT
+    description: "Empty segment between dots is rejected"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "agent:acme..bot"
+    expected:
+      valid: false
+
+  - id: IDENT-INVALID-EMPTY-RESOURCE
+    description: "Empty resource segment after '/' is rejected"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3 Rule 7"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "agent:acme.bot/"
+    expected:
+      valid: false
+
+  - id: IDENT-INVALID-EMPTY
+    description: "Empty string is rejected"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: ""
+    expected:
+      valid: false
+
+  - id: IDENT-INVALID-TOO-LONG
+    description: "Identifier over 256 characters is rejected"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3 Rule 1"
+    rtm_ids:
+      - "CORE-§3.3-10"
+    input:
+      agent_id: "agent:acme.bot-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    expected:
+      valid: false
+
+  # ---- Case sensitivity (§3.3 Rule 4) ----------------------------------------
+
+  - id: IDENT-CASE-SENSITIVE-LOWER
+    description: "Lowercase agent:acme.billing is valid and parses as org=acme"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3 Rule 4"
+    rtm_ids:
+      - "CORE-§3.3-06"
+    input:
+      agent_id: "agent:acme.billing"
+    expected:
+      valid: true
+      parsed:
+        org: acme
+        name: billing
+
+  - id: IDENT-CASE-SENSITIVE-UPPER
+    description: "Mixed-case agent:Acme.Billing is distinct from lowercase (case preserved)"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3 Rule 4"
+    rtm_ids:
+      - "CORE-§3.3-06"
+    input:
+      agent_id: "agent:Acme.Billing"
+    expected:
+      valid: true
+      parsed:
+        org: Acme
+        name: Billing
+
+  - id: IDENT-CASE-SENSITIVE-COMPARE
+    description: "agent:acme.billing and agent:Acme.Billing are distinct identities (no case normalisation)"
+    category: identity
+    level: core
+    spec_ref: "ARSIA-Core §3.3 Rule 4"
+    rtm_ids:
+      - "CORE-§3.3-06"
+    input:
+      operation: compare_agent_ids
+      agent_id_a: "agent:acme.billing"
+      agent_id_b: "agent:Acme.Billing"
+    expected:
+      equal: false
