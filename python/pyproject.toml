@@ -1,6 +1,6 @@
 [project]
 name = "arsia-protocol"
-version = "1.0.0.post1"
+version = "1.0.0.post2"
 description = "ARSIA Protocol SDK — EdDSA signing, message types, compliance profiles for autonomous AI agent infrastructure"
 readme = "README.md"
 license = "BUSL-1.1"
