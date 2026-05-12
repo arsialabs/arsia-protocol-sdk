@@ -99,7 +99,7 @@ Client ──[full PII]──→ Agent A ──[no PII]──→ Agent B (risk)
 ```
 
 Every arrow is a signed ARSIA Protocol
-[envelope](https://github.com/arsialabs/arsia-protocol/blob/main/ARSIA-Core.md) —
+[envelope](https://github.com/arsialabs/arsia-protocol/blob/main/spec/ARSIA-Core.md) —
 Ed25519 signature, MiFID-II compliance profile, 5-year retention
 metadata. No shared databases, no shared memory. Agents communicate
 exclusively through envelopes.
@@ -128,12 +128,12 @@ MiFID-II Art. 25(2) suitability analysis. The response includes a score
 (0.0-1.0), a classification (suitable / suitable_with_warnings /
 unsuitable), warnings, and the regulatory basis. Agent B signs the
 response envelope and sends it back to Agent A. Agent A validates the
-[correlation and explainability](https://github.com/arsialabs/arsia-protocol/blob/main/ARSIA-Actions.md)
+[correlation and explainability](https://github.com/arsialabs/arsia-protocol/blob/main/spec/ARSIA-Actions.md)
 of the response.
 
 **Step 4 — Pipeline stops for human oversight.**
 Agent A creates a `pending_approval`
-[oversight envelope](https://github.com/arsialabs/arsia-protocol/blob/main/ARSIA-Actions.md).
+[oversight envelope](https://github.com/arsialabs/arsia-protocol/blob/main/spec/ARSIA-Actions.md).
 This is not the approval itself — it is the **request** for approval. The envelope contains a
 summary (amount, suitability score, warning count) and an expiry time
 (1 hour). The pipeline halts here. The dashboard shows the approval form
@@ -150,7 +150,7 @@ portfolio composition, suitability score, or warnings. Agent C knows
 
 **Step 6 — Agent C returns the execution report.**
 Agent C calls an LLM (or falls back to deterministic logic) to split the
-[trade](https://github.com/arsialabs/arsia-protocol/blob/main/ARSIA-Assets.md)
+[trade](https://github.com/arsialabs/arsia-protocol/blob/main/spec/ARSIA-Assets.md)
 into orders of up to €50,000 each using a TWAP (Time-Weighted Average
 Price) strategy. The response includes individual orders with fill
 times, quantities, and prices. Agent C signs the response and sends it
@@ -158,7 +158,7 @@ back to Agent A.
 
 **Step 7 — Audit trail finalized.**
 All envelopes have been recorded in the
-[audit store](https://github.com/arsialabs/arsia-protocol/blob/main/ARSIA-State.md).
+[audit store](https://github.com/arsialabs/arsia-protocol/blob/main/spec/ARSIA-State.md).
 Each audit record includes a SHA-256 payload hash, the compliance
 profile (MIFID-II), and a 5-year (1,827 days) retention period. The
 pipeline is marked complete.
