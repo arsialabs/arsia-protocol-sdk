@@ -1,6 +1,6 @@
 [project]
 name = "arsia-protocol"
-version = "1.0.0"
+version = "1.0.0.post1"
 description = "ARSIA Protocol SDK — EdDSA signing, message types, compliance profiles for autonomous AI agent infrastructure"
 readme = "README.md"
 license = "BUSL-1.1"
@@ -26,7 +26,7 @@ keywords = [
     "jcs",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
     "Intended Audience :: Information Technology",

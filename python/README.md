@@ -1,16 +1,19 @@
 # arsia-protocol — Python SDK
 
-Reference Python implementation of the
-[ARSIA Protocol](https://arsiaprotocol.org): the compliance-enforced
-communication layer for autonomous AI agents. The SDK builds, signs,
-verifies, and validates ARSIA message envelopes. It is
-**transport-agnostic** — you choose HTTP, WebSocket, gRPC, MCP, A2A,
-stdio, or anything else.
+[![PyPI](https://img.shields.io/pypi/v/arsia-protocol)](https://pypi.org/project/arsia-protocol/)
+[![Python](https://img.shields.io/pypi/pyversions/arsia-protocol)](https://pypi.org/project/arsia-protocol/)
+[![License](https://img.shields.io/badge/license-BSL_1.1-blue)](https://github.com/arsialabs/arsia-protocol-sdk/blob/main/LICENSE.md)
+[![Typed](https://img.shields.io/badge/typed-mypy%20%7C%20pyright-brightgreen)](https://github.com/arsialabs/arsia-protocol-sdk)
 
-- **License:** BSL 1.1
-- **Python:** ≥ 3.12
-- **Status:** `1.0.0`
-- **Specification:** <https://github.com/arsialabs/arsia-protocol>
+**The trust layer for AI agents.** Make any agent enterprise-ready — compliant,
+secure, and auditable out of the box.
+
+Python SDK for the [ARSIA Protocol](https://github.com/arsialabs/arsia-protocol):
+the compliance-enforced communication layer for AI agents. Build, sign, verify,
+and validate ARSIA message envelopes over any transport — HTTP, WebSocket, gRPC,
+MCP, A2A, or your own.
+
+Fully typed — works with mypy, pyright, and IDE autocompletion out of the box.
 
 ## Install
 
@@ -67,16 +70,6 @@ envelope["compliance"] = {"profile": "GDPR-STANDARD"}
 enriched = apply_profile(envelope)         # strict=False by default
 ```
 
-## Documentation
-
-| Resource | Description |
-|----------|-------------|
-| [Learning Path](docs/learning-path.md) | Step-by-step guide from install to production |
-| [Concepts](docs/concepts.md) | Mental model: envelopes, lifecycle, naming, profiles |
-| [Cookbook](docs/cookbook.md) | 22 copy-pasteable recipes for common tasks |
-| [Examples](examples/) | 14 runnable scripts (10 basic + 4 regulated use cases) |
-| [API Reference](docs/api/) | Full API documentation (run `mkdocs serve`) |
-
 ## Key Concepts
 
 ### verify vs. validate
@@ -105,12 +98,11 @@ A typical receiver calls both: `verify_message()` to trust the sender, then
 Rule of thumb: if it returns a complete envelope ready to sign, it's `create_*`.
 If it returns a component or record, it's `build_*`.
 
-## `arsia` command-line tool
-
-Installed with the `cli` extra.
+## `arsia` CLI
 
 ```bash
-arsia --version
+pip install "arsia-protocol[cli]"
+
 arsia keygen --kid agent:acme.bot#k1        # generate Ed25519 key material
 arsia verify envelope.json --jwk sender.jwk # verify a signed envelope
 arsia canonicalize doc.json                 # emit RFC 8785 canonical bytes
@@ -120,48 +112,24 @@ arsia vectors                               # list bundled test vectors
 arsia profiles GDPR-STANDARD                # print a compliance profile
 ```
 
-The CLI is a thin operator-ergonomics wrapper around the public SDK API.
-It is not a configuration surface for production agents — import the
-SDK directly.
-
-## Module map
-
-| Module | Layer | Purpose |
-|--------|-------|---------|
-| `hazmat.canonicalization` | 0 | RFC 8785 JCS (use `rfc8785`; never `json.dumps(sort_keys=True)`) |
-| `hazmat.primitives.ed25519` | 0 | Raw Ed25519 sign / verify / JWK helpers |
-| `version`, `identity` | 0 | Semver parsing, `agent:org.name` validation |
-| `types` | 1 | Pydantic v2 envelope / payload / audit models |
-| `message` | 2 | Envelope factories (`create_request`, …), `sign_message`, `verify_message` |
-| `errors` | 2 | Error-code registry, retry policy, error-envelope builders |
-| `compliance` | 2 | Profile loading (GDPR, EU AI Act, MiFID II, DORA, …), retention floor |
-| `validation` | 3 | L1 schema + L2 semantic validation |
-| `actions` | 4 | Capability model, reserved prefixes, oversight, explainability |
-| `state` | 4 | State operations, scope taxonomy, GDPR retention |
-| `assets` | 4 | Transfer lifecycle, escrow, MiFID II, DORA, PSD2 SCA |
-| `routing` | 4 | Topology determination, broker discovery, retry / lifecycle |
-| `discovery` | 4 | Discovery document + JWKS builders |
-| `authorization` | 4 | JWT + DPoP, scope coverage, JWK thumbprint |
-| `certificates` | 4 | X.509 trust levels L1 / L2 / L3 |
-| `onboarding` | 4 | External agent onboarding flow |
-| `audit` | 5 | Audit record builders, payload hash, immutability |
-| `idempotency` | 5 | Store protocol, duplicate detection, scope helpers |
-| `__main__` | 6 | `arsia` CLI (optional dep) |
-
-Primitive modules never import transport libraries (`httpx`, `fastapi`,
-`websockets`). Boundary rules are enforced by
-`tests/unit/test_module_boundaries.py`.
-
 ## What the SDK does NOT do
 
-- Transport (HTTP, WebSocket, MCP, A2A) — that's
-  `arsiactl`, not the SDK.
-- Agent execution, planning, tool use — that's the agent framework.
-- Audit trail storage — that's the server (`arsiactl`). The SDK
-  builds audit records; it does not persist them.
-- OAuth2 issuance — the SDK validates tokens, does not issue them.
-- Payload interpretation — the SDK signs and verifies envelopes; it
-  never inspects payload content beyond routing-relevant fields.
+- **Transport** (HTTP, WebSocket, MCP, A2A) — that's `arsiactl`, not the SDK.
+- **Agent execution**, planning, tool use — that's the agent framework.
+- **Audit trail storage** — the SDK builds audit records; it does not persist them.
+- **OAuth2 issuance** — the SDK validates tokens, does not issue them.
+- **Payload interpretation** — the SDK signs and verifies envelopes; it never inspects payload content beyond routing-relevant fields.
+
+## Documentation
+
+| Resource | Description |
+|----------|-------------|
+| [Learning Path](https://github.com/arsialabs/arsia-protocol-sdk/blob/main/python/docs/learning-path.md) | Step-by-step guide from install to production |
+| [Concepts](https://github.com/arsialabs/arsia-protocol-sdk/blob/main/python/docs/concepts.md) | Mental model: envelopes, lifecycle, naming, profiles |
+| [Cookbook](https://github.com/arsialabs/arsia-protocol-sdk/blob/main/python/docs/cookbook.md) | 22 copy-pasteable recipes for common tasks |
+| [Examples](https://github.com/arsialabs/arsia-protocol-sdk/tree/main/python/examples) | 14 runnable scripts (10 basic + 4 regulated use cases) |
+| [API Reference](https://github.com/arsialabs/arsia-protocol-sdk/tree/main/python/docs/api) | Full API documentation (run `mkdocs serve`) |
+| [Demos](https://github.com/arsialabs/arsia-protocol-sdk/tree/main/demos) | Production-realistic multi-agent scenarios — run any of them in under a minute |
 
 ## Development
 
@@ -172,25 +140,15 @@ pytest tests/ -v
 mypy src/arsia_protocol/
 ruff check src/
 ruff format src/
-python -m build
-```
-
-Cross-language conformance lives at
-`../conformance/runners/python/` and is installed separately:
-
-```bash
-cd ../conformance/runners/python
-pip install -e .
-python -m arsia_conformance
 ```
 
 ## Links
 
 - **Specification:** <https://github.com/arsialabs/arsia-protocol>
-- **SDKs repo:** <https://github.com/arsialabs/arsia-protocol-sdk>
+- **Repository:** <https://github.com/arsialabs/arsia-protocol-sdk>
 - **Website:** <https://arsiaprotocol.org>
 - **Issues:** <https://github.com/arsialabs/arsia-protocol-sdk/issues>
-- **Changelog:** [`CHANGELOG.md`](../CHANGELOG.md)
+- **Changelog:** [CHANGELOG.md](https://github.com/arsialabs/arsia-protocol-sdk/blob/main/CHANGELOG.md)
 
 ---
 
