@@ -63,6 +63,27 @@ the ARSIA Protocol.
   Default model: gemma4:e2b for all agents (configurable per agent)
 ```
 
+### Data isolation — who sees what
+
+The key principle: **each agent only receives the data it needs for its
+specific function.** Agent A enforces this by constructing separate
+envelopes with different payloads for each peer.
+
+| Data field                  | Agent A | Agent B | Agent C |
+|-----------------------------|:-------:|:-------:|:-------:|
+| Client name & account       |    Y    |    -    |    -    |
+| Risk tolerance              |    Y    |    Y    |    -    |
+| Portfolio composition       |    Y    |    Y    |    -    |
+| Trade parameters            |    Y    |    Y    |    Y    |
+| Suitability assessment      |    Y    |    -    |    -    |
+| Execution report            |    Y    |    -    |    -    |
+| Full audit trail            |    Y    |    -    |    -    |
+
+The "fields not sent to this agent" notes in the Envelope Inspector
+refer to fields that were present in the original client request but
+**excluded** from the envelope sent to that particular agent. Agent A
+always has the complete picture.
+
 ### Pipeline steps
 
 | Step | What happens | Envelope |
@@ -163,32 +184,21 @@ Each audit record includes a SHA-256 payload hash, the compliance
 profile (MIFID-II), and a 5-year (1,827 days) retention period. The
 pipeline is marked complete.
 
-### Data isolation — who sees what
-
-The key principle: **each agent only receives the data it needs for its
-specific function.** Agent A enforces this by constructing separate
-envelopes with different payloads for each peer.
-
-| Data field                  | Agent A | Agent B | Agent C |
-|-----------------------------|:-------:|:-------:|:-------:|
-| Client name & account       |    Y    |    -    |    -    |
-| Risk tolerance              |    Y    |    Y    |    -    |
-| Portfolio composition       |    Y    |    Y    |    -    |
-| Trade parameters            |    Y    |    Y    |    Y    |
-| Suitability assessment      |    Y    |    -    |    -    |
-| Execution report            |    Y    |    -    |    -    |
-| Full audit trail            |    Y    |    -    |    -    |
-
-The "fields not sent to this agent" notes in the Envelope Inspector
-refer to fields that were present in the original client request but
-**excluded** from the envelope sent to that particular agent. Agent A
-always has the complete picture.
-
 ### If approval is denied
 
 When the compliance officer denies the trade, Agent A builds an oversight
 denial error envelope with the approver ID and reason, records it in the
 audit trail, and terminates the pipeline. Steps 5-7 never execute.
+
+### Capability denial demo
+
+The demo includes a capability denial scenario that proves Agent C
+cannot perform risk assessments — only trade execution.
+
+Agent A sends a request to Agent C asking for `risk.assess` — a
+capability Agent C does not have. Agent C responds with a 403 Forbidden
+and an ARSIA error envelope listing the required vs. provided
+capabilities.
 
 ## Prerequisites
 
@@ -207,14 +217,14 @@ cd python && pip install -e ".[dev]"
 cd ../demos/fintech-trade && pip install -r requirements.txt
 ```
 
-### 2. Pull Ollama models (optional)
+### 2. Pull Ollama model (optional)
 
 ```bash
-ollama pull gemma4:e2b   # Default model for all agents
+ollama pull gemma4:e2b
 ```
 
-Skip this step if you want to run without LLM — agents use deterministic
-fallback responses automatically.
+Skip this step to run without LLM — agents use deterministic fallback
+responses automatically.
 
 ### 3. Run
 
@@ -223,67 +233,21 @@ cd demos/fintech-trade
 ./run.sh
 ```
 
-Or without Ollama checks:
+Or skip Ollama checks:
 
 ```bash
 ./run.sh --no-ollama
 ```
 
-### 4. Open the dashboard
+The script validates prerequisites, starts all four services in the
+correct order, waits for health checks, and prints a summary. Press
+Ctrl+C to stop everything.
 
-Navigate to **http://localhost:3000** in your browser.
+<details>
+<summary>Manual startup (four separate terminals)</summary>
 
-## Running with Docker
-
-```bash
-cd demos/fintech-trade
-docker compose up --build
-```
-
-The first startup will pull Ollama images and models (this takes time).
-
-### Single Ollama mode
-
-For machines with limited resources, point all agents at one Ollama
-instance. Create a `.env` file:
-
-```bash
-cp .env.example .env
-```
-
-Then uncomment the single-Ollama overrides:
-
-```
-AGENT_A_OLLAMA_URL=http://localhost:11434
-AGENT_B_OLLAMA_URL=http://localhost:11434
-AGENT_C_OLLAMA_URL=http://localhost:11434
-```
-
-### GPU passthrough (NVIDIA)
-
-Uncomment the `deploy.resources.reservations.devices` block in
-`docker-compose.yml` for each Ollama service to enable GPU acceleration.
-
-## Running locally (without Docker)
-
-### Using the run script
-
-```bash
-./run.sh              # Full mode (checks Ollama, pulls models)
-./run.sh --no-ollama  # Skip Ollama (deterministic fallbacks)
-```
-
-The script:
-- Checks Python 3.12+, SDK, and uvicorn are installed
-- Checks Ollama and pulls missing models (unless `--no-ollama`)
-- Starts Agent B, Agent C, Agent A, and Dashboard as background processes
-- Waits for all services to pass health checks
-- Prints the dashboard URL
-- Kills all processes on Ctrl+C
-
-### Manual startup
-
-In four separate terminals:
+Start Agent B and C before Agent A — Agent A exchanges public keys with
+its peers on startup and will retry until they respond.
 
 ```bash
 # Terminal 1 — Agent B (Risk Assessor)
@@ -303,8 +267,11 @@ cd demos/fintech-trade
 python -m uvicorn dashboard.app:app --host 127.0.0.1 --port 3000
 ```
 
-Start Agent B and C before Agent A — Agent A exchanges public keys with
-its peers on startup and will retry until they respond.
+</details>
+
+### 4. Open the dashboard
+
+Navigate to **http://localhost:3000** in your browser.
 
 ## Demo walkthrough
 
@@ -319,7 +286,8 @@ its peers on startup and will retry until they respond.
 
 ### Watching the pipeline progress
 
-- **Steps 1-3** execute automatically (~10-15s with `gemma4:e2b`).
+- **Steps 1-3** execute automatically (~10-15s with `gemma4:e2b`,
+  instant with fallback).
 - The **Pipeline Status** bar shows each step lighting up in sequence.
 - The **LLM Streaming** panel appears during step 2, showing Agent B's
   response being generated token-by-token in real time.
@@ -365,10 +333,45 @@ curl -X POST http://localhost:8001/trigger?demo_denial=true \
 This asks Agent C for `risk.assess` (which it doesn't have), triggering
 a 403 Forbidden response with an ARSIA error envelope.
 
+## Running with Docker
+
+```bash
+cd demos/fintech-trade
+docker compose up --build
+```
+
+The first startup will pull Ollama images and models (this takes time).
+
+### Single Ollama mode
+
+For machines with limited resources, point all agents at one Ollama
+instance. Create a `.env` file:
+
+```bash
+cp .env.example .env
+```
+
+Then uncomment the single-Ollama overrides:
+
+```
+AGENT_A_OLLAMA_URL=http://localhost:11434
+AGENT_B_OLLAMA_URL=http://localhost:11434
+AGENT_C_OLLAMA_URL=http://localhost:11434
+```
+
+### GPU passthrough (NVIDIA)
+
+Uncomment the `deploy.resources.reservations.devices` block in
+`docker-compose.yml` for each Ollama service to enable GPU acceleration.
+
 ## Configuration
 
 All configuration is via environment variables. See `.env.example` for
-the full list.
+the full list. Copy it to `.env` to customize:
+
+```bash
+cp .env.example .env
+```
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -384,7 +387,7 @@ the full list.
 | `AGENT_C_OLLAMA_MODEL` | `gemma4:e2b` | Model for Agent C |
 | `DASHBOARD_AGENT_A_URL` | `http://localhost:8001` | How the dashboard reaches Agent A |
 
-### Changing Ollama models
+### Changing Ollama model
 
 Set the model per agent via environment variables:
 
@@ -416,6 +419,63 @@ set the Ollama URL to your provider's base URL:
 AGENT_B_OLLAMA_URL=http://your-openai-compatible-api:8080 ./run.sh
 ```
 
+## Compliance
+
+### MIFID-II profile
+
+Used for all envelopes in the pipeline. Applied with:
+
+```json
+{
+  "profile": "MIFID-II",
+  "audit_required": true,
+  "retention_days": 1827,
+  "data_residency": "EU"
+}
+```
+
+- `retention_days: 1827` — 5-year retention for investment services
+  records (MiFID-II Art. 16(7)).
+- `data_residency: EU` — data must remain in the European Union.
+
+### Per-message overrides
+
+Each envelope carries its own compliance block. The A → B envelope
+excludes client PII fields; the A → C envelope further excludes risk
+data. The compliance profile is consistent (MIFID-II) but the data
+included in each envelope varies by recipient.
+
+### What a regulator can verify
+
+**Audit trail (6-8 records per completed pipeline):**
+
+| # | Event type | From → To | What it proves |
+|---|-----------|-----------|----------------|
+| 1 | `request` | client → A | Trade request received |
+| 2 | `request` | A → B | Suitability assessment requested (no client PII) |
+| 3 | `response` | B → A | MiFID-II Art. 25(2) suitability result |
+| 4 | `pending_approval` | A → officer | Human oversight gate created |
+| 5 | `approval_decision` | officer → A | Compliance officer approved/denied with reason |
+| 6 | `request` | A → C | Trade execution requested (no identity, no risk) |
+| 7 | `response` | C → A | Execution report with TWAP order splitting |
+| 8 | `response` | A → client | Pipeline complete — audit sealed |
+
+Each record includes: SHA-256 payload hash, correlation ID, compliance
+profile, retention period, data residency, and processing timestamp.
+
+**MiFID-II compliance points:**
+
+- **Art. 25 (suitability)** — Agent B performs suitability assessment
+  before any trade execution. Assessment includes score, classification,
+  warnings, and regulatory basis.
+- **Art. 27 (best execution)** — Agent C splits large orders into
+  smaller tranches using TWAP strategy to minimize market impact.
+- **Art. 16(7) (record-keeping)** — 5-year retention period (1,827
+  days) on all audit records with SHA-256 payload hashes.
+- **Human oversight** — pipeline stops for compliance officer approval
+  with expiry timer. Decision recorded with approver ID and written
+  justification.
+
 ## The ARSIA Protocol in action
 
 This demo builds on the **ARSIA Protocol SDK** — the open-source
@@ -440,9 +500,35 @@ The SDK is transport-agnostic — it builds and validates envelopes. This
 demo adds HTTP transport, but the same envelopes could travel over
 WebSocket, gRPC, message queues, or any other transport.
 
-- **Specification**: [github.com/arsialabs/arsia-protocol](https://github.com/arsialabs/arsia-protocol)
-- **SDK**: [github.com/arsialabs/arsia-protocol-sdk](https://github.com/arsialabs/arsia-protocol-sdk)
-- **Website**: [arsiaprotocol.org](https://arsiaprotocol.org)
+## Project structure
+
+```
+demos/fintech-trade/
+├── agents/
+│   ├── __init__.py               # Package marker
+│   ├── advisor.py                # Agent A — pipeline orchestrator (holds client PII)
+│   ├── risk_assessor.py          # Agent B — MiFID-II suitability assessment
+│   └── trade_executor.py         # Agent C — TWAP order splitting (no PII)
+├── dashboard/
+│   ├── __init__.py               # Package marker
+│   ├── app.py                    # FastAPI proxy to Agent A + static serving
+│   └── static/
+│       ├── index.html            # Single-page dashboard (SSE, approval UI)
+│       └── style.css             # Dashboard styles
+├── run.sh                        # One-command local startup (./run.sh)
+├── config.py                     # Agent/demo configuration from env vars
+├── keys.py                       # Ed25519 key generation and peer exchange
+├── transport.py                  # HTTP envelope sending and validation
+├── ollama_client.py              # Ollama OpenAI-compatible API client
+├── audit_store.py                # In-memory audit record store
+├── flow_state.py                 # Pipeline state tracking with SSE broadcast
+├── docker-compose.yml            # 3 Ollama + 3 agents + dashboard
+├── Dockerfile                    # Python 3.12 slim with SDK volume mount
+├── entrypoint.sh                 # Installs SDK from volume on first run
+├── requirements.txt              # Python dependencies
+├── .env.example                  # Environment variable reference
+└── README.md                     # This file
+```
 
 ## Troubleshooting
 
@@ -483,6 +569,12 @@ Override ports via environment variables:
 AGENT_A_PORT=9001 AGENT_B_PORT=9002 AGENT_C_PORT=9003 DASHBOARD_PORT=9000 ./run.sh
 ```
 
+### LLM timeout
+
+The default timeout is 120 seconds for LLM calls. If the LLM is slow,
+agents automatically fall back to deterministic responses and log a
+warning. The pipeline completes successfully either way.
+
 ### Key exchange timeout
 
 ```
@@ -514,6 +606,12 @@ docker compose logs -f dashboard
 
 In local mode with `run.sh`, all logs are interleaved in the terminal.
 For separate logs, use manual startup (one terminal per service).
+
+## Links
+
+- **ARSIA Protocol**: [arsiaprotocol.org](https://arsiaprotocol.org)
+- **SDK**: [github.com/arsialabs/arsia-protocol-sdk](https://github.com/arsialabs/arsia-protocol-sdk)
+- **Spec**: [github.com/arsialabs/arsia-protocol](https://github.com/arsialabs/arsia-protocol)
 
 ## License
 

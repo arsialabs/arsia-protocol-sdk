@@ -153,6 +153,7 @@ cfg = load_agent_config("AGENT_A", {
 })
 
 key_store = KeyStore(cfg.agent_id)
+intake_keys = KeyStore("agent:meddata.intake-system")
 clinician_keys = KeyStore("agent:meddata.clinician")
 audit_store = AuditStore()
 flow = FlowState()
@@ -200,6 +201,7 @@ async def lifespan(app: FastAPI):
     global PEER_B_URL, PEER_C_URL, AGENT_B_ID, AGENT_C_ID
 
     key_store.generate()
+    intake_keys.generate()
     clinician_keys.generate()
 
     AGENT_B_ID = os.environ.get("AGENT_B_ID", "agent:meddata.anonymizer")
@@ -372,7 +374,7 @@ async def _run_pipeline(patient_data: dict[str, Any], *, demo_denial: bool = Fal
             },
         )
         profiled_intake = apply_profile(intake_env)
-        signed_intake = sign_message(profiled_intake, key_store.private_key, key_store.kid)
+        signed_intake = sign_message(profiled_intake, intake_keys.private_key, intake_keys.kid)
         _pipeline_state["original_request_id"] = signed_intake["id"]
 
         await audit_store.add_from_envelope(signed_intake, event_type="request")

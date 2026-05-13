@@ -784,7 +784,15 @@
         if (findings.length > 0) {
             html += '<label style="display:block;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px">Findings</label>';
             html += '<ul class="findings-list">';
-            findings.forEach(function(f) { html += '<li>' + esc(f) + '</li>'; });
+            findings.forEach(function(f) {
+                if (typeof f === 'object' && f !== null) {
+                    html += '<li><strong>' + esc(f.test || '') + '</strong>: ' + esc(f.value || '') + ' (ref: ' + esc(f.reference_range || '') + ') — <em>' + esc(f.interpretation || '') + '</em>';
+                    if (f.clinical_note) html += '<br><span style="color:var(--text-muted);font-size:0.85em">' + esc(f.clinical_note) + '</span>';
+                    html += '</li>';
+                } else {
+                    html += '<li>' + esc(f) + '</li>';
+                }
+            });
             html += '</ul>';
         }
 
@@ -954,7 +962,15 @@
         if (findings.length > 0) {
             html += '<div class="report-section"><h4>Findings</h4>';
             html += '<ul class="findings-list">';
-            findings.forEach(function(f) { html += '<li>' + esc(f) + '</li>'; });
+            findings.forEach(function(f) {
+                if (typeof f === 'object' && f !== null) {
+                    html += '<li><strong>' + esc(f.test || '') + '</strong>: ' + esc(f.value || '') + ' (ref: ' + esc(f.reference_range || '') + ') — <em>' + esc(f.interpretation || '') + '</em>';
+                    if (f.clinical_note) html += '<br><span style="color:var(--text-muted);font-size:0.85em">' + esc(f.clinical_note) + '</span>';
+                    html += '</li>';
+                } else {
+                    html += '<li>' + esc(f) + '</li>';
+                }
+            });
             html += '</ul></div>';
         }
 

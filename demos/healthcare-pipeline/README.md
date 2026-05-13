@@ -111,7 +111,36 @@ they are **structurally absent** from the envelope.
 | 6 | Human oversight gate — clinician approves/denies | A (internal) | No |
 | 7 | Agent A reassociates diagnosis with patient via token | A (internal) | Yes |
 
-## Pipeline walkthrough
+## Understanding the flow
+
+This section explains what actually happens at each step, what data each
+agent sees, and why the pipeline stops where it does. For the full
+protocol specification, see the
+[ARSIA Protocol spec](https://github.com/arsialabs/arsia-protocol).
+
+### The big picture
+
+```
+Patient ──[full PII]──→ Agent A ──[PII + labs]──→ Agent B (anonymize)
+                          │                           │
+                          │←──[anonymized + token]────┘
+                          │
+                          │──[anonymized labs only]──→ Agent C (analyze)
+                          │                              │
+                          │←──[diagnosis + explanation]──┘
+                          │
+                      [STOP: awaiting clinician approval]
+                          │
+                      [Reassociate via token · deliver report]
+```
+
+Every arrow is a signed ARSIA Protocol
+[envelope](https://github.com/arsialabs/arsia-protocol/blob/main/spec/ARSIA-Core.md) —
+Ed25519 signature, GDPR/EU AI Act compliance profile, 10-year retention
+metadata. No shared databases, no shared memory. Agents communicate
+exclusively through envelopes.
+
+### Step by step
 
 **Step 1 — Patient record received.**
 The dashboard sends a patient record to Agent A containing full PII
@@ -166,24 +195,15 @@ When the clinician denies the diagnosis, Agent A builds an oversight
 denial error envelope with the approver ID and reason, records it in the
 audit trail, and terminates the pipeline. Step 7 never executes.
 
-## Capability denial demo
+### Capability denial demo
 
 The demo includes a capability denial scenario that proves Agent C
 cannot access PII even if asked.
 
-1. Click **Demo: PII Access Denial** in the dashboard, or trigger with:
-   ```bash
-   curl -X POST http://localhost:8001/trigger?demo_denial=true \
-     -H "Content-Type: application/json" -d '{}'
-   ```
-2. During the normal pipeline run, Agent A sends an additional request
-   to Agent C asking for `pii.read` — a capability Agent C does not
-   have.
-3. Agent C responds with a 403 Forbidden and an ARSIA error envelope
-   listing the required vs. provided capabilities.
-
-This demonstrates that even if Agent A attempted to send PII to Agent C,
-the capability check would reject it at the protocol level.
+During the pipeline run, Agent A sends an additional request to Agent C
+asking for `pii.read` — a capability Agent C does not have. Agent C
+responds with a 403 Forbidden and an ARSIA error envelope listing the
+required vs. provided capabilities.
 
 ## Prerequisites
 
@@ -192,7 +212,7 @@ the capability check would reject it at the protocol level.
   (optional — agents fall back to deterministic responses)
 - **arsia-protocol SDK** installed in development mode
 
-## Quick start (without Docker)
+## Quick start
 
 ### 1. Install dependencies
 
@@ -211,12 +231,28 @@ ollama pull gemma4:e2b
 Skip this step to run without LLM — agents use deterministic fallback
 responses automatically.
 
-### 3. Start the services
+### 3. Run
+
+```bash
+cd demos/healthcare-pipeline
+./run.sh
+```
+
+Or skip Ollama checks:
+
+```bash
+./run.sh --no-ollama
+```
+
+The script validates prerequisites, starts all four services in the
+correct order, waits for health checks, and prints a summary. Press
+Ctrl+C to stop everything.
+
+<details>
+<summary>Manual startup (four separate terminals)</summary>
 
 Start Agent B and C before Agent A — Agent A exchanges public keys with
 its peers on startup and will retry until they respond.
-
-In four separate terminals:
 
 ```bash
 # Terminal 1 — Agent B (Anonymizer)
@@ -236,35 +272,82 @@ cd demos/healthcare-pipeline
 python -m uvicorn dashboard.app:app --host 127.0.0.1 --port 3000
 ```
 
+</details>
+
 ### 4. Open the dashboard
 
 Navigate to **http://localhost:3000** in your browser.
 
-1. The SSE connection indicator (top-right) should show **Connected**.
-2. Click **Start Pipeline**. The demo sends a pre-filled patient record
-   (Maria Silva, with lab values for LDL/HDL cholesterol, fasting
-   glucose, and hemoglobin).
-3. Watch steps 1-5 execute automatically (~10-15s with `gemma4:e2b`,
-   instant with fallback).
-4. At step 6, the pipeline halts for clinician approval. Type a
-   justification and click **Approve** or **Deny**.
-5. On approval, step 7 delivers the final clinical report with patient
-   identity reassociated via token.
+## Demo walkthrough
+
+### Starting the pipeline
+
+1. Open **http://localhost:3000**.
+2. The SSE connection indicator (top-right) should show **Connected**.
+3. Click **Start Pipeline**. The demo sends a pre-filled patient record:
+   - Patient: Maria Silva
+   - Lab values: LDL/HDL cholesterol, fasting glucose, hemoglobin
 
 Subsequent runs cycle through five built-in patient profiles.
 
-### Single Ollama mode (local development)
+### Watching the pipeline progress
 
-For machines with limited resources, point all agents at one Ollama
-instance:
+- **Steps 1-5** execute automatically (~10-15s with `gemma4:e2b`,
+  instant with fallback).
+- The **Pipeline Status** bar shows each step lighting up in sequence.
+- The **PII Isolation** grid highlights which agent is active and what
+  data it can see at each step.
+- The **LLM Processing** panel appears during steps 2-3 and 4-5,
+  showing Agent B's anonymization and Agent C's analysis being generated
+  token-by-token in real time.
+- At step 3, the **Anonymization Result** panel appears with the
+  stripped fields, opaque token, lab values, and PII leak check status.
+- At step 5, the **Clinical Diagnosis** panel appears with risk level,
+  confidence score, findings, recommendations, and the EU AI Act
+  explanation.
+
+### Approving or denying
+
+- At step 6, the pipeline **stops** and waits for clinician approval.
+- The **Human Oversight** panel shows a summary (risk level, confidence,
+  findings count) and a countdown timer.
+- Type a justification in the text field (required).
+- Click **Approve Diagnosis** (green) or **Deny Diagnosis** (red).
+- On approval: step 7 executes automatically. The **Final Clinical
+  Report** appears with patient identity reassociated via the
+  anonymization token.
+- On denial: the pipeline terminates and the denial is recorded.
+
+### Inspecting the audit trail
+
+- The **Audit Trail** table populates progressively as steps complete.
+- Click any row to expand it and see: record ID, message ID, payload
+  hash (SHA-256), correlation ID, compliance profile, legal basis,
+  retention period, data residency.
+- After completion, you should see 8 audit records (one per pipeline
+  step plus oversight events).
+
+### Inspecting envelopes
+
+- The **Envelope Inspector** shows the raw ARSIA envelope at each step.
+- Click a step header to expand and see the full JSON.
+- Step 2 shows a **PII present** note — Agent B needs PII to anonymize.
+- Step 4 shows a **data isolation** note — PII fields are structurally
+  absent from the envelope sent to Agent C.
+
+### Triggering capability denial
+
+Click **Demo: PII Access Denial** in the dashboard, or trigger with:
 
 ```bash
-export AGENT_A_OLLAMA_URL=http://localhost:11434
-export AGENT_B_OLLAMA_URL=http://localhost:11434
-export AGENT_C_OLLAMA_URL=http://localhost:11434
+curl -X POST http://localhost:8001/trigger?demo_denial=true \
+  -H "Content-Type: application/json" -d '{}'
 ```
 
-## Quick start (with Docker)
+Agent A sends an additional request to Agent C asking for `pii.read`.
+Agent C responds with 403 Forbidden and an ARSIA error envelope.
+
+## Running with Docker
 
 ```bash
 cd demos/healthcare-pipeline
@@ -287,10 +370,6 @@ docker compose exec ollama-c ollama pull gemma4:e2b
 
 Or point all agents at one Ollama by setting the environment overrides
 in a `.env` file (see Configuration below).
-
-### Access the dashboard
-
-Navigate to **http://localhost:3000**.
 
 ### GPU passthrough (NVIDIA)
 
@@ -325,8 +404,22 @@ cp .env.example .env
 Set the model per agent via environment variables:
 
 ```bash
-AGENT_B_OLLAMA_MODEL=llama3.2:3b python -m uvicorn agents.anonymizer:app --port 8002
+AGENT_B_OLLAMA_MODEL=llama3.2:3b ./run.sh
 ```
+
+### Single Ollama instance
+
+Point all agents at one Ollama (typical for local development):
+
+```bash
+export AGENT_A_OLLAMA_URL=http://localhost:11434
+export AGENT_B_OLLAMA_URL=http://localhost:11434
+export AGENT_C_OLLAMA_URL=http://localhost:11434
+./run.sh
+```
+
+The run script does this automatically — in local mode, all agents
+default to `http://localhost:11434`.
 
 ### Using custom patient data
 
@@ -348,12 +441,19 @@ curl -X POST http://localhost:3000/api/trigger \
   }'
 ```
 
-## Compliance profiles
+### Using a different LLM provider
 
-The demo uses two compliance profiles from the ARSIA Protocol
-specification, applied per-message based on context.
+The agents use Ollama's OpenAI-compatible endpoint
+(`/v1/chat/completions`). Any provider with the same API works —
+set the Ollama URL to your provider's base URL:
 
-### GDPR-STANDARD with Art. 9 overrides (A → B, steps 1-3, 7)
+```bash
+AGENT_B_OLLAMA_URL=http://your-openai-compatible-api:8080 ./run.sh
+```
+
+## Compliance
+
+### GDPR-STANDARD with Art. 9 overrides (steps 1-3, 7)
 
 Used for messages involving patient health data (special category under
 GDPR Art. 9). Applied with:
@@ -374,7 +474,7 @@ GDPR Art. 9). Applied with:
 - `retention_days: 3650` — 10-year retention for clinical records.
 - `data_residency: EU` — data must remain in the European Union.
 
-### EU-AI-ACT-HIGH-RISK (C → A, step 6)
+### EU-AI-ACT-HIGH-RISK (steps 5-6)
 
 Used for the clinical analysis response and the oversight gate. Applied
 with:
@@ -399,9 +499,9 @@ from a global configuration. This follows the spec's priority chain
 The anonymized A → C envelope explicitly sets `pii_involved: false`
 even though the surrounding pipeline handles PII.
 
-## What a regulator can verify
+### What a regulator can verify
 
-### Audit trail (8 records per completed pipeline)
+**Audit trail (8 records per completed pipeline):**
 
 | # | Event type | From → To | What it proves |
 |---|-----------|-----------|----------------|
@@ -418,7 +518,7 @@ Each record includes: SHA-256 payload hash, correlation ID, compliance
 profile, legal basis, retention period, data residency, and processing
 timestamp.
 
-### GDPR compliance points
+**GDPR compliance points:**
 
 - **Art. 5 (principles)** — purpose limitation (each agent processes
   only what it needs), data minimization (PII structurally absent from
@@ -429,7 +529,7 @@ timestamp.
 - **Art. 30 (records of processing)** — complete audit trail with
   payload hashes, correlation IDs, and retention metadata.
 
-### EU AI Act compliance points
+**EU AI Act compliance points:**
 
 - **Art. 13 (transparency)** — Agent C attaches an explanation object
   to every clinical response: model used, clinical reasoning, confidence
@@ -437,6 +537,31 @@ timestamp.
 - **Art. 14 (human oversight)** — pipeline halts for clinician approval
   with expiry timer. Decision recorded with approver ID and written
   justification.
+
+## The ARSIA Protocol in action
+
+This demo builds on the **ARSIA Protocol SDK** — the open-source
+reference implementation of the ARSIA Protocol specification.
+
+**What the SDK provides** (used in this demo):
+- Envelope construction (`create_request`, `create_response`,
+  `create_pending_approval`, `create_approval_decision`)
+- Ed25519 signing and verification (`sign_message`, `verify_message`)
+- Compliance profile application (`apply_profile` — GDPR-STANDARD,
+  EU-AI-ACT-HIGH-RISK)
+- Audit record building (`build_audit_record`)
+- Capability matching (`match_capabilities`)
+- Correlation and explainability validation
+
+**What this demo builds** (not in the SDK):
+- Agent logic (LLM integration, PII anonymization, clinical analysis)
+- HTTP transport (FastAPI endpoints, envelope delivery)
+- Dashboard (SSE, clinician approval UI, audit viewer)
+- Key exchange (runtime public key distribution)
+
+The SDK is transport-agnostic — it builds and validates envelopes. This
+demo adds HTTP transport, but the same envelopes could travel over
+WebSocket, gRPC, message queues, or any other transport.
 
 ## Project structure
 
@@ -453,6 +578,7 @@ demos/healthcare-pipeline/
 │   └── static/
 │       ├── index.html            # Single-page dashboard (SSE, approval UI)
 │       └── style.css             # Dashboard styles
+├── run.sh                        # One-command local startup (./run.sh)
 ├── config.py                     # Agent/demo configuration from env vars
 ├── keys.py                       # Ed25519 key generation and peer exchange
 ├── transport.py                  # HTTP envelope sending and validation
@@ -472,17 +598,17 @@ demos/healthcare-pipeline/
 ### Ollama not running
 
 ```
-[warn] Ollama health check failed at http://localhost:11434
+[warn] Ollama not running at http://localhost:11434
 ```
 
-Start Ollama: `ollama serve`. Agents automatically use deterministic
-fallback responses when Ollama is unreachable — the demo works without
-any LLM.
+Start Ollama: `ollama serve`. Or run without it: `./run.sh --no-ollama`.
+Agents automatically use deterministic fallback responses when Ollama is
+unreachable.
 
 ### Model not pulled
 
 ```
-[warn] Ollama at http://localhost:11434 is reachable but model gemma4:e2b not found
+[warn] Failed to pull gemma4:e2b
 ```
 
 Pull manually: `ollama pull gemma4:e2b`. Check available models with
@@ -503,7 +629,7 @@ lsof -i :8001  # or :8002, :8003, :3000
 Override ports via environment variables:
 
 ```bash
-AGENT_A_PORT=9001 AGENT_B_PORT=9002 AGENT_C_PORT=9003 DASHBOARD_PORT=9000
+AGENT_A_PORT=9001 AGENT_B_PORT=9002 AGENT_C_PORT=9003 DASHBOARD_PORT=9000 ./run.sh
 ```
 
 ### LLM timeout
@@ -526,7 +652,8 @@ Key exchange incomplete — missing peers: [...]
 ```
 
 Agent A retries key exchange for 60 seconds. If peers don't start in
-time, Agent A logs a warning. Start Agent B and Agent C before Agent A.
+time, Agent A will log a warning and continue. Restart Agent A after the
+peers are healthy.
 
 ### Checking service health
 
@@ -537,14 +664,18 @@ curl http://localhost:8003/health  # Agent C
 curl http://localhost:3000/health  # Dashboard
 ```
 
-### Viewing logs (Docker)
+### Viewing logs
+
+Each service logs to stderr. In Docker mode:
 
 ```bash
 docker compose logs -f agent-a
 docker compose logs -f agent-b
-docker compose logs -f agent-c
 docker compose logs -f dashboard
 ```
+
+In local mode with `run.sh`, all logs are interleaved in the terminal.
+For separate logs, use manual startup (one terminal per service).
 
 ## Links
 
