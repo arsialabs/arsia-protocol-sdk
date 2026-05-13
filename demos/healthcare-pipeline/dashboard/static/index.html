@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARSIA Clinician Dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <h1>ARSIA Clinician Dashboard</h1>
+        <span class="tag">Healthcare Demo</span>
+    </div>
+    <div class="connection">
+        <div class="status-dot" id="sse-dot"></div>
+        <span id="sse-label">Disconnected</span>
+    </div>
+</header>
+
+<main>
+
+    <!-- ── Pipeline status ─────────────────────────────── -->
+    <div class="card" id="pipeline-card">
+        <div class="card-header">
+            <h2>Pipeline Status</h2>
+            <div class="actions-bar">
+                <button class="primary" id="btn-trigger">Start Pipeline</button>
+                <button class="warning sm" id="btn-denial">Demo: PII Access Denial</button>
+                <button class="sm" id="btn-reset">Reset</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="pipeline-steps" id="pipeline-steps"></div>
+            <div class="status-bar">
+                <span class="status-badge idle" id="status-badge">Idle</span>
+                <span class="status-times" id="status-times"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Patient record ──────────────────────────────── -->
+    <div class="card" id="patient-card">
+        <div class="card-header">
+            <h2>Patient Record</h2>
+        </div>
+        <div class="card-body">
+            <div id="patient-body">
+                <div class="empty-state">
+                    <div class="icon">&#x1F9EA;</div>
+                    Start the pipeline to see the patient record.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── PII isolation ───────────────────────────────── -->
+    <div class="card" id="isolation-card">
+        <div class="card-header">
+            <h2>PII Isolation &mdash; What Each Agent Sees</h2>
+        </div>
+        <div class="card-body" style="padding:0">
+            <div class="isolation-grid" id="isolation-grid">
+                <div class="isolation-col" id="iso-col-a">
+                    <h3>Agent A &mdash; Data Collector</h3>
+                    <div class="agent-id">agent:meddata.data-collector</div>
+                    <div class="agent-desc">Full picture &mdash; orchestrates the pipeline</div>
+                    <div class="data-field"><span class="check yes">&#10003;</span> Patient Name</div>
+                    <div class="data-field"><span class="check yes">&#10003;</span> Date of Birth</div>
+                    <div class="data-field"><span class="check yes">&#10003;</span> Health Number</div>
+                    <div class="data-field"><span class="check yes">&#10003;</span> Lab Values</div>
+                    <div class="data-field"><span class="check yes">&#10003;</span> Anonymization Token</div>
+                    <div class="data-field"><span class="check yes">&#10003;</span> Diagnosis &amp; Report</div>
+                </div>
+                <div class="isolation-col" id="iso-col-b">
+                    <h3>Agent B &mdash; Anonymizer</h3>
+                    <div class="agent-id">agent:meddata.anonymizer</div>
+                    <div class="agent-desc">Receives PII to strip it &mdash; produces opaque token</div>
+                    <div class="data-field"><span class="check strip">&#x2794;</span> Patient Name <span class="redacted">(strips)</span></div>
+                    <div class="data-field"><span class="check strip">&#x2794;</span> Date of Birth <span class="redacted">(strips)</span></div>
+                    <div class="data-field"><span class="check strip">&#x2794;</span> Health Number <span class="redacted">(strips)</span></div>
+                    <div class="data-field"><span class="check yes">&#10003;</span> Lab Values</div>
+                    <div class="data-field"><span class="check yes">&#10003;</span> Anonymization Token</div>
+                    <div class="data-field"><span class="check no">&#10007;</span> Diagnosis &amp; Report</div>
+                </div>
+                <div class="isolation-col" id="iso-col-c">
+                    <h3>Agent C &mdash; Clinical Analyzer</h3>
+                    <div class="agent-id">agent:meddata.clinical-analyzer</div>
+                    <div class="agent-desc">Anonymized only &mdash; PII structurally absent</div>
+                    <div class="data-field"><span class="check no">&#10007;</span> Patient Name</div>
+                    <div class="data-field"><span class="check no">&#10007;</span> Date of Birth</div>
+                    <div class="data-field"><span class="check no">&#10007;</span> Health Number</div>
+                    <div class="data-field"><span class="check yes">&#10003;</span> Lab Values</div>
+                    <div class="data-field"><span class="check yes">&#10003;</span> Anonymization Token</div>
+                    <div class="data-field"><span class="check no">&#10007;</span> Diagnosis &amp; Report</div>
+                </div>
+            </div>
+            <div class="isolation-note-box" style="margin:0 20px 20px">
+                The protocol guarantees Agent C never sees PII &mdash; not because of access control,
+                but because the data is structurally absent from the envelope. Agent B receives PII
+                only to anonymize it; the token it produces cannot be reversed to recover identity.
+            </div>
+        </div>
+    </div>
+
+    <!-- ── LLM streaming ───────────────────────────────── -->
+    <div class="card panel-hidden" id="llm-stream-card">
+        <div class="card-header">
+            <h2>LLM Processing</h2>
+            <span class="status-badge running" id="llm-stream-badge">Streaming</span>
+        </div>
+        <div class="card-body" style="padding:0">
+            <div class="llm-sections">
+                <div class="llm-section">
+                    <div class="llm-section-header">Agent B &mdash; Anonymizer</div>
+                    <div class="llm-stream-output" id="llm-output-b"></div>
+                </div>
+                <div class="llm-section">
+                    <div class="llm-section-header">Agent C &mdash; Clinical Analyzer</div>
+                    <div class="llm-stream-output" id="llm-output-c"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+
+        <!-- ── Anonymization result ────────────────────── -->
+        <div class="card panel-hidden" id="anon-card">
+            <div class="card-header">
+                <h2>Anonymization Result</h2>
+                <span class="status-badge" style="font-size:0.72rem">Step 3</span>
+            </div>
+            <div class="card-body" id="anon-body"></div>
+        </div>
+
+        <!-- ── Clinical diagnosis ──────────────────────── -->
+        <div class="card panel-hidden" id="diagnosis-card">
+            <div class="card-header">
+                <h2>Clinical Diagnosis</h2>
+                <span class="status-badge" style="font-size:0.72rem">Step 5</span>
+            </div>
+            <div class="card-body" id="diagnosis-body"></div>
+        </div>
+
+    </div>
+
+    <!-- ── Human oversight ─────────────────────────────── -->
+    <div class="card panel-hidden" id="oversight-card">
+        <div class="card-header">
+            <h2>Human Oversight &mdash; Clinician Approval</h2>
+            <span class="status-badge awaiting_approval" id="oversight-badge">Pending</span>
+        </div>
+        <div class="card-body" id="oversight-body"></div>
+    </div>
+
+    <!-- ── Final result ────────────────────────────────── -->
+    <div class="card panel-hidden" id="result-card">
+        <div class="card-header">
+            <h2>Final Clinical Report</h2>
+            <span class="status-badge completed" style="font-size:0.72rem">Step 7</span>
+        </div>
+        <div class="card-body" id="result-body"></div>
+    </div>
+
+    <!-- ── Audit trail ─────────────────────────────────── -->
+    <div class="card" id="audit-card">
+        <div class="card-header">
+            <h2>Audit Trail</h2>
+            <span id="audit-count" style="font-size:0.78rem;color:var(--text-muted)">0 records</span>
+        </div>
+        <div class="card-body" style="padding:0">
+            <div id="audit-body">
+                <div class="empty-state">
+                    <div class="icon">&#x1F4CB;</div>
+                    Audit records will appear as the pipeline progresses.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Envelope inspector ──────────────────────────── -->
+    <div class="card" id="envelope-card">
+        <div class="card-header">
+            <h2>Envelope Inspector</h2>
+        </div>
+        <div class="card-body">
+            <div class="envelope-list" id="envelope-list">
+                <div class="empty-state">
+                    <div class="icon">&#x1F4E8;</div>
+                    Signed ARSIA envelopes will appear here for inspection.
+                </div>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<script>
+(function() {
+    "use strict";
+
+    // ── State ────────────────────────────────────────────
+    var state = null;
+    var sseSource = null;
+    var countdownTimer = null;
+    var auditRecords = [];
+
+    var STEP_LABELS = {
+        1: "Patient Record Received",
+        2: "Sent for Anonymization",
+        3: "Anonymized Data Received",
+        4: "Sent for Clinical Analysis",
+        5: "Diagnosis Received",
+        6: "Awaiting Clinician Approval",
+        7: "Result Delivered"
+    };
+
+    var ENVELOPE_LABELS = {
+        1: "① Intake → Agent A: patient record (full PII + lab values)",
+        2: "② Agent A → Agent B: PII + lab values for anonymization",
+        3: "③ Agent B → Agent A: anonymized dataset with opaque token",
+        4: "④ Agent A → Agent C: anonymized lab values only (no PII)",
+        5: "⑤ Agent C → Agent A: diagnosis + explanation",
+        6: "⑥ Agent A: pending clinician approval (human oversight)",
+        7: "⑦ Agent A: final report (reassociated via token)"
+    };
+
+    var AGENT_NAMES = {
+        "agent:meddata.anonymizer": "b",
+        "agent:meddata.clinical-analyzer": "c"
+    };
+
+    // ── DOM refs ─────────────────────────────────────────
+    var $steps = document.getElementById("pipeline-steps");
+    var $badge = document.getElementById("status-badge");
+    var $times = document.getElementById("status-times");
+    var $patientBody = document.getElementById("patient-body");
+    var $isoGrid = document.getElementById("isolation-grid");
+    var $anonCard = document.getElementById("anon-card");
+    var $anonBody = document.getElementById("anon-body");
+    var $diagCard = document.getElementById("diagnosis-card");
+    var $diagBody = document.getElementById("diagnosis-body");
+    var $overCard = document.getElementById("oversight-card");
+    var $overBody = document.getElementById("oversight-body");
+    var $overBadge = document.getElementById("oversight-badge");
+    var $resultCard = document.getElementById("result-card");
+    var $resultBody = document.getElementById("result-body");
+    var $auditBody = document.getElementById("audit-body");
+    var $auditCount = document.getElementById("audit-count");
+    var $envList = document.getElementById("envelope-list");
+    var $btnTrigger = document.getElementById("btn-trigger");
+    var $btnDenial = document.getElementById("btn-denial");
+    var $btnReset = document.getElementById("btn-reset");
+    var $sseDot = document.getElementById("sse-dot");
+    var $sseLabel = document.getElementById("sse-label");
+    var $llmCard = document.getElementById("llm-stream-card");
+    var $llmBadge = document.getElementById("llm-stream-badge");
+    var $llmOutB = document.getElementById("llm-output-b");
+    var $llmOutC = document.getElementById("llm-output-c");
+
+    // ── Init ─────────────────────────────────────────────
+    buildSteps();
+    connectSSE();
+
+    $btnTrigger.addEventListener("click", triggerPipeline);
+    $btnDenial.addEventListener("click", triggerDenialDemo);
+    $btnReset.addEventListener("click", resetPipeline);
+
+    // ── SSE connection ───────────────────────────────────
+    function connectSSE() {
+        fetch("/api/state/stream-url").then(function(res) {
+            return res.json();
+        }).then(function(data) {
+            var url = data.url;
+            if (sseSource) sseSource.close();
+            sseSource = new EventSource(url);
+
+            sseSource.onopen = function() {
+                $sseDot.classList.add("connected");
+                $sseLabel.textContent = "Connected";
+            };
+            sseSource.onerror = function() {
+                $sseDot.classList.remove("connected");
+                $sseLabel.textContent = "Reconnecting…";
+            };
+            sseSource.addEventListener("snapshot", function(e) {
+                handleSnapshot(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("pipeline_started", function(e) {
+                handlePipelineStarted(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("step_advanced", function(e) {
+                handleStepAdvanced(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("awaiting_approval", function(e) {
+                handleAwaitingApproval(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("approval_decision", function(e) {
+                handleApprovalDecision(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("pipeline_completed", function(e) {
+                handlePipelineCompleted(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("pipeline_error", function(e) {
+                handlePipelineError(JSON.parse(e.data));
+            });
+            sseSource.addEventListener("pipeline_reset", function() {
+                handleReset();
+            });
+            sseSource.addEventListener("keepalive", function() {});
+            sseSource.addEventListener("llm_stream", function(e) {
+                handleLlmStream(JSON.parse(e.data));
+            });
+        }).catch(function(err) {
+            console.error("SSE connect failed:", err);
+            setTimeout(connectSSE, 3000);
+        });
+    }
+
+    // ── Pipeline actions ─────────────────────────────────
+    function triggerPipeline() {
+        $btnTrigger.disabled = true;
+        fetch("/api/trigger", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: "{}"
+        }).then(function(resp) {
+            if (!resp.ok) return resp.json().then(function(d) { alert("Trigger failed: " + (d.error || resp.statusText)); });
+        }).catch(function(err) {
+            alert("Trigger failed: " + err.message);
+        }).finally(function() {
+            setTimeout(function() { $btnTrigger.disabled = false; }, 2000);
+        });
+    }
+
+    function triggerDenialDemo() {
+        $btnDenial.disabled = true;
+        fetch("/api/trigger?demo_denial=true", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: "{}"
+        }).then(function(resp) {
+            if (!resp.ok) return resp.json().then(function(d) { alert("Trigger failed: " + (d.error || resp.statusText)); });
+        }).catch(function(err) {
+            alert("Trigger failed: " + err.message);
+        }).finally(function() {
+            setTimeout(function() { $btnDenial.disabled = false; }, 2000);
+        });
+    }
+
+    function resetPipeline() {
+        fetch("/api/reset", {method: "POST"}).catch(function(err) {
+            alert("Reset failed: " + err.message);
+        });
+    }
+
+    function submitDecision(decision) {
+        var reason = document.getElementById("approval-reason");
+        var approver = document.getElementById("approver-id");
+        if (!reason || !reason.value.trim()) { reason.focus(); return; }
+        var body = {
+            intent: "approval_decision",
+            decision: decision,
+            approver_id: approver ? approver.value : "agent:meddata.clinician",
+            reason: reason.value.trim()
+        };
+        var btns = document.querySelectorAll("#oversight-body button");
+        btns.forEach(function(b) { b.disabled = true; });
+        fetch("/api/envelope", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        }).then(function(resp) {
+            if (!resp.ok) return resp.json().then(function(d) {
+                alert("Decision failed: " + (d.error || resp.statusText));
+                btns.forEach(function(b) { b.disabled = false; });
+            });
+        }).catch(function(err) {
+            alert("Decision failed: " + err.message);
+            btns.forEach(function(b) { b.disabled = false; });
+        });
+    }
+
+    // ── Payload extractors ───────────────────────────────
+    function extractAnonymization(envs) {
+        var env = envs && (envs["3"] || envs[3]);
+        if (!env || !env.payload) return null;
+        var result = env.payload.result;
+        if (!result || typeof result !== "object") return null;
+        return result;
+    }
+
+    function extractDiagnosis(envs) {
+        var env = envs && (envs["5"] || envs[5]);
+        if (!env || !env.payload) return null;
+        var result = env.payload.result;
+        var explanation = env.payload.explanation;
+        if (!result || typeof result !== "object") return null;
+        return { result: result, explanation: explanation || null };
+    }
+
+    // ── SSE handlers ─────────────────────────────────────
+    function handleSnapshot(data) {
+        state = data;
+        renderPipeline(data.current_step, data.status);
+        renderStatusBadge(data.status);
+        renderTimes(data.started_at, data.completed_at);
+
+        if (data.patient_data) renderPatient(data.patient_data);
+        updateIsolationHighlight(data.current_step);
+
+        if (data.current_step >= 3 && data.step_envelopes) {
+            var anon = extractAnonymization(data.step_envelopes);
+            if (anon) { $anonCard.classList.remove("panel-hidden"); renderAnonymization(anon); }
+        }
+        if (data.current_step >= 5 && data.step_envelopes) {
+            var diag = extractDiagnosis(data.step_envelopes);
+            if (diag) { $diagCard.classList.remove("panel-hidden"); renderDiagnosis(diag); }
+        }
+        if (data.status === "awaiting_approval") {
+            var diagForApproval = data.step_envelopes ? extractDiagnosis(data.step_envelopes) : null;
+            renderOversight(data.pending_approval, diagForApproval);
+        }
+        if (data.status === "approved" || data.status === "denied") {
+            renderDecisionResult(data.status, data.approval_decision);
+        }
+        if (data.final_result) {
+            $resultCard.classList.remove("panel-hidden");
+            renderFinalResult(data.final_result);
+        }
+        if (data.step_envelopes) renderEnvelopes(data.step_envelopes);
+        fetchAudit();
+    }
+
+    function handlePipelineStarted(data) {
+        state = state || {};
+        state.status = data.status;
+        state.started_at = data.started_at;
+        state.current_step = data.step;
+        state.completed_at = null;
+        state.step_envelopes = {};
+        state.final_result = null;
+        renderPipeline(data.step, data.status);
+        renderStatusBadge(data.status);
+        renderTimes(data.started_at, null);
+        updateIsolationHighlight(data.step);
+
+        $llmCard.classList.add("panel-hidden");
+        $llmOutB.textContent = "";
+        $llmOutC.textContent = "";
+        $anonCard.classList.add("panel-hidden");
+        $diagCard.classList.add("panel-hidden");
+        $overCard.classList.add("panel-hidden");
+        $resultCard.classList.add("panel-hidden");
+        $envList.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4E8;</div>Signed ARSIA envelopes will appear here for inspection.</div>';
+
+        fetchState();
+    }
+
+    function handleStepAdvanced(data) {
+        if (state) state.current_step = data.step;
+        renderPipeline(data.step, (state && state.status) || "running");
+        updateIsolationHighlight(data.step);
+
+        fetchState().then(function(s) {
+            if (!s) return;
+            if (s.patient_data) renderPatient(s.patient_data);
+            if (data.step >= 3) {
+                var anon = extractAnonymization(s.step_envelopes);
+                if (anon) { $anonCard.classList.remove("panel-hidden"); renderAnonymization(anon); }
+            }
+            if (data.step >= 5) {
+                var diag = extractDiagnosis(s.step_envelopes);
+                if (diag) { $diagCard.classList.remove("panel-hidden"); renderDiagnosis(diag); }
+            }
+            if (data.step >= 7 && s.final_result) {
+                $resultCard.classList.remove("panel-hidden");
+                renderFinalResult(s.final_result);
+            }
+        });
+        fetchAudit();
+    }
+
+    function handleAwaitingApproval(data) {
+        if (state) state.status = data.status;
+        renderPipeline((state && state.current_step) || 6, data.status);
+        renderStatusBadge(data.status);
+        fetchState().then(function(s) {
+            if (s && s.pending_approval) {
+                var diag = extractDiagnosis(s.step_envelopes);
+                renderOversight(s.pending_approval, diag);
+            }
+        });
+    }
+
+    function handleApprovalDecision(data) {
+        if (state) {
+            state.status = data.status;
+            if (data.decision === "denied") {
+                state.completed_at = new Date().toISOString();
+            }
+        }
+        renderStatusBadge(data.status);
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+        if (data.decision === "denied") {
+            renderPipeline((state && state.current_step) || 6, "denied");
+            renderTimes(state && state.started_at, state && state.completed_at);
+        }
+        fetchState().then(function(s) {
+            if (s) renderDecisionResult(data.decision, s.approval_decision);
+        });
+        fetchAudit();
+    }
+
+    function handlePipelineCompleted(data) {
+        if (state) {
+            state.status = data.status;
+            state.completed_at = data.completed_at;
+            state.current_step = 7;
+        }
+        renderPipeline(7, data.status);
+        renderStatusBadge(data.status);
+        renderTimes(state && state.started_at, data.completed_at);
+        fetchState().then(function(s) {
+            if (s && s.final_result) {
+                $resultCard.classList.remove("panel-hidden");
+                renderFinalResult(s.final_result);
+            }
+        });
+        fetchAudit();
+    }
+
+    function handlePipelineError(data) {
+        if (state) state.status = data.status;
+        renderStatusBadge(data.status);
+        fetchAudit();
+    }
+
+    function handleReset() {
+        state = {status: "idle", current_step: 0, step_envelopes: {}};
+        auditRecords = [];
+        renderPipeline(0, "idle");
+        renderStatusBadge("idle");
+        renderTimes(null, null);
+        $patientBody.innerHTML = '<div class="empty-state"><div class="icon">&#x1F9EA;</div>Start the pipeline to see the patient record.</div>';
+        updateIsolationHighlight(0);
+        $llmCard.classList.add("panel-hidden");
+        $llmOutB.textContent = "";
+        $llmOutC.textContent = "";
+        $anonCard.classList.add("panel-hidden");
+        $diagCard.classList.add("panel-hidden");
+        $overCard.classList.add("panel-hidden");
+        $resultCard.classList.add("panel-hidden");
+        $auditBody.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4CB;</div>Audit records will appear as the pipeline progresses.</div>';
+        $auditCount.textContent = "0 records";
+        $envList.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4E8;</div>Signed ARSIA envelopes will appear here for inspection.</div>';
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    }
+
+    // ── LLM streaming handler ────────────────────────────
+    function handleLlmStream(data) {
+        var agentKey = AGENT_NAMES[data.agent] || "b";
+        var $output = agentKey === "c" ? $llmOutC : $llmOutB;
+
+        if (data.event === "start") {
+            $llmCard.classList.remove("panel-hidden");
+            $llmBadge.className = "status-badge running";
+            $llmBadge.textContent = "Streaming";
+            $output.textContent = "";
+            var cursor = document.createElement("span");
+            cursor.className = "llm-cursor";
+            $output.appendChild(cursor);
+            return;
+        }
+
+        if (data.event === "end") {
+            var cursor = $output.querySelector(".llm-cursor");
+            if (cursor) cursor.remove();
+            var anyActive = $llmOutB.querySelector(".llm-cursor") || $llmOutC.querySelector(".llm-cursor");
+            if (!anyActive) {
+                $llmBadge.className = "status-badge completed";
+                $llmBadge.textContent = "Complete";
+            }
+            return;
+        }
+
+        if (data.token) {
+            var cursor = $output.querySelector(".llm-cursor");
+            if (cursor) cursor.remove();
+            $output.appendChild(document.createTextNode(data.token));
+            var newCursor = document.createElement("span");
+            newCursor.className = "llm-cursor";
+            $output.appendChild(newCursor);
+            $output.scrollTop = $output.scrollHeight;
+        }
+    }
+
+    // ── Fetch helpers ────────────────────────────────────
+    function fetchState() {
+        return fetch("/api/state").then(function(resp) {
+            return resp.json();
+        }).then(function(data) {
+            state = data;
+            if (data.step_envelopes) renderEnvelopes(data.step_envelopes);
+            return data;
+        }).catch(function() { return null; });
+    }
+
+    function fetchAudit() {
+        fetch("/api/audit").then(function(resp) {
+            return resp.json();
+        }).then(function(data) {
+            auditRecords = data.records || [];
+            renderAudit(auditRecords);
+        }).catch(function() {});
+    }
+
+    // ── Renderers ────────────────────────────────────────
+
+    function buildSteps() {
+        var html = "";
+        for (var i = 1; i <= 7; i++) {
+            html += '<div class="step" data-step="' + i + '">';
+            html += '<div class="step-circle">' + i + '</div>';
+            html += '<div class="step-label">' + esc(STEP_LABELS[i]) + '</div>';
+            if (i < 7) html += '<div class="step-connector"></div>';
+            html += '</div>';
+        }
+        $steps.innerHTML = html;
+    }
+
+    function renderPipeline(currentStep, status) {
+        var steps = $steps.querySelectorAll(".step");
+        steps.forEach(function(el) {
+            var s = parseInt(el.getAttribute("data-step"));
+            el.classList.remove("completed", "active", "awaiting", "error", "denied");
+            if (status === "denied") {
+                if (s < currentStep) el.classList.add("completed");
+                else if (s === currentStep) el.classList.add("denied");
+            } else {
+                if (s < currentStep) el.classList.add("completed");
+                else if (s === currentStep) {
+                    if (status === "awaiting_approval") el.classList.add("awaiting");
+                    else if (status === "error") el.classList.add("error");
+                    else if (status === "completed") el.classList.add("completed");
+                    else el.classList.add("active");
+                }
+            }
+        });
+    }
+
+    function renderStatusBadge(status) {
+        $badge.className = "status-badge " + status;
+        $badge.textContent = status.replace(/_/g, " ");
+    }
+
+    function renderTimes(started, completed) {
+        var parts = [];
+        if (started) parts.push("Started: " + fmtTime(started));
+        if (completed) parts.push("Completed: " + fmtTime(completed));
+        $times.textContent = parts.join(" · ");
+    }
+
+    function renderPatient(patient) {
+        var html = '<div class="patient-details">';
+        html += detail("Patient Name", patient.patient_name);
+        html += detail("Date of Birth", patient.date_of_birth, true);
+        html += detail("Health Number", patient.health_number, true);
+        html += '</div>';
+
+        var labs = patient.lab_values;
+        if (labs) {
+            html += '<div class="lab-values-grid">';
+            if (labs.ldl_cholesterol != null) {
+                html += labItem("LDL Cholesterol", labs.ldl_cholesterol, "mg/dL");
+            }
+            if (labs.hdl_cholesterol != null) {
+                html += labItem("HDL Cholesterol", labs.hdl_cholesterol, "mg/dL");
+            }
+            if (labs.fasting_glucose != null) {
+                html += labItem("Fasting Glucose", labs.fasting_glucose, "mg/dL");
+            }
+            if (labs.hemoglobin != null) {
+                html += labItem("Hemoglobin", labs.hemoglobin, "g/dL");
+            }
+            html += '</div>';
+        }
+
+        $patientBody.innerHTML = html;
+    }
+
+    function updateIsolationHighlight(step) {
+        var grid = $isoGrid;
+        var colA = document.getElementById("iso-col-a");
+        var colB = document.getElementById("iso-col-b");
+        var colC = document.getElementById("iso-col-c");
+
+        colA.classList.remove("dim");
+        colB.classList.remove("dim");
+        colC.classList.remove("dim");
+        grid.classList.remove("isolation-active");
+
+        if (step >= 1 && step <= 1) {
+            grid.classList.add("isolation-active");
+            colB.classList.add("dim");
+            colC.classList.add("dim");
+        } else if (step >= 2 && step <= 2) {
+            grid.classList.add("isolation-active");
+            colC.classList.add("dim");
+        } else if (step >= 4 && step <= 4) {
+            grid.classList.add("isolation-active");
+            colB.classList.add("dim");
+        }
+    }
+
+    function renderAnonymization(result) {
+        var token = result.anonymization_token || "";
+        var method = result.anonymization_method || "k-anonymity";
+        var fieldsStripped = result.fields_stripped || [];
+        var labs = result.lab_values || {};
+        var piiLeakCheck = !result.pii_present;
+
+        var html = '<div class="anon-result">';
+
+        html += '<div class="anon-meta">';
+        html += detail("Anonymization Token", token, true);
+        html += detail("Method", method);
+
+        html += '<div><label style="display:block;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px">Fields Stripped</label>';
+        html += '<div class="fields-stripped">';
+        fieldsStripped.forEach(function(f) {
+            html += '<span class="field-tag">' + esc(f) + '</span>';
+        });
+        html += '</div></div>';
+
+        html += '<div class="anon-check ' + (piiLeakCheck ? "pass" : "fail") + '">';
+        html += (piiLeakCheck ? "✓ PII leak check passed" : "✗ PII leak detected");
+        html += '</div>';
+
+        html += '</div>';
+
+        html += '<div>';
+        html += '<label style="display:block;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:8px">Lab Values (unchanged)</label>';
+        html += '<div class="lab-values-grid" style="margin-top:0;padding-top:0;border-top:none">';
+        var labKeys = Object.keys(labs);
+        labKeys.forEach(function(k) {
+            var name = k.replace(/_/g, " ");
+            html += labItem(name, labs[k], "");
+        });
+        html += '</div>';
+        html += '</div>';
+
+        html += '</div>';
+        $anonBody.innerHTML = html;
+    }
+
+    function renderDiagnosis(data) {
+        var result = data.result;
+        var explanation = data.explanation;
+
+        var riskLevel = result.risk_level || "unknown";
+        var confidence = result.confidence || 0;
+        var diagText = result.diagnosis || "";
+        var findings = result.findings || [];
+        var recommendations = result.recommendations || [];
+
+        var riskClass = riskLevel.toLowerCase();
+        if (riskClass !== "low" && riskClass !== "high") riskClass = "moderate";
+
+        var html = '<div class="diagnosis-header">';
+        html += '<span class="risk-badge ' + riskClass + '">' + esc(riskLevel) + ' risk</span>';
+        html += '<div class="confidence-bar">';
+        html += '<div class="confidence-track"><div class="confidence-fill" style="width:' + (confidence * 100) + '%"></div></div>';
+        html += '<span class="confidence-value">' + confidence.toFixed(2) + '</span>';
+        html += '</div>';
+        html += '</div>';
+
+        if (diagText) {
+            html += '<div class="diagnosis-text">' + esc(diagText) + '</div>';
+        }
+
+        if (findings.length > 0) {
+            html += '<label style="display:block;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px">Findings</label>';
+            html += '<ul class="findings-list">';
+            findings.forEach(function(f) { html += '<li>' + esc(f) + '</li>'; });
+            html += '</ul>';
+        }
+
+        if (recommendations.length > 0) {
+            html += '<label style="display:block;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px">Recommendations</label>';
+            html += '<ul class="findings-list">';
+            recommendations.forEach(function(r) { html += '<li>' + esc(r) + '</li>'; });
+            html += '</ul>';
+        }
+
+        if (explanation) {
+            html += '<div class="explanation-section">';
+            html += '<h4>Explanation</h4><dl>';
+            if (explanation.model) {
+                html += '<dt>Model</dt><dd>' + esc(explanation.model) + '</dd>';
+            }
+            if (explanation.reasoning) {
+                html += '<dt>Clinical Reasoning</dt><dd>' + esc(explanation.reasoning) + '</dd>';
+            }
+            var refs = explanation.references || result.guidelines_cited || [];
+            if (refs.length > 0) {
+                html += '<dt>Medical References</dt><dd><div class="references-list">';
+                refs.forEach(function(r) {
+                    html += '<span class="ref-tag">' + esc(r) + '</span>';
+                });
+                html += '</div></dd>';
+            }
+            html += '</dl></div>';
+        }
+
+        $diagBody.innerHTML = html;
+    }
+
+    function renderOversight(pending, diagData) {
+        $overCard.classList.remove("panel-hidden");
+        $overBadge.className = "status-badge awaiting_approval";
+        $overBadge.textContent = "Pending";
+
+        var riskLevel = "unknown";
+        var confidence = 0;
+        var findingsCount = 0;
+        if (pending && pending.payload && pending.payload.args) {
+            var args = pending.payload.args;
+            riskLevel = args.risk_level || "unknown";
+            confidence = args.confidence || 0;
+            findingsCount = args.findings_count || 0;
+        }
+
+        var html = '<div class="oversight-form">';
+
+        html += '<div style="font-size:1.05rem;font-weight:600;color:var(--text)">Diagnosis pending your approval</div>';
+
+        html += '<div class="oversight-summary">';
+        html += '<div class="summary-stat"><div class="stat-value">' + esc(riskLevel) + '</div><div class="stat-label">Risk Level</div></div>';
+        html += '<div class="summary-stat"><div class="stat-value">' + confidence.toFixed(2) + '</div><div class="stat-label">Confidence</div></div>';
+        html += '<div class="summary-stat"><div class="stat-value">' + findingsCount + '</div><div class="stat-label">Findings</div></div>';
+        html += '</div>';
+
+        html += '<div class="oversight-pii-note">';
+        html += 'Patient identity is not shown in the approval envelope &mdash; PII isolation is maintained through the oversight gate. ';
+        html += 'The clinician reviews the diagnosis on its clinical merits alone.';
+        html += '</div>';
+
+        if (pending && pending.expires_at) {
+            html += '<div class="countdown" id="countdown-bar">Approval deadline: <span class="time" id="countdown-time">--:--:--</span></div>';
+        }
+
+        html += '<div class="form-field"><label>Approver ID</label>';
+        html += '<input type="text" id="approver-id" value="agent:meddata.clinician"></div>';
+
+        html += '<div class="form-field"><label>Justification (required)</label>';
+        html += '<textarea id="approval-reason" placeholder="Provide your clinical reasoning for this decision…"></textarea></div>';
+
+        html += '<div class="form-actions">';
+        html += '<button class="approve" onclick="window._submitDecision(\'approved\')">Approve Diagnosis</button>';
+        html += '<button class="deny" onclick="window._submitDecision(\'denied\')">Deny Diagnosis</button>';
+        html += '</div>';
+
+        html += '</div>';
+        $overBody.innerHTML = html;
+
+        window._submitDecision = submitDecision;
+
+        var reasonField = document.getElementById("approval-reason");
+        var approveBtn = $overBody.querySelector(".approve");
+        var denyBtn = $overBody.querySelector(".deny");
+        function checkReason() {
+            var empty = !reasonField.value.trim();
+            approveBtn.disabled = empty;
+            denyBtn.disabled = empty;
+        }
+        reasonField.addEventListener("input", checkReason);
+        checkReason();
+
+        if (pending && pending.expires_at) startCountdown(pending.expires_at);
+    }
+
+    function renderDecisionResult(decision, envelope) {
+        $overCard.classList.remove("panel-hidden");
+        var cls = decision === "approved" ? "approved" : "denied";
+        $overBadge.className = "status-badge " + cls;
+        $overBadge.textContent = decision;
+
+        var reason = envelope && envelope.payload && envelope.payload.result && envelope.payload.result.reason;
+        var approver = envelope && envelope.payload && envelope.payload.result && envelope.payload.result.approver_id;
+
+        var html = '<div class="decision-panel ' + cls + '">';
+
+        html += '<div class="decision-panel-header">';
+        html += '<div class="decision-indicator ' + cls + '">' + (decision === "approved" ? "Approved" : "Denied") + '</div>';
+        if (envelope && envelope.ts) {
+            html += '<span class="decision-ts">' + fmtTime(envelope.ts) + '</span>';
+        }
+        if (approver) {
+            html += '<span class="decision-ts">' + esc(approver) + '</span>';
+        }
+        html += '</div>';
+
+        if (reason) {
+            html += '<div class="decision-panel-reason">' + esc(reason) + '</div>';
+        }
+
+        html += '</div>';
+        $overBody.innerHTML = html;
+    }
+
+    function renderFinalResult(result) {
+        var html = '';
+
+        var token = result.anonymization_token || "";
+        if (token) {
+            html += '<div class="reassociation-note">';
+            html += 'Reassociation: diagnosis linked back to patient identity via anonymization token <code style="font-family:var(--mono);font-size:0.82rem;background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:3px">' + esc(token.substring(0, 24)) + '…</code>';
+            html += '</div>';
+        }
+
+        html += '<div class="clinical-report">';
+        html += '<div class="report-header">';
+        html += '<h3>' + esc(result.report_title || "Clinical Lab Report") + '</h3>';
+        if (result.report_date) {
+            html += '<div class="report-date">' + esc(result.report_date) + '</div>';
+        }
+        html += '</div>';
+        html += '<div class="report-body">';
+
+        if (result.patient) {
+            html += '<div class="report-patient">';
+            html += detail("Patient Name", result.patient.name || result.patient.patient_name);
+            html += detail("Date of Birth", result.patient.date_of_birth, true);
+            html += detail("Health Number", result.patient.health_number, true);
+            html += '</div>';
+        }
+
+        if (result.summary) {
+            html += '<div class="report-section"><h4>Summary</h4>';
+            html += '<p style="font-size:0.92rem;line-height:1.6">' + esc(result.summary) + '</p></div>';
+        }
+
+        if (result.risk_level) {
+            var riskClass = result.risk_level.toLowerCase();
+            if (riskClass !== "low" && riskClass !== "high") riskClass = "moderate";
+            html += '<div class="report-section"><h4>Risk Level</h4>';
+            html += '<span class="risk-badge ' + riskClass + '">' + esc(result.risk_level) + '</span></div>';
+        }
+
+        var findings = result.findings || [];
+        if (findings.length > 0) {
+            html += '<div class="report-section"><h4>Findings</h4>';
+            html += '<ul class="findings-list">';
+            findings.forEach(function(f) { html += '<li>' + esc(f) + '</li>'; });
+            html += '</ul></div>';
+        }
+
+        var recs = result.recommendations || [];
+        if (recs.length > 0) {
+            html += '<div class="report-section"><h4>Recommendations</h4>';
+            html += '<ul class="findings-list">';
+            recs.forEach(function(r) { html += '<li>' + esc(r) + '</li>'; });
+            html += '</ul></div>';
+        }
+
+        var refs = result.guidelines_cited || [];
+        if (refs.length > 0) {
+            html += '<div class="report-section"><h4>Guidelines Cited</h4>';
+            html += '<div class="references-list">';
+            refs.forEach(function(r) { html += '<span class="ref-tag">' + esc(r) + '</span>'; });
+            html += '</div></div>';
+        }
+
+        if (result.disclaimer) {
+            html += '<div class="report-disclaimer">' + esc(result.disclaimer) + '</div>';
+        }
+
+        html += '</div></div>';
+        $resultBody.innerHTML = html;
+    }
+
+    function renderAudit(records) {
+        if (!records || records.length === 0) {
+            $auditBody.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4CB;</div>Audit records will appear as the pipeline progresses.</div>';
+            $auditCount.textContent = "0 records";
+            return;
+        }
+
+        $auditCount.textContent = records.length + " record" + (records.length === 1 ? "" : "s");
+
+        var html = '<table class="audit-table"><thead><tr>';
+        html += '<th>Record ID</th><th>Event</th><th>From → To</th><th>Profile</th><th>Retained Until</th><th>Processed At</th>';
+        html += '</tr></thead><tbody>';
+
+        records.forEach(function(r, idx) {
+            var isDenial = r.event_type === "error" && r.human_oversight_status === "denied";
+            var evtClass = isDenial ? "denied" : (r.event_type || "request");
+            var evtLabel = isDenial ? "denied" : (r.event_type || "");
+
+            var profile = r.compliance_profile || "";
+            var profileClass = profile.indexOf("EU-AI") >= 0 ? "euai" : "gdpr";
+
+            html += '<tr onclick="window._toggleAuditRow(' + idx + ')" data-audit-idx="' + idx + '">';
+            html += '<td class="mono">' + esc((r.record_id || "").substring(0, 12)) + '…</td>';
+            html += '<td><span class="event-type-badge ' + esc(evtClass) + '">' + esc(evtLabel) + '</span></td>';
+            html += '<td>' + fmtAgent(r.from_agent) + ' → ' + fmtAgent(r.to_agent) + '</td>';
+            html += '<td><span class="profile-badge ' + profileClass + '">' + esc(profile) + '</span></td>';
+            html += '<td class="mono">' + fmtDate(r.retained_until) + '</td>';
+            html += '<td class="mono">' + fmtTime(r.processed_at) + '</td>';
+            html += '</tr>';
+            html += '<tr class="audit-detail" id="audit-detail-' + idx + '"><td colspan="6"><dl>';
+            html += '<dt>Record ID</dt><dd class="mono" style="font-size:0.75rem;word-break:break-all">' + esc(r.record_id || "") + '</dd>';
+            html += '<dt>Message ID</dt><dd class="mono" style="font-size:0.75rem;word-break:break-all">' + esc(r.message_id || "") + '</dd>';
+            html += '<dt>Payload Hash</dt><dd class="mono" style="font-size:0.75rem;word-break:break-all">' + esc(r.payload_hash || "") + '</dd>';
+            html += '<dt>Correlation ID</dt><dd class="mono" style="font-size:0.75rem;word-break:break-all">' + esc(r.correlation_id || "") + '</dd>';
+            html += '<dt>Compliance Profile</dt><dd>' + esc(r.compliance_profile || "") + '</dd>';
+            if (r.legal_basis) html += '<dt>Legal Basis</dt><dd>' + esc(r.legal_basis) + '</dd>';
+            if (r.retention_days) html += '<dt>Retention</dt><dd>' + r.retention_days + ' days</dd>';
+            if (r.data_residency) html += '<dt>Data Residency</dt><dd>' + esc(r.data_residency) + '</dd>';
+            if (r.human_oversight_status) html += '<dt>Oversight</dt><dd>' + esc(r.human_oversight_status) + '</dd>';
+            if (r.approver_id) html += '<dt>Approver</dt><dd>' + esc(r.approver_id) + '</dd>';
+            html += '</dl></td></tr>';
+        });
+
+        html += '</tbody></table>';
+        $auditBody.innerHTML = html;
+
+        window._toggleAuditRow = function(idx) {
+            var el = document.getElementById("audit-detail-" + idx);
+            if (el) el.classList.toggle("open");
+        };
+    }
+
+    function renderEnvelopes(envelopes) {
+        if (!envelopes || Object.keys(envelopes).length === 0) return;
+
+        var PII_FIELDS = ["patient_name", "date_of_birth", "health_number"];
+
+        var html = "";
+        var keys = Object.keys(envelopes).sort();
+        keys.forEach(function(step) {
+            var env = envelopes[step];
+            var stepNum = parseInt(step);
+            var label = ENVELOPE_LABELS[stepNum] || ("Step " + step);
+
+            html += '<div class="envelope-item" data-env-step="' + step + '">';
+            html += '<div class="envelope-header" onclick="window._toggleEnv(' + step + ')">';
+            html += '<span><span class="step-tag">Step ' + step + '</span> — ' + esc(label) + '</span>';
+            html += '<span class="arrow">&#x25B6;</span>';
+            html += '</div>';
+
+            if (stepNum === 2) {
+                html += '<div class="pii-present-note">';
+                html += 'ℹ This envelope contains PII (patient_name, date_of_birth, health_number) — Agent B needs it to perform anonymization.';
+                html += '</div>';
+            }
+            if (stepNum === 4) {
+                html += '<div class="isolation-note">';
+                html += '⚠ Data isolation: PII fields are structurally absent from this envelope. Agent C receives only anonymized lab values and a token.';
+                html += '</div>';
+            }
+
+            html += '<div class="envelope-content">';
+            html += '<div class="envelope-json">' + syntaxHighlight(env, stepNum === 4 ? PII_FIELDS : null) + '</div>';
+            html += '</div></div>';
+        });
+
+        $envList.innerHTML = html;
+
+        window._toggleEnv = function(step) {
+            var item = document.querySelector('[data-env-step="' + step + '"]');
+            if (item) item.classList.toggle("open");
+        };
+    }
+
+    // ── Countdown ────────────────────────────────────────
+    function startCountdown(expiresAt) {
+        if (countdownTimer) clearInterval(countdownTimer);
+        var deadline = new Date(expiresAt).getTime();
+
+        function tick() {
+            var el = document.getElementById("countdown-time");
+            if (!el) { clearInterval(countdownTimer); return; }
+            var remaining = deadline - Date.now();
+            if (remaining <= 0) {
+                el.textContent = "EXPIRED";
+                clearInterval(countdownTimer);
+                return;
+            }
+            var mins = Math.floor(remaining / 60000);
+            var secs = Math.floor((remaining % 60000) / 1000);
+            el.textContent = mins + ":" + (secs < 10 ? "0" : "") + secs;
+        }
+
+        tick();
+        countdownTimer = setInterval(tick, 1000);
+    }
+
+    // ── Helpers ──────────────────────────────────────────
+
+    function detail(label, value, mono) {
+        return '<div class="detail-item"><label>' + esc(label) + '</label>' +
+            '<div class="value' + (mono ? " mono" : "") + '">' + esc(String(value == null ? "" : value)) + '</div></div>';
+    }
+
+    function labItem(name, value, unit) {
+        return '<div class="lab-item"><div class="lab-name">' + esc(name) + '</div>' +
+            '<div class="lab-val">' + esc(String(value)) + '</div>' +
+            (unit ? '<div class="lab-unit">' + esc(unit) + '</div>' : '') + '</div>';
+    }
+
+    function esc(s) {
+        if (s == null) return "";
+        var d = document.createElement("div");
+        d.textContent = String(s);
+        return d.innerHTML;
+    }
+
+    function fmtTime(ts) {
+        if (!ts) return "—";
+        try {
+            var d = new Date(ts);
+            return d.toLocaleTimeString("en-GB", {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+        } catch (e) { return ts; }
+    }
+
+    function fmtDate(ts) {
+        if (!ts) return "—";
+        try {
+            var d = new Date(ts);
+            return d.toLocaleDateString("en-GB", {year: "numeric", month: "short", day: "numeric"});
+        } catch (e) { return ts; }
+    }
+
+    function fmtAgent(a) {
+        if (!a) return "—";
+        return a.replace("agent:meddata.", "");
+    }
+
+    function syntaxHighlight(obj, absentFields) {
+        var json = JSON.stringify(obj, null, 2);
+        var highlighted = json
+            .replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*")\s*:/g, '<span class="key">$1</span>:')
+            .replace(/: ("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*")/g, ': <span class="string">$1</span>')
+            .replace(/: (-?\d+\.?\d*)/g, ': <span class="number">$1</span>')
+            .replace(/: (true|false)/g, ': <span class="bool">$1</span>')
+            .replace(/: (null)/g, ': <span class="null">$1</span>');
+
+        if (absentFields && absentFields.length > 0) {
+            absentFields.forEach(function(field) {
+                var re = new RegExp('(<span class="key">"' + field + '"</span>)', 'g');
+                highlighted = highlighted.replace(re, '<span class="key" style="color:#fb923c;text-decoration:line-through">"' + field + '"</span> <span style="color:#fb923c;font-size:0.72rem">[ABSENT]</span>');
+            });
+        }
+
+        return highlighted;
+    }
+
+})();
+</script>
+
+</body>
+</html>
