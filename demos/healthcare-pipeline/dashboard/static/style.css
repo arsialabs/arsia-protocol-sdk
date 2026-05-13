@@ -841,6 +841,34 @@ button.warning:hover { background: #b45309; }
     line-height: 1.55;
 }
 
+.decision-panel-footer {
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    background: #fafbfc;
+}
+
+.decision-env-link {
+    font-size: 0.78rem;
+    color: var(--accent);
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.decision-env-link:hover { text-decoration: underline; }
+
+.decision-env-link .arrow {
+    transition: transform 0.2s;
+    font-size: 0.65rem;
+}
+
+.decision-env-body {
+    display: none;
+    border-top: 1px solid var(--border);
+}
+
 /* ── Final result panel ──────────────────────────────────── */
 
 .clinical-report {
@@ -1098,30 +1126,19 @@ button.warning:hover { background: #b45309; }
     background: var(--teal-bg);
 }
 
+.envelope-item.envelope-denial {
+    border-color: var(--red);
+}
+
+.envelope-item.envelope-denial .envelope-header {
+    background: var(--red-bg);
+}
+
+.step-tag.denial {
+    color: var(--red);
+}
+
 /* ── LLM streaming panel ─────────────────────────────────── */
-
-.llm-sections {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-}
-
-.llm-section {
-    border-right: 1px solid var(--border);
-}
-
-.llm-section:last-child { border-right: none; }
-
-.llm-section-header {
-    padding: 8px 16px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-    background: #f8fafb;
-    border-bottom: 1px solid var(--border);
-}
 
 .llm-stream-output {
     font-family: var(--mono);
@@ -1129,8 +1146,7 @@ button.warning:hover { background: #b45309; }
     background: #1e293b;
     color: #e2e8f0;
     padding: 16px;
-    min-height: 80px;
-    max-height: 300px;
+    height: 300px;
     overflow-y: auto;
     white-space: pre-wrap;
     word-break: break-word;
@@ -1183,7 +1199,5 @@ button.warning:hover { background: #b45309; }
     .isolation-col { border-right: none; border-bottom: 1px solid var(--border); }
     .oversight-summary { grid-template-columns: 1fr; }
     .anon-result { grid-template-columns: 1fr; }
-    .llm-sections { grid-template-columns: 1fr; }
-    .llm-section { border-right: none; border-bottom: 1px solid var(--border); }
     .report-patient { grid-template-columns: 1fr; }
 }

@@ -46,7 +46,7 @@ class FlowState:
     def __init__(self) -> None:
         self._status: PipelineStatus = PipelineStatus.IDLE
         self._current_step: int = 0
-        self._step_envelopes: dict[int, dict[str, Any]] = {}
+        self._step_envelopes: dict[str, dict[str, Any]] = {}
         self._pending_approval: dict[str, Any] | None = None
         self._approval_decision: dict[str, Any] | None = None
         self._error: str | None = None
@@ -111,12 +111,17 @@ class FlowState:
             "started_at": self._started_at,
         })
 
+    async def add_envelope(self, key: str, envelope: dict[str, Any]) -> None:
+        """Store an extra envelope (e.g. denial demo) visible in the inspector."""
+        async with self._lock:
+            self._step_envelopes[key] = envelope
+
     async def advance(self, step: int, envelope: dict[str, Any] | None = None) -> None:
         """Move the pipeline to the given step, optionally recording an envelope."""
         async with self._lock:
             self._current_step = step
             if envelope is not None:
-                self._step_envelopes[step] = envelope
+                self._step_envelopes[str(step)] = envelope
 
         await self._broadcast("step_advanced", {
             "step": step,
@@ -196,7 +201,7 @@ class FlowState:
                 "total_steps": 7,
                 "step_descriptions": STEP_DESCRIPTIONS,
                 "step_envelopes": {
-                    str(k): _envelope_summary(v)
+                    k: _envelope_summary(v)
                     for k, v in self._step_envelopes.items()
                 },
                 "pending_approval": _envelope_summary(self._pending_approval) if self._pending_approval else None,
@@ -211,7 +216,7 @@ class FlowState:
         return self._status
 
     def get_step_envelope(self, step: int) -> dict[str, Any] | None:
-        return self._step_envelopes.get(step)
+        return self._step_envelopes.get(str(step))
 
 
 def _envelope_summary(env: dict[str, Any]) -> dict[str, Any]:

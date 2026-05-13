@@ -27,6 +27,7 @@ import sys
 from contextlib import asynccontextmanager
 from typing import Any
 
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -660,11 +661,26 @@ async def _reassociate(
         f"Format as a structured clinical report JSON."
     )
 
+    await flow.broadcast_llm_event({
+        "agent": cfg.agent_id, "event": "start",
+    })
+
+    async def on_token(token: str) -> None:
+        await flow.broadcast_llm_event({
+            "agent": cfg.agent_id, "event": "token", "token": token,
+        })
+
     try:
-        result = await ollama.chat_json(prompt)
+        result = await ollama.chat_json_stream(prompt, on_token=on_token)
+        await flow.broadcast_llm_event({
+            "agent": cfg.agent_id, "event": "end",
+        })
         if isinstance(result, dict) and "patient" in result:
             return result
     except Exception as exc:
+        await flow.broadcast_llm_event({
+            "agent": cfg.agent_id, "event": "end",
+        })
         logger.warning("LLM reassociation failed (%s), using template", exc)
 
     return _build_fallback_report(patient_data, diagnosis, anon_token)
@@ -709,14 +725,29 @@ async def _demo_capability_denial() -> None:
         args={"demo": True, "note": "This request will be denied — Agent C lacks pii.read"},
         compliance={
             "profile": "GDPR-STANDARD",
+            "legal_basis": "health_medicine",
             "pii_involved": True,
             "audit_required": True,
         },
     )
 
+    signed_denial_req = sign_message(apply_profile(denial_request), key_store.private_key, key_store.kid)
+    await audit_store.add_from_envelope(signed_denial_req, event_type="request")
+    await flow.add_envelope("denial_req", signed_denial_req)
+
     try:
         response = await send_envelope(denial_request, key_store, PEER_C_URL, timeout=30.0)
         logger.info("Capability denial response: intent=%s", response.get("intent"))
+        await audit_store.add_from_envelope(response, event_type="error")
+        await flow.add_envelope("denial_resp", response)
+    except httpx.HTTPStatusError as exc:
+        try:
+            error_envelope = exc.response.json()
+            await audit_store.add_from_envelope(error_envelope, event_type="error")
+            await flow.add_envelope("denial_resp", error_envelope)
+        except Exception:
+            pass
+        logger.info("Capability denial triggered expected error: %s", exc)
     except Exception as exc:
         logger.info("Capability denial triggered expected error: %s", exc)
 

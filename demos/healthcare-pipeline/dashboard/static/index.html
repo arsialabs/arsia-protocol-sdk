@@ -55,6 +55,88 @@
         </div>
     </div>
 
+    <!-- ── Final result ────────────────────────────────── -->
+    <div class="card panel-hidden" id="result-card">
+        <div class="card-header">
+            <h2>Final Clinical Report</h2>
+            <span class="status-badge completed" style="font-size:0.72rem">Step 7</span>
+        </div>
+        <div class="card-body" id="result-body"></div>
+    </div>
+
+    <!-- ── LLM streaming ───────────────────────────────── -->
+    <div class="card panel-hidden" id="llm-stream-card">
+        <div class="card-header">
+            <h2 id="llm-stream-title">LLM Processing</h2>
+            <span class="status-badge running" id="llm-stream-badge">Streaming</span>
+        </div>
+        <div class="card-body" style="padding:0">
+            <div class="llm-stream-output" id="llm-stream-output"></div>
+        </div>
+    </div>
+
+    <!-- ── Anonymization result ──────────────────────── -->
+    <div class="card panel-hidden" id="anon-card">
+        <div class="card-header">
+            <h2>Anonymization Result</h2>
+            <span class="status-badge" style="font-size:0.72rem">Step 3</span>
+        </div>
+        <div class="card-body" id="anon-body"></div>
+    </div>
+
+    <div class="grid-2">
+
+        <!-- ── Clinical diagnosis ──────────────────────── -->
+        <div class="card panel-hidden" id="diagnosis-card">
+            <div class="card-header">
+                <h2>Clinical Diagnosis</h2>
+                <span class="status-badge" style="font-size:0.72rem">Step 5</span>
+            </div>
+            <div class="card-body" id="diagnosis-body"></div>
+        </div>
+
+        <!-- ── Human oversight ─────────────────────────── -->
+        <div class="card panel-hidden" id="oversight-card">
+            <div class="card-header">
+                <h2>Human Oversight &mdash; Clinician Approval</h2>
+                <span class="status-badge awaiting_approval" id="oversight-badge">Pending</span>
+            </div>
+            <div class="card-body" id="oversight-body"></div>
+        </div>
+
+    </div>
+
+    <!-- ── Envelope inspector ──────────────────────────── -->
+    <div class="card" id="envelope-card">
+        <div class="card-header">
+            <h2>Envelope Inspector</h2>
+        </div>
+        <div class="card-body">
+            <div class="envelope-list" id="envelope-list">
+                <div class="empty-state">
+                    <div class="icon">&#x1F4E8;</div>
+                    Signed ARSIA envelopes will appear here for inspection.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Audit trail ─────────────────────────────────── -->
+    <div class="card" id="audit-card">
+        <div class="card-header">
+            <h2>Audit Trail</h2>
+            <span id="audit-count" style="font-size:0.78rem;color:var(--text-muted)">0 records</span>
+        </div>
+        <div class="card-body" style="padding:0">
+            <div id="audit-body">
+                <div class="empty-state">
+                    <div class="icon">&#x1F4CB;</div>
+                    Audit records will appear as the pipeline progresses.
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ── PII isolation ───────────────────────────────── -->
     <div class="card" id="isolation-card">
         <div class="card-header">
@@ -104,97 +186,6 @@
         </div>
     </div>
 
-    <!-- ── LLM streaming ───────────────────────────────── -->
-    <div class="card panel-hidden" id="llm-stream-card">
-        <div class="card-header">
-            <h2>LLM Processing</h2>
-            <span class="status-badge running" id="llm-stream-badge">Streaming</span>
-        </div>
-        <div class="card-body" style="padding:0">
-            <div class="llm-sections">
-                <div class="llm-section">
-                    <div class="llm-section-header">Agent B &mdash; Anonymizer</div>
-                    <div class="llm-stream-output" id="llm-output-b"></div>
-                </div>
-                <div class="llm-section">
-                    <div class="llm-section-header">Agent C &mdash; Clinical Analyzer</div>
-                    <div class="llm-stream-output" id="llm-output-c"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid-2">
-
-        <!-- ── Anonymization result ────────────────────── -->
-        <div class="card panel-hidden" id="anon-card">
-            <div class="card-header">
-                <h2>Anonymization Result</h2>
-                <span class="status-badge" style="font-size:0.72rem">Step 3</span>
-            </div>
-            <div class="card-body" id="anon-body"></div>
-        </div>
-
-        <!-- ── Clinical diagnosis ──────────────────────── -->
-        <div class="card panel-hidden" id="diagnosis-card">
-            <div class="card-header">
-                <h2>Clinical Diagnosis</h2>
-                <span class="status-badge" style="font-size:0.72rem">Step 5</span>
-            </div>
-            <div class="card-body" id="diagnosis-body"></div>
-        </div>
-
-    </div>
-
-    <!-- ── Human oversight ─────────────────────────────── -->
-    <div class="card panel-hidden" id="oversight-card">
-        <div class="card-header">
-            <h2>Human Oversight &mdash; Clinician Approval</h2>
-            <span class="status-badge awaiting_approval" id="oversight-badge">Pending</span>
-        </div>
-        <div class="card-body" id="oversight-body"></div>
-    </div>
-
-    <!-- ── Final result ────────────────────────────────── -->
-    <div class="card panel-hidden" id="result-card">
-        <div class="card-header">
-            <h2>Final Clinical Report</h2>
-            <span class="status-badge completed" style="font-size:0.72rem">Step 7</span>
-        </div>
-        <div class="card-body" id="result-body"></div>
-    </div>
-
-    <!-- ── Audit trail ─────────────────────────────────── -->
-    <div class="card" id="audit-card">
-        <div class="card-header">
-            <h2>Audit Trail</h2>
-            <span id="audit-count" style="font-size:0.78rem;color:var(--text-muted)">0 records</span>
-        </div>
-        <div class="card-body" style="padding:0">
-            <div id="audit-body">
-                <div class="empty-state">
-                    <div class="icon">&#x1F4CB;</div>
-                    Audit records will appear as the pipeline progresses.
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ── Envelope inspector ──────────────────────────── -->
-    <div class="card" id="envelope-card">
-        <div class="card-header">
-            <h2>Envelope Inspector</h2>
-        </div>
-        <div class="card-body">
-            <div class="envelope-list" id="envelope-list">
-                <div class="empty-state">
-                    <div class="icon">&#x1F4E8;</div>
-                    Signed ARSIA envelopes will appear here for inspection.
-                </div>
-            </div>
-        </div>
-    </div>
-
 </main>
 
 <script>
@@ -224,12 +215,15 @@
         4: "④ Agent A → Agent C: anonymized lab values only (no PII)",
         5: "⑤ Agent C → Agent A: diagnosis + explanation",
         6: "⑥ Agent A: pending clinician approval (human oversight)",
-        7: "⑦ Agent A: final report (reassociated via token)"
+        7: "⑦ Agent A: final report (reassociated via token)",
+        "denial_req": "⚠ Agent A → Agent C: PII access request (capability denial demo)",
+        "denial_resp": "⛔ Agent C → Agent A: capability denied — pii.read not granted"
     };
 
     var AGENT_NAMES = {
-        "agent:meddata.anonymizer": "b",
-        "agent:meddata.clinical-analyzer": "c"
+        "agent:meddata.data-collector": "Agent A — Data Collector",
+        "agent:meddata.anonymizer": "Agent B — Anonymizer",
+        "agent:meddata.clinical-analyzer": "Agent C — Clinical Analyzer"
     };
 
     // ── DOM refs ─────────────────────────────────────────
@@ -256,9 +250,9 @@
     var $sseDot = document.getElementById("sse-dot");
     var $sseLabel = document.getElementById("sse-label");
     var $llmCard = document.getElementById("llm-stream-card");
+    var $llmTitle = document.getElementById("llm-stream-title");
     var $llmBadge = document.getElementById("llm-stream-badge");
-    var $llmOutB = document.getElementById("llm-output-b");
-    var $llmOutC = document.getElementById("llm-output-c");
+    var $llmOutput = document.getElementById("llm-stream-output");
 
     // ── Init ─────────────────────────────────────────────
     buildSteps();
@@ -448,8 +442,7 @@
         updateIsolationHighlight(data.step);
 
         $llmCard.classList.add("panel-hidden");
-        $llmOutB.textContent = "";
-        $llmOutC.textContent = "";
+        $llmOutput.textContent = "";
         $anonCard.classList.add("panel-hidden");
         $diagCard.classList.add("panel-hidden");
         $overCard.classList.add("panel-hidden");
@@ -547,8 +540,7 @@
         $patientBody.innerHTML = '<div class="empty-state"><div class="icon">&#x1F9EA;</div>Start the pipeline to see the patient record.</div>';
         updateIsolationHighlight(0);
         $llmCard.classList.add("panel-hidden");
-        $llmOutB.textContent = "";
-        $llmOutC.textContent = "";
+        $llmOutput.textContent = "";
         $anonCard.classList.add("panel-hidden");
         $diagCard.classList.add("panel-hidden");
         $overCard.classList.add("panel-hidden");
@@ -561,39 +553,34 @@
 
     // ── LLM streaming handler ────────────────────────────
     function handleLlmStream(data) {
-        var agentKey = AGENT_NAMES[data.agent] || "b";
-        var $output = agentKey === "c" ? $llmOutC : $llmOutB;
-
         if (data.event === "start") {
             $llmCard.classList.remove("panel-hidden");
+            $llmTitle.textContent = AGENT_NAMES[data.agent] || "LLM Processing";
             $llmBadge.className = "status-badge running";
             $llmBadge.textContent = "Streaming";
-            $output.textContent = "";
+            $llmOutput.textContent = "";
             var cursor = document.createElement("span");
             cursor.className = "llm-cursor";
-            $output.appendChild(cursor);
+            $llmOutput.appendChild(cursor);
             return;
         }
 
         if (data.event === "end") {
-            var cursor = $output.querySelector(".llm-cursor");
+            $llmBadge.className = "status-badge completed";
+            $llmBadge.textContent = "Complete";
+            var cursor = $llmOutput.querySelector(".llm-cursor");
             if (cursor) cursor.remove();
-            var anyActive = $llmOutB.querySelector(".llm-cursor") || $llmOutC.querySelector(".llm-cursor");
-            if (!anyActive) {
-                $llmBadge.className = "status-badge completed";
-                $llmBadge.textContent = "Complete";
-            }
             return;
         }
 
         if (data.token) {
-            var cursor = $output.querySelector(".llm-cursor");
+            var cursor = $llmOutput.querySelector(".llm-cursor");
             if (cursor) cursor.remove();
-            $output.appendChild(document.createTextNode(data.token));
+            $llmOutput.appendChild(document.createTextNode(data.token));
             var newCursor = document.createElement("span");
             newCursor.className = "llm-cursor";
-            $output.appendChild(newCursor);
-            $output.scrollTop = $output.scrollHeight;
+            $llmOutput.appendChild(newCursor);
+            $llmOutput.scrollTop = $llmOutput.scrollHeight;
         }
     }
 
@@ -861,7 +848,11 @@
         }
 
         html += '<div class="form-field"><label>Approver ID</label>';
-        html += '<input type="text" id="approver-id" value="agent:meddata.clinician"></div>';
+        html += '<select id="approver-id">';
+        html += '<option value="agent:meddata.clinician">agent:meddata.clinician</option>';
+        html += '<option value="agent:meddata.senior-clinician">agent:meddata.senior-clinician</option>';
+        html += '<option value="agent:meddata.chief-medical-officer">agent:meddata.chief-medical-officer</option>';
+        html += '</select></div>';
 
         html += '<div class="form-field"><label>Justification (required)</label>';
         html += '<textarea id="approval-reason" placeholder="Provide your clinical reasoning for this decision…"></textarea></div>';
@@ -915,8 +906,28 @@
             html += '<div class="decision-panel-reason">' + esc(reason) + '</div>';
         }
 
+        if (envelope) {
+            html += '<div class="decision-panel-footer">';
+            html += '<span class="decision-env-link" onclick="window._toggleDecisionEnv()">';
+            html += '<span class="arrow" id="decision-env-arrow">&#x25B6;</span> Signed envelope</span>';
+            html += '</div>';
+            html += '<div class="decision-env-body" id="decision-env-content">';
+            html += '<div class="envelope-json">' + syntaxHighlight(envelope) + '</div>';
+            html += '</div>';
+        }
+
         html += '</div>';
         $overBody.innerHTML = html;
+
+        window._toggleDecisionEnv = function() {
+            var content = document.getElementById("decision-env-content");
+            var arrow = document.getElementById("decision-env-arrow");
+            if (content) {
+                var open = content.style.display === "block";
+                content.style.display = open ? "none" : "block";
+                arrow.style.transform = open ? "" : "rotate(90deg)";
+            }
+        };
     }
 
     function renderFinalResult(result) {
@@ -1055,16 +1066,27 @@
 
         var PII_FIELDS = ["patient_name", "date_of_birth", "health_number"];
 
+        var numericKeys = [];
+        var extraKeys = [];
+        Object.keys(envelopes).forEach(function(k) {
+            if (isNaN(parseInt(k))) extraKeys.push(k);
+            else numericKeys.push(k);
+        });
+        numericKeys.sort(function(a, b) { return parseInt(a) - parseInt(b); });
+        var keys = numericKeys.concat(extraKeys);
+
         var html = "";
-        var keys = Object.keys(envelopes).sort();
         keys.forEach(function(step) {
             var env = envelopes[step];
             var stepNum = parseInt(step);
-            var label = ENVELOPE_LABELS[stepNum] || ("Step " + step);
+            var isNumeric = !isNaN(stepNum);
+            var label = ENVELOPE_LABELS[isNumeric ? stepNum : step] || ("Step " + step);
+            var isDenial = step === "denial_req" || step === "denial_resp";
+            var tagLabel = isNumeric ? "Step " + step : (step === "denial_req" ? "Denial" : "Denied");
 
-            html += '<div class="envelope-item" data-env-step="' + step + '">';
-            html += '<div class="envelope-header" onclick="window._toggleEnv(' + step + ')">';
-            html += '<span><span class="step-tag">Step ' + step + '</span> — ' + esc(label) + '</span>';
+            html += '<div class="envelope-item' + (isDenial ? " envelope-denial" : "") + '" data-env-step="' + step + '">';
+            html += '<div class="envelope-header" onclick="window._toggleEnv(\'' + step + '\')">';
+            html += '<span><span class="step-tag' + (isDenial ? " denial" : "") + '">' + tagLabel + '</span> — ' + esc(label) + '</span>';
             html += '<span class="arrow">&#x25B6;</span>';
             html += '</div>';
 
@@ -1076,6 +1098,11 @@
             if (stepNum === 4) {
                 html += '<div class="isolation-note">';
                 html += '⚠ Data isolation: PII fields are structurally absent from this envelope. Agent C receives only anonymized lab values and a token.';
+                html += '</div>';
+            }
+            if (step === "denial_resp") {
+                html += '<div class="isolation-note">';
+                html += 'Agent C rejected this request — capability pii.read is not in its granted set. The protocol enforces data isolation structurally.';
                 html += '</div>';
             }
 
@@ -1151,9 +1178,17 @@
         } catch (e) { return ts; }
     }
 
+    var AGENT_DISPLAY = {
+        "agent:meddata.data-collector": "Agent A — Data Collector",
+        "agent:meddata.anonymizer": "Agent B — Anonymizer",
+        "agent:meddata.clinical-analyzer": "Agent C — Clinical Analyzer",
+        "agent:meddata.clinician": "Human Supervisor",
+        "agent:meddata.intake-system": "Intake System"
+    };
+
     function fmtAgent(a) {
         if (!a) return "—";
-        return a.replace("agent:meddata.", "");
+        return AGENT_DISPLAY[a] || a.replace("agent:meddata.", "");
     }
 
     function syntaxHighlight(obj, absentFields) {
