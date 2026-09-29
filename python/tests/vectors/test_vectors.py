@@ -549,6 +549,8 @@ class TestSchemaValidationVectors:
         ids=[v["id"] for v in _INVALID_SCHEMA_VECTORS],
     )
     def test_schema_invalid(self, vector: dict[str, Any]) -> None:
+        if vector.get("skip_schema"):
+            pytest.skip("skip_schema: runtime-only vector")
         data = vector["data"] if "data" in vector else vector["message"]
         errors = validate_schema(data, vector["schema_ref"])
         assert len(errors) > 0, f"{vector['id']}: expected invalid"
