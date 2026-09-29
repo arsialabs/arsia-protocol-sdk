@@ -6,16 +6,14 @@ These files are copied from the ARSIA Protocol specification
 repository: `arsia-protocol`.
 
 **Source repo:** `github.com/arsialabs/arsia-protocol`
-**Source ref:** branch `fix/draft-01-vector-signatures`, commit
-`bbbd8dfe3e41f8248d06d479199242007bcb165f`
+**Source ref:** `main`, merge commit
+`17dcf33fc4f31bd067024ca2f8f07bc3925e65aa` (pull request #1); content commit
+`bbbd8dfe3e41f8248d06d479199242007bcb165f` (identical tree)
 **Copied on:** 2026-09-29
 **Spec version:** Draft-01.1 (wire version `1.0`)
 
-The source is a branch commit, not yet merged into the protocol's `main`.
-After the protocol pull request is merged, and before the SDK release,
-the content of this directory must be re-verified against the merged
-`main` (SHA-256 per file), and the commit reference above updated if it
-changes.
+The merge commit's tree is identical to the content commit's; every file
+listed below was re-verified against `main` by SHA-256 on 2026-09-29.
 
 Copied byte-for-byte: `schemas/*.json`, `profiles/arsia-compliance-profiles.json`,
 `test-vectors/arsia-test-vectors.json`, `test-vectors/keypairs.json`, and
