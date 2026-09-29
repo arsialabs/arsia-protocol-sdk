@@ -18,7 +18,7 @@ the public API or to the wire format (`1.0`).
   (EdDSA and ES256, with the vector's `crypto` block or the published
   keypairs; RS256 reported as SKIP) — instead of hard-coded vector-ID
   lists. It reports passed, failed and skipped separately and exits 1 on
-  any failure. On the bundled corpus: 545 passed, 0 failed, 66 skipped.
+  any failure. On the bundled corpus: 544 passed, 0 failed, 67 skipped.
 - **Vector tests** derive their cases from the corpus: every vector goes
   through the same layered check, every `crypto` block is checked for
   canonical bytes, and signatures of valid vectors are verified. No
@@ -31,8 +31,8 @@ the public API or to the wire format (`1.0`).
 ### Changed
 
 - **Conformance corpus** re-synced from the ARSIA Protocol Draft-01.1
-  errata (see `shared/SOURCE.md`): 611 test vectors (413 valid, 124
-  invalid, 74 runtime-only); 57 keypairs (53 Ed25519, 2 ES256, 2 RS256);
+  errata (see `shared/SOURCE.md`): 611 test vectors (413 valid, 123
+  invalid, 75 runtime-only); 57 keypairs (53 Ed25519, 2 ES256, 2 RS256);
   every signature in a valid vector verifies with a published key.
 - **CI** runs `arsia vectors run` after the test suite.
 - **Conformance suites** that reference vectors state that they are
