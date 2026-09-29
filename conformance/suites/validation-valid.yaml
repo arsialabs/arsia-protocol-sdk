@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BUSL-1.1
 # L1+L2 validation of valid ARSIA envelopes
-# Generated from shared/test-vectors/arsia-test-vectors.json.
+# A deliberate fixed subset of shared/test-vectors/arsia-test-vectors.json;
+# every vector is checked by `arsia vectors run` and python/tests/vectors.
 # Language-agnostic — any ARSIA runner consumes this file.
 name: validation-valid
 description: 'L1+L2 validation of valid ARSIA envelopes'

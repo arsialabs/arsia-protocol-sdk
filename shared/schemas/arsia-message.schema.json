@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://arsiaprotocol.org/schemas/message/v1.0.json",
-  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See licenses/LICENSE-ARTIFACTS.md.",
   "title": "ARSIA Message",
   "description": "Message envelope for the ARSIA Protocol v1.0. Runtime constraints not expressible in JSON Schema: (1) When a receiving agent downgrades capabilities (Actions \u00a71.3), the response MUST include effective_capabilities in payload.result. This array MUST be a subset of the original request's capabilities and MUST contain at least one capability. Enforced at runtime \u2014 schema cannot validate cross-message state. (2) Rollback requests (Actions \u00a74.2) use intent 'request' with payload.type formatted as '{action_id}/rollback'. The payload.args SHOULD include original_message_id. This is a naming convention, not a distinct wire format. (3) Long-running actions (Actions \u00a74.3) SHOULD use the asynchronous execution pattern. The initial response uses intent 'response' with payload.result containing status_url. Status polling responses are separate HTTP GET responses outside the ARSIA message envelope.",
   "type": "object",

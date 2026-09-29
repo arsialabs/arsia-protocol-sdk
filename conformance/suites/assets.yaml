@@ -5,6 +5,8 @@
 # are routed through the assets Layer-4 validators (not validate_envelope):
 # Core §4 / §4.3.8 does not know about precision, reversal preconditions,
 # or escrow-conditions coupling.
+# A deliberate fixed subset of shared/test-vectors/arsia-test-vectors.json;
+# every vector is checked by `arsia vectors run` and python/tests/vectors.
 name: assets
 description: 'Assets primitive: transfer request/receipt/reversal, escrow machine, two-party auth, DORA/MiFID/PSD2 helpers.'
 level: compliance

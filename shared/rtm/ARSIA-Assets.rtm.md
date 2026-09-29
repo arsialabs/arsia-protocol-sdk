@@ -304,6 +304,8 @@
 | ASSETS-§4.2.2-01 | 4.2.2 | MUST | behavioural_positive |
 | ASSETS-§4.2.2-02 | 4.2.2 | MUST | behavioural_positive |
 | ASSETS-§4.2.2-03 | 4.2.2 | SHOULD_NOT | behavioural_negative |
+| ASSETS-§4.2.3-03 | 4.2.3 | MUST | behavioural_positive |
+| ASSETS-§4.2.3-04 | 4.2.3 | MUST | behavioural_negative |
 | ASSETS-§4.2.4-01 | 4.2.4 | MUST | behavioural_positive |
 | ASSETS-§4.2.4-02 | 4.2.4 | MUST | behavioural_negative |
 | ASSETS-§4.2.4-03 | 4.2.4 | MUST | structural |
@@ -365,8 +367,8 @@
 | ASSETS-§7-02 | 7 | MAY | informational |
 
 ### Summary
-- Total requirements: 256
-- Schema coverage: 128 / 256 (50%)
-- Vector coverage: 141 / 256 (55%)
-- Both: 101 / 256
-- Neither: 88 / 256 ← these are the gaps
+- Total requirements: 262
+- Schema coverage: 129 / 262 (49%)
+- Vector coverage: 141 / 262 (54%)
+- Both: 101 / 262
+- Neither: 93 / 262 ← these are the gaps

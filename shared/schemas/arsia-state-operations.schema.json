@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://arsiaprotocol.org/schemas/state-operations/v1.0.json",
-  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See licenses/LICENSE-ARTIFACTS.md.",
   "title": "ARSIA State Operations",
   "description": "Validates payload.args and payload.result for the 8 state operations defined in ARSIA-State.md \u00a73. Base operations: GET, SET, DELETE, REVOKE (\u00a73.1, \u00a73.3.2). Complex operations: QUERY (\u00a73.1.4), SNAPSHOT (\u00a73.2.1), PURGE (\u00a73.2.2), GRANT (\u00a73.3.1). Discriminated by the payload.type field. Only enforces MUST-level structural constraints. Runtime constraints (namespace matching, legal_basis for personal PII, optimistic concurrency, value size limit, limit clamping to 1000, access control, elevated capabilities, key_pattern ownership, purge procedure, audit events) MUST be enforced programmatically.",
   "type": "object",

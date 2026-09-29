@@ -318,7 +318,7 @@
 | CORE-§8.3-06 | 8.3 | MAY | sdk | behavioural_positive | Messages with ts differing more than ±300 seconds (default, may be overridden by compliance profile) from recipient time MAY be rejected | — | ITV-440 |
 | CORE-§8.3-07 | 8.3 | SHOULD | deployment | behavioural_positive | Implementations SHOULD synchronise clocks using NTP or equivalent time protocol | — | — |
 | CORE-§8.3-08 | 8.3 | SHOULD | deployment | behavioural_positive | Compliance-sensitive agents SHOULD use multiple NTP sources and log drift exceeding 10 seconds | — | — |
-| CORE-§8.3-09 | 8.3 | MUST | sdk | behavioural_positive | When compliance profile defines clock_skew_seconds, that value MUST be used instead of the 300s default | arsia-compliance-profiles | ITV-545, ITV-546, ITV-547 |
+| CORE-§8.3-09 | 8.3 | MUST | sdk | behavioural_positive | When compliance profile defines clock_skew_seconds, that value MUST be used instead of the 300s default | arsia-compliance-profiles | ITV-546, ITV-547 |
 | CORE-§8.3-10 | 8.3 | MUST_NOT | schema | constraint | Profile clock_skew_seconds MUST NOT exceed 300 seconds (maximum: 300 in schema enforces this) | arsia-compliance-profiles | — |
 | CORE-§9.1-01 | 9.1 | MUST | sdk | interoperability | Direct routing alone MUST be sufficient for Core conformance (§12.1) | — | — |
 | CORE-§9.1-02 | 9.1 | MUST | sdk_enabled | procedural | Sender MUST resolve the recipient's inbox URL via the discovery endpoint (§7.1) | — | — |
@@ -401,17 +401,17 @@
 
 ## Coverage Gaps
 
-Generated: 2026-05-04 (audited)
+Generated: 2026-09-29
 
 ### Summary
 
 | Metric | Count |
 |--------|------:|
-| Total requirements | 388 |
-| Schema ≠ — | 165 |
-| Vector ≠ — | 132 |
-| Both ≠ — | 71 |
-| Both = — (gaps) | 162 |
+| Total requirements | 392 |
+| Schema ≠ — | 168 |
+| Vector ≠ — | 137 |
+| Both ≠ — | 74 |
+| Both = — (gaps) | 161 |
 
 ### Per-section breakdown
 
@@ -420,7 +420,7 @@ Generated: 2026-05-04 (audited)
 | 1 | 1 | 0 | 0 | 0 | 1 |
 | 2 | 12 | 6 | 2 | 2 | 6 |
 | 3 | 12 | 7 | 3 | 3 | 5 |
-| 4 | 131 | 70 | 68 | 37 | 30 |
+| 4 | 136 | 73 | 73 | 40 | 30 |
 | 5 | 34 | 7 | 19 | 4 | 12 |
 | 6 | 34 | 19 | 12 | 5 | 8 |
 | 7 | 46 | 25 | 10 | 7 | 18 |
@@ -431,4 +431,3 @@ Generated: 2026-05-04 (audited)
 | 12 | 4 | 0 | 0 | 0 | 4 |
 | 13 | 3 | 1 | 0 | 0 | 2 |
 | 14 | 2 | 0 | 2 | 0 | 0 |
-| 16 | 1 | 0 | 0 | 0 | 1 |

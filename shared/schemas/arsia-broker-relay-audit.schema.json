@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://arsiaprotocol.org/schemas/broker-relay-audit/v1.0.json",
-  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See licenses/LICENSE-ARTIFACTS.md.",
   "title": "ARSIA Broker Relay Audit Record",
   "description": "Audit record produced by a Compliance Broker for every message it relays. Captures relay metadata for compliance and audit purposes without storing the message payload. Defined in ARSIA-Routing.md \u00a77.4; normative field requirements in \u00a77.3 Rule 7.",
   "type": "object",

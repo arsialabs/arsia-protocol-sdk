@@ -1,5 +1,5 @@
 {
-  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See licenses/LICENSE-ARTIFACTS.md.",
   "description": "Test-only keypairs (Ed25519, ES256, RS256) for ARSIA Protocol test vectors. NOT secrets.",
   "keypairs": {
     "agent:acme.echo-client": {
@@ -46,6 +46,246 @@
       "private_key_hex": "308204be020100300d06092a864886f70d0101010500048204a8308204a402010002820101009fb685c8e218910deb94b23ec7c11da4b94e7b7920d405efd11dce4130bb7df403ef8d549820203dc793ddaa2c7d8f4b9d03c7e776d589be66b60579c2a82f7eaddc727bf7bd3af63fe30e7f21919f664fa2629c16ec90678a352b926d9720342d2cbf5e640266d3fdfc658a3db76171fb38b59e80a0f33415a244150c102336c4fee73a7e3dc219f8f37d05da4dc3dae11f1fea0b9d8db7c9f18ddd927ee5589378cecc9674fd68e2aa8edf472987e2cabb29edc242d7d795a3f24b904ba50445a7de1d2f808306ebaaf5551722297677c2d37d7c3566d949eb2761f440459fcc5fbf76b5c8cf39f0ba6757430649d60470e7de38a3a8e66e5bfbb7d9f7d3cb020301000102820100285a570212f22f102bd215991c2254698eb2602b121acfe730584e09159581b4da1bb803442e75c6f63a8b7a98241f44f50684071cf4c60937ed4c83dfa55bdeaf71eff1177e95bbab17a4cd853f445d76c86a0ed311f1485fd8a04a2e6b4d2531b6c92141b683a1935e268f9f994a4320bccad2a1e048a283c6cc59df02e2ca68da2d1263a590da799633c41d1003ffb4e3589b5af35eca6d0ae0b69061a25056e93336dfffc5c5f90193cb71ab30147d27f269b15cfacde6feff7c781a6aaf03564a0a933d9780c638080802d3e55883bb054fb67e78c0cfa7af1a618f72002255c700bca2a92cb853e2e0fb4866cc4222d467347ea68fcac2a157d7fd80b902818100d92913ebe3cc1efb2e66d1de89f02672a1bc991b3fbdb70ab609295fd9b76d37b5c83dc0961bd9a3798de1ecf55ce7bc5c6cad3a1c3f6c8d6431321f3aaddd8160402078b7bc151a0f287368924f9f30ccba8984f02dca73256e6f53a895e2a5762fb398866aad9f6826f18b2f2f85fdde8ef54872eed3e2618ed4f3db84de1902818100bc47269f2ddfd6a621c6230d2468f243fcb420575f4313230aefa3b5961547326304e0aa9d0759af6ded58c9b2b3e29c836738fbba6132ec5a1c48021a67addf15f623de48ff487b7cbe65a17df3a5504bbff11006ca28f5c343d228dc93f7dc15553b2143ea8399d086db55c1ccea607284a4d3a569764a8d492448dcd7358302818100ba7bcb0ebbed3301b2a43b3f66a6e2ed77b4b4aa30bfa32b408d778947367c44e60711f88b2f596347e42e8a455e45e67c5c1b1a16dde4433b31ffffcf6d35157fe931b958d6dc2c27ae2e0533f7ca15a709dd445ad887ccffece90f276ba7593db7d2fb7d1aa90485f54361a9e09ea916f11ef3db36fa9fa1f57d2bf86c0e29028180192c0213e2143d2474fb82902d4002b3e84344d7a99ad422294224c7104bc3fb0e96065b8927046c99ebd3a513c94d10d3d8a71bb0ad721b7b68b08fe76bd9292c4c7e3b27d349a388e803ba75966f91aeaef8d1c5b69d874e15f131195c8714db9d4b8c8502039a3af0ecbe286cf720f1ee9e02d5e8a5b20df5ab6e3a68637502818100998a2574549da44e4dfcb2acabd781b4b6587770e6c8e291763593e647706fa1b773a8ac7fbed0c51660d70df9dacacc100a718bf1cbb7b6dc530a025caf2f663c0a77c65729fd74e06cf04b8119bc79f0d0b9f15bbebfad83918ba372a7953b96d8307a8b53889f3706acc79b13b01132d64c971e93625dc2065e29f5752bb7",
       "public_key_hex": "30820122300d06092a864886f70d01010105000382010f003082010a02820101009fb685c8e218910deb94b23ec7c11da4b94e7b7920d405efd11dce4130bb7df403ef8d549820203dc793ddaa2c7d8f4b9d03c7e776d589be66b60579c2a82f7eaddc727bf7bd3af63fe30e7f21919f664fa2629c16ec90678a352b926d9720342d2cbf5e640266d3fdfc658a3db76171fb38b59e80a0f33415a244150c102336c4fee73a7e3dc219f8f37d05da4dc3dae11f1fea0b9d8db7c9f18ddd927ee5589378cecc9674fd68e2aa8edf472987e2cabb29edc242d7d795a3f24b904ba50445a7de1d2f808306ebaaf5551722297677c2d37d7c3566d949eb2761f440459fcc5fbf76b5c8cf39f0ba6757430649d60470e7de38a3a8e66e5bfbb7d9f7d3cb0203010001",
       "kid": "agent:arsialabs.demo.rs256-signer#key-rs256"
+    },
+    "agent:acme.executor": {
+      "private_key_hex": "4321ed7f12720a5760db0b02f836adbeda377b4398fb4b537c4900fef60cc11d",
+      "public_key_hex": "7157ca9e466a793ea71667ca1b6f99f2c4aa80dac28357f8285197cb2ea1506c",
+      "kid": "agent:acme.executor#key1"
+    },
+    "agent:acme.transfer-processor": {
+      "private_key_hex": "44e51068a0b8b118be6486fe097b0bdc592419190af157466bfe10b38a9f3256",
+      "public_key_hex": "bce855861b07aa630df191132b19af241a360801e179466c58efb28f53c59ddf",
+      "kid": "agent:acme.transfer-processor#key1"
+    },
+    "agent:acme.data-agent": {
+      "private_key_hex": "eb119911edc419e3437f7bbb72856a7826c70eea6a542743f76401fb050d2811",
+      "public_key_hex": "f3b002c365a5149062be7477e7901c9455e536d8070bddc9bcbd61959c2246f3",
+      "kid": "agent:acme.data-agent#key1"
+    },
+    "agent:acme.oversight-panel": {
+      "private_key_hex": "160d14ff6cb359536e89ca97d0f97b681cc3269833049493a90dcfa3afaa7dce",
+      "public_key_hex": "22ff7973d4d41a66d1c7c07ae602ce51b1c83b5f3993c7829be499d6a0dc4e72",
+      "kid": "agent:acme.oversight-panel#key1"
+    },
+    "agent:acme.trading-engine": {
+      "private_key_hex": "7fa3c8c6ac7df1f01828a3a77a4aa9fa556a40c8003595b79faeea758e1a028e",
+      "public_key_hex": "aa52f882abdc40a1abe0ce7643822c96b97381a361b000f95cc16c39bfe16d78",
+      "kid": "agent:acme.trading-engine#key1"
+    },
+    "agent:acme.compliance-agent": {
+      "private_key_hex": "fa0b752825618d342274163049ff7752157431f4dd2b0509ff95d9e35410e38b",
+      "public_key_hex": "cfaa9ba431baa21d5428b0e8ae13c9e2bf9c41f68623fe2ea498bb7f6aa6c68e",
+      "kid": "agent:acme.compliance-agent#key1"
+    },
+    "agent:acme.payments": {
+      "private_key_hex": "f421ede37577d714d24ca0e089df5e5e706744cccc31dd88bc1646e59c912cc4",
+      "public_key_hex": "80faf0559926834bdc8383effd118bcd9f1ae5a1432883d8b4bfb33023d60645",
+      "kid": "agent:acme.payments#key1"
+    },
+    "agent:arsialabs.broker.eu-west": {
+      "private_key_hex": "de81f200e86a888c0d5fa7aaf4737b96d0dc6c40022f931db6ef7cf958f5b420",
+      "public_key_hex": "df716b704c01392252d0aea73e27d67fd62bf22f8c5ab8760ab81f8480c93ff8",
+      "kid": "agent:arsialabs.broker.eu-west#key1"
+    },
+    "agent:acme.data-processor": {
+      "private_key_hex": "e84176f64bce4c3791c6998b1529b3be630cdc68a614c6415365943778a57d93",
+      "public_key_hex": "bf7577d19379e8e3594863559c0688bcd1fd5a2576dacce7d558dfb8ae1eeece",
+      "kid": "agent:acme.data-processor#key1"
+    },
+    "agent:contoso.risk-assessor": {
+      "private_key_hex": "432ba5f8296341a87d1fad036f14f2c1fd20f199928a8f3c622c2384833ceda7",
+      "public_key_hex": "97b90e0b9711d41595c0afc0a955833a8a910f5076a86529d413a9899489b527",
+      "kid": "agent:contoso.risk-assessor#key1"
+    },
+    "agent:acme.rate-limiter": {
+      "private_key_hex": "9fd6393bb5409b546e1e7a19de32266e20b9816b27e792b9ba04981d3d75b44b",
+      "public_key_hex": "5cf447eb80a03068a7ff7aca2ef42856993b4246d3ef755ced89c03a49779307",
+      "kid": "agent:acme.rate-limiter#key1"
+    },
+    "agent:acme.gateway": {
+      "private_key_hex": "52603963260a8fd258e6236e06670eac3745136846673bdef677b9568b839a65",
+      "public_key_hex": "9ed62e3936a95cb79020b3bb0c8e309de64e4eb4c3e7d1618643a36d7407fbde",
+      "kid": "agent:acme.gateway#key1"
+    },
+    "agent:acme.chatbot-service": {
+      "private_key_hex": "0a231801f503e6cf0a81f57003fafa397242821b951f766014e160e2aee0025b",
+      "public_key_hex": "f4d80f2200882695a8955c0b25ea08f0c5e9ae62dd3df3c70202bcfdb25bc667",
+      "kid": "agent:acme.chatbot-service#key1"
+    },
+    "agent:acme.content-moderator": {
+      "private_key_hex": "29debf5fcb87e6aed7d78e6d939003b1df583efe04407532eb68acfdbe1bda38",
+      "public_key_hex": "f730b34e5bb4ae35f99b8414dfe5c6a37321242e034ed83b52ccb5602f72df56",
+      "kid": "agent:acme.content-moderator#key1"
+    },
+    "agent:acme.ict-incident-handler": {
+      "private_key_hex": "e11d466cfef5ffdc4846337c3681e3de1c1ed01738efe11856d9edd14024915c",
+      "public_key_hex": "131319a41052932a5584bd8ff73a9b3c3d8f69ff4a35d4cd36c9037cea917d53",
+      "kid": "agent:acme.ict-incident-handler#key1"
+    },
+    "agent:acme.health-processor": {
+      "private_key_hex": "eb7ed19e2decf4ca9883604821671d88c28fad1a32eceeb01ad858170777a0e3",
+      "public_key_hex": "40e63411500679bb2a1dd32b4a736db14abc9c4b56de41faee87bca52eed0b28",
+      "kid": "agent:acme.health-processor#key1"
+    },
+    "agent:acme.state-store": {
+      "private_key_hex": "7dcaca8778a4d0d79920c519ed9606b4e0d9af2356648caeb707f0891e685b94",
+      "public_key_hex": "c38a00e62a6c77d9ecfe90f8816d907631b53be8e12d31c0cc889c9eba11d70a",
+      "kid": "agent:acme.state-store#key1"
+    },
+    "agent:acme.transfer-service": {
+      "private_key_hex": "f7c67bae700e81a6743f6cca12d7d5e98e7d3efcc213ca1a69caf9814b154a21",
+      "public_key_hex": "1f6157f436534160033653d90fe0af5693996ed67119fc4a00529a033dc750cc",
+      "kid": "agent:acme.transfer-service#key1"
+    },
+    "agent:acme.escrow-service": {
+      "private_key_hex": "94e0633299c74604772c338226f0e4e3eaf64ffc8ac1f416be42b655b80be4fb",
+      "public_key_hex": "41b814d74914bc93389a011f2e923a142f433f9bd8cfed54a63e9eb6fbb820c4",
+      "kid": "agent:acme.escrow-service#key1"
+    },
+    "agent:acme.escrow-holder": {
+      "private_key_hex": "5eec6505c922689cb6c3c5d449998b3134bc46a482544f0f9f8e2999b9cdc1cd",
+      "public_key_hex": "ad242e4bffcf756a25740640b8f2e4e521c993bdde973c410773102ea5fa9684",
+      "kid": "agent:acme.escrow-holder#key1"
+    },
+    "agent:arsialabs.demo.executor": {
+      "private_key_hex": "4bf1a81ee442f1567da2dd49e01161a4bd3f20e5fca9610dfb5bdfa90ac2b2e5",
+      "public_key_hex": "df9e425a86672d6c1e1aed589cc68aba1242a145b35992ce8999610a942b19e2",
+      "kid": "agent:arsialabs.demo.executor#key1"
+    },
+    "agent:acme.risk-engine": {
+      "private_key_hex": "e8a30449af193a75eb9ffe3e39395edb720e49db3ea1bd707228dbaf130a9cce",
+      "public_key_hex": "bf0506650f164e23d10464f08b328a6c1198716ce47c1c103f87d55e2f1e534e",
+      "kid": "agent:acme.risk-engine#key1"
+    },
+    "agent:acme.notes": {
+      "private_key_hex": "9c1513601a25cae395bdb440721b002a2c401e51e32a737efb82017fa47c050a",
+      "public_key_hex": "604c7971785f7bfa283792cbccc96ef6b073a63a9f9b5bf808b939bfcee8c324",
+      "kid": "agent:acme.notes#key1"
+    },
+    "agent:acme.compliance-checker": {
+      "private_key_hex": "61fa33c7d34abe70b816a1fa6beafb8575b21b021a777807eaff70e4d3eeadeb",
+      "public_key_hex": "e009b73cd8de4a58957f6c124aa36689113a62b67161ae14e53f0fa0dab1160f",
+      "kid": "agent:acme.compliance-checker#key1"
+    },
+    "agent:acme.identity-admin": {
+      "private_key_hex": "c6f6507da6a012f1089c9d13194432f0f85a87c1f34bad5c385a1fc84fff2af2",
+      "public_key_hex": "100e76fef9eff0e7f8828f572037552017ef5e7dad40a5c7c853fba04c9dcf22",
+      "kid": "agent:acme.identity-admin#key1"
+    },
+    "agent:arsialabs.analytics.reporter": {
+      "private_key_hex": "13946958aa9a508bf90fa11fb883334158d6e0b6afb6a960f063ee5555ad2d6e",
+      "public_key_hex": "393926607195cbc28c32cb90fe9aeb651f1d7e8b43f940954fadc7e5c0aad488",
+      "kid": "agent:arsialabs.analytics.reporter#key1"
+    },
+    "agent:arsialabs.hr.processor": {
+      "private_key_hex": "a9efc2fe63fcfb7e9271a20b1729677e4128e6b389a88e8da5c30a4d5354c58b",
+      "public_key_hex": "dedaf4227945992c4de2a739a3e8d13950d6d26da973c74a5421f51dc1de54e0",
+      "kid": "agent:arsialabs.hr.processor#key1"
+    },
+    "agent:arsialabs.gov.census": {
+      "private_key_hex": "ab386b5e37b51eacca6f39c7bc5c33107538e1ca1b64ba9c97279936c63a7c60",
+      "public_key_hex": "1b1bab0c24cf8bb93952d94980c9bde202d59384432e0c51c09abf000f0fc11b",
+      "kid": "agent:arsialabs.gov.census#key1"
+    },
+    "agent:arsialabs.compliance.auditor": {
+      "private_key_hex": "d8df3faf64ab8ceb189fdf707ac9bb397f0abec509c322b3269141f62b4d9013",
+      "public_key_hex": "d42861b347fd1536f63e4ee62e60259ebddf2c739762476f62266b0b39e0ad9d",
+      "kid": "agent:arsialabs.compliance.auditor#key1"
+    },
+    "agent:arsialabs.demo.gateway": {
+      "private_key_hex": "b6f4f453d6a69231275abf3bf7f2f8b60c7016034d612657814ec5fd69907185",
+      "public_key_hex": "1a5150838e2e8f4b3f2342df4cfdc792d12351e0ff687b402b0add95ed9fc6bf",
+      "kid": "agent:arsialabs.demo.gateway#key1"
+    },
+    "agent:segment0.segment1.segment2.segment3.segment4.segment5.segment6.segment7.segment8.segment9.segment10.segment11.segment12.segment13.segment14.segment15.segment16.segment17.segment18.segment19.segment20.segment21.segment22.segment23.segment24.segment25.segment26.segment27.segment28.segment29.segment30.segment31.segment32.segment33.segment34.segment35.segment36.segment37.segment38.segment39.segment40.segment41.segment42.segment43.segment44.segment45.segment46.segment47.segment48.segment49": {
+      "private_key_hex": "b6f4f453d6a69231275abf3bf7f2f8b60c7016034d612657814ec5fd69907185",
+      "public_key_hex": "1a5150838e2e8f4b3f2342df4cfdc792d12351e0ff687b402b0add95ed9fc6bf",
+      "kid": "agent:segment0.segment1.segment2.segment3.segment4.segment5.segment6.segment7.segment8.segment9.segment10.segment11.segment12.segment13.segment14.segment15.segment16.segment17.segment18.segment19.segment20.segment21.segment22.segment23.segment24.segment25.segment26.segment27.segment28.segment29.segment30.segment31.segment32.segment33.segment34.segment35.segment36.segment37.segment38.segment39.segment40.segment41.segment42.segment43.segment44.segment45.segment46.segment47.segment48.segment49#key1"
+    },
+    "agent:arsialabs.demo.sender": {
+      "private_key_hex": "2fde282b11bbecfe897071e0915050f6653f77d2ddccf6bb8bedd7fe2a6c2610",
+      "public_key_hex": "e96fceebe8a5a28347a1885e15c7db09506f62daa682f328b25e8ebb40c9c0cb",
+      "kid": "agent:arsialabs.demo.sender#key1"
+    },
+    "agent:arsialabs.demo.verifier": {
+      "private_key_hex": "177d2392339c1533ca50844a7dddac156edf210e90df51729466a90f84edda83",
+      "public_key_hex": "bf5afb991f7c3ac4c065374c5cb5f8351d88b8cf721a3ce7e5ebcb46ba474d80",
+      "kid": "agent:arsialabs.demo.verifier#key1"
+    },
+    "agent:arsialabs.demo.server": {
+      "private_key_hex": "09a5505b19cc55979a06654e5e5c322b862511c69751de35437a3f394261d18c",
+      "public_key_hex": "50815ca774436082e6d3a108dc2d0bce974aa402ee430e676d5032ac2657bff3",
+      "kid": "agent:arsialabs.demo.server#key1"
+    },
+    "agent:arsialabs.demo.auth-server": {
+      "private_key_hex": "f89e572f22b048bb5a4eccb30cb2cd8031c51485cddc519594008ab964e4aff5",
+      "public_key_hex": "6a31a1148a0f5b53b4a94a7f914f6416c96a5cbdba3351d16db296764ff93f74",
+      "kid": "agent:arsialabs.demo.auth-server#key1"
+    },
+    "agent:arsialabs.demo.registry": {
+      "private_key_hex": "5fb8751245af0c2d94bbddaab16fae06715a0524f66ed7f431f29087d9d3c3ca",
+      "public_key_hex": "9b6ce289410d76c2f145df331292204d9151b10ddcd60acfedf70778341e24aa",
+      "kid": "agent:arsialabs.demo.registry#key1"
+    },
+    "agent:arsialabs.demo.broker": {
+      "private_key_hex": "c3b2c9a0f30a01a41f51733f8b0d46c009b54a20cc5ec087abcb4b825edb7f84",
+      "public_key_hex": "5880118909766319b95f4d8e717f066c4377bf3964fe10e561d3b68c654b26c1",
+      "kid": "agent:arsialabs.demo.broker#key1"
+    },
+    "agent:arsialabs.demo.state-server": {
+      "private_key_hex": "4f10cff189a3aa45ba9431593b1a31b136ef26e44786fccf2d6d0fae526d6417",
+      "public_key_hex": "9e901c4992a5d767b37f072029985c57e9447c9dbb9a538583f719b4a65cd3cc",
+      "kid": "agent:arsialabs.demo.state-server#key1"
+    },
+    "agent:arsialabs.demo.sender#key-es256": {
+      "private_key_hex": "bca9ef66668e11d8176727565886b6d8b5573f30d45799e414307ede902c240c",
+      "public_key_hex": "0414b99150981900296924d22cf2095e06f29a5933a66fdb083807b752c483a97ffdf44334c06b3617061c7859229e9c104040bc3a52804a340f4466c08e09ed6d",
+      "kid": "agent:arsialabs.demo.sender#key-es256"
+    },
+    "agent:arsialabs.demo.sender#key-rsa2048": {
+      "private_key_hex": "308204bd020100300d06092a864886f70d0101010500048204a7308204a30201000282010100dd37bef10694a2d6362b2b96ded33bb902d4e705019998cbaf4132d1ae646fae55ae43571264e0e65cecd6d480e642e763ccc70bf76d165413b9e09cead15fd05373f646f18995c9d79e1de863f67d0de5b1b6f91d45e54c07b68bf5e8a2ab92a7b22d7409ad7661fd18948c12870ece30c63787e69b59a83e167edc28803ddcb3bb9f745373f5423a762289113cf64ba9fcfd5ab89ce0bc7d11b46f7abc96f63fae7d6a6f2f5b1f3e5d4299f385418a7e3e6a175d25057122d8747db6fec44f5457f4d540fa13b838904bddbdeb2d54f1dab931685f25be2d98dabd915530bb19d3cb06f22b03db7bbb9a7cf5de09e623a6d54010cf1732a48b03f4da1b5c590203010001028201000716004a81aab4ad96661b1b15cf9fd7dd089b4ecc7e9247a1f93d6abc8290963dbddb7fd841bd777b8e0592a07f5fb0c04060b6d829d91f7fd34227dc98b0d04040146930d6f6a294c2c693f951bdaf3a868f051b4430245791e8194c269bc6d292d1446883f3290fdd9ff27dac7053b7f9bd711fb8a5ae4f30d2c6f410298b0f3acd1283b977820e777361037aa10dde6b8278266653717a0a8e45436ad79a22b994f8be0f685c08e82f547776b8c0cffc3947c80112841710063457f07fd462eeff2ad899abda6438522801da96e271a326c03fccc87df687dfd99d8eff158a95aac63438a0dfe623a404350a1462feb657b311020468db84823651f392e502818100fdd25b1b2f5177cbcc995de4d078defee483c297d00ea6cca28c2a4d9a4420eb15937f4236b484be4b885245a30e566a08a7df5d7d778eeaaeab562a1d7054c59e61c9aee4026df3e19b12c1a3686282d4589ada7336c9f6851b2bc2b6b5386d28190635338fe97565642b43e5907af19b90e767c4b71a28280c86aad5a6133d02818100df1dc2677eaf01d5ac832f7902576e573b4a5a99d3eb3358654b7c11c1ba095452f64af9b95495ff3c47638d51dfdbe8da30e564df1dbe93acf5b0dd14399e49de860e2533d69321b672b147c2836f14c1e20b638ae7fec3a95d4a5013977256f2a6350ed759f0c7d3c0bf932d3b0fd0a2df85396f2c93c8cba7a64110930f4d02818038c2144b64ee63ca77eb07bb05ff31667035228b8e23e89ab3f281f72e7af39d7e0aa89766e24118c88d28509820b9a426615baa6d4711f75aadc7abcd3f744568a057583b766b9df0a21bb49f54d54a8a2f72194d504023572a7743a855a7d388f6e79377ff43665410ed37d69ad35339c55269baec72f5edd6b73a766217c50281804c5ac6d8dc45cffeebd6c93c444cdf7a02d46345197cf8495c0105289e7fa809af8a9205fc22b26272a28bb3253dd2e85123429dcead43370e8dd6451252d594ba0e6e70d4d8ade96fa2b880b25480833e06b9970b4671ad4c1c9cfde27685aeb3c3a58cbaae10f491c6f8c8c945d917b16585162eb1b6b194e07ec8ed7f265102818100abce6580c8dbc98668cd2d42663b9f27465c2ee230ae9d0da8abb3b10f824a6c80b309de956472f0b28084538ed469d5e752a61d162938304d6dfe2b799664056c8f85e0202bae5a4091d94c0229aeda5ffb0dafcc6b9fe320c5a75a2e9fcc28c62dd185d29022c8d1a4dd06a0ee6c4ebb7ffc88b7c9a62fb9f1d2e5ccc365ab",
+      "public_key_hex": "30820122300d06092a864886f70d01010105000382010f003082010a0282010100dd37bef10694a2d6362b2b96ded33bb902d4e705019998cbaf4132d1ae646fae55ae43571264e0e65cecd6d480e642e763ccc70bf76d165413b9e09cead15fd05373f646f18995c9d79e1de863f67d0de5b1b6f91d45e54c07b68bf5e8a2ab92a7b22d7409ad7661fd18948c12870ece30c63787e69b59a83e167edc28803ddcb3bb9f745373f5423a762289113cf64ba9fcfd5ab89ce0bc7d11b46f7abc96f63fae7d6a6f2f5b1f3e5d4299f385418a7e3e6a175d25057122d8747db6fec44f5457f4d540fa13b838904bddbdeb2d54f1dab931685f25be2d98dabd915530bb19d3cb06f22b03db7bbb9a7cf5de09e623a6d54010cf1732a48b03f4da1b5c590203010001",
+      "kid": "agent:arsialabs.demo.sender#key-rsa2048"
+    },
+    "agent:arsialabs.demo.tracer": {
+      "private_key_hex": "f7688d4c1a92031de45e8c15f1d74fab496896047c29c0ce1bd3a8f57feffb78",
+      "public_key_hex": "d8e7e6940b191e97e395abf6ef1372924dc417439d0a26d1aeadcf1a96bb6a2b",
+      "kid": "agent:arsialabs.demo.tracer#key1"
+    },
+    "agent:acme.compliance-officer": {
+      "private_key_hex": "9dec7959cccc831fe08069e9baafaf88c2b526fe4ea9426e98df63294e869128",
+      "public_key_hex": "b86142bbe88cb23848ca50077f890da1259ce52ccab647390b62d139503e6425",
+      "kid": "agent:acme.compliance-officer#key1"
+    },
+    "agent:acme.qa-inspector": {
+      "private_key_hex": "e2121244d7fbabeb5cdfe460e55ef0d02d8984314365a7ad97be555232159cf3",
+      "public_key_hex": "2f0c46a3a8e688f13207cbd3f18dc21a8943909a4638b1958773e217c4bcf08b",
+      "kid": "agent:acme.qa-inspector#key1"
+    },
+    "agent:acme.shipping": {
+      "private_key_hex": "35bdaab4110ef39687f7a2b8976aa6709f6711a6cdaf482b931a880d38d1aa41",
+      "public_key_hex": "56fd0a5dd1589cbf954a5ce159af3b0bf7b43f3fd7f7df44536c49ad42d2f86b",
+      "kid": "agent:acme.shipping#key1"
+    },
+    "agent:acme.gdpr-agent": {
+      "private_key_hex": "7bbff123db366d13021d2a506b675bb632333d865c66d6861b2b3543a3ad97ea",
+      "public_key_hex": "758665d1d0bbbafa8533af4232fcd3182b499bebfbfd910d0a827bc21b59ad5f",
+      "kid": "agent:acme.gdpr-agent#key1"
+    },
+    "agent:acme.audit-inspector": {
+      "private_key_hex": "4f4b2b521acadd070c1ecd3fe25cc2a47c4694cbf7662a3587b514129a3ac236",
+      "public_key_hex": "fdac1af7aaa126d53a11ad249214b9d0f64df2830d6b0344c49067b98dfed0f0",
+      "kid": "agent:acme.audit-inspector#key1"
+    },
+    "agent:acme.state-extension": {
+      "private_key_hex": "486e0ee2cc9b1e36993ecdce654f50541977cb3a6c647b45a2d12b398a7d0b2d",
+      "public_key_hex": "899ead3157deabaedecdb7331d5855790926da655b53b01e7a1990961b6eec38",
+      "kid": "agent:acme.state-extension#key1"
+    },
+    "agent:arsialabs.aiact.hr-screener": {
+      "private_key_hex": "9ae4106601118e87cb032c0eb24a8ef9b6af0fb9cdbacf4e33c34e887f9e847f",
+      "public_key_hex": "13e399ee5c5c9bf26bc6523668a07892473ddf247b612b42af809dada9e63a13",
+      "kid": "agent:arsialabs.aiact.hr-screener#key1"
     }
   }
 }

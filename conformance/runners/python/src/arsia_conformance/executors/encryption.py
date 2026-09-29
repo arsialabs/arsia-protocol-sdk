@@ -42,7 +42,12 @@ from arsia_conformance.reporter import TestStatus
 
 def _load_ed25519_keypair(
     context: ConformanceContext, agent_id: str
-) -> tuple[Any, Any] | None:
+) -> tuple[Any, Any] | str:
+    """Resolve a shared test keypair to ``(private_key, public_key)``.
+
+    Returns an error message instead if the agent ID is not present in
+    ``shared/test-vectors/keypairs.json`` or its key is not Ed25519.
+    """
     from arsia_protocol.hazmat.primitives.ed25519 import (
         private_key_from_hex,
         public_key_from_hex,
@@ -50,11 +55,13 @@ def _load_ed25519_keypair(
 
     entry = context.keypairs.get(agent_id)
     if not isinstance(entry, dict):
-        return None
+        return f"unknown test keypair: {agent_id!r}"
     private_hex = entry.get("private_key_hex")
     public_hex = entry.get("public_key_hex")
     if not isinstance(private_hex, str) or not isinstance(public_hex, str):
-        return None
+        return f"unknown test keypair: {agent_id!r}"
+    if len(bytes.fromhex(public_hex)) != 32:
+        return f"test keypair {agent_id!r} is not Ed25519"
     return private_key_from_hex(private_hex), public_key_from_hex(public_hex)
 
 
@@ -104,8 +111,8 @@ def _run_decrypt_and_verify(
     if not isinstance(signer, str):
         return "error", "input.signer_agent_id must be a string"
     pair = _load_ed25519_keypair(context, signer)
-    if pair is None:
-        return "error", f"unknown test keypair: {signer!r}"
+    if isinstance(pair, str):
+        return "error", pair
     private_key, public_key = pair
 
     plaintext_payload = case.input.get("plaintext_payload")
@@ -171,8 +178,10 @@ def _run_decrypt_bad_signature(
         return "error", "input.signer_agent_id and input.wrong_signer_agent_id required"
     correct_pair = _load_ed25519_keypair(context, signer)
     wrong_pair = _load_ed25519_keypair(context, wrong_signer)
-    if correct_pair is None or wrong_pair is None:
-        return "error", f"unknown keypair: {signer!r} or {wrong_signer!r}"
+    if isinstance(correct_pair, str):
+        return "error", correct_pair
+    if isinstance(wrong_pair, str):
+        return "error", wrong_pair
 
     _, correct_public = correct_pair
     wrong_private, _ = wrong_pair
@@ -220,8 +229,10 @@ def _run_decrypt_dual_fault(
         return "error", "input.signer_agent_id and input.wrong_signer_agent_id required"
     correct_pair = _load_ed25519_keypair(context, signer)
     wrong_pair = _load_ed25519_keypair(context, wrong_signer)
-    if correct_pair is None or wrong_pair is None:
-        return "error", f"unknown keypair: {signer!r} or {wrong_signer!r}"
+    if isinstance(correct_pair, str):
+        return "error", correct_pair
+    if isinstance(wrong_pair, str):
+        return "error", wrong_pair
 
     _, correct_public = correct_pair
     wrong_private, _ = wrong_pair
@@ -280,8 +291,8 @@ def _run_decrypt_not_json_object(
     if not isinstance(signer, str):
         return "error", "input.signer_agent_id must be a string"
     pair = _load_ed25519_keypair(context, signer)
-    if pair is None:
-        return "error", f"unknown test keypair: {signer!r}"
+    if isinstance(pair, str):
+        return "error", pair
     private_key, public_key = pair
 
     non_object_json = case.input.get("non_object_json", "[1,2,3]")

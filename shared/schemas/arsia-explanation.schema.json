@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://arsiaprotocol.org/schemas/explanation/v1.0.json",
-  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See licenses/LICENSE-ARTIFACTS.md.",
   "title": "ARSIA Explanation",
   "description": "Structured account of the agent's reasoning, included in response messages as payload.explanation when the action's explainability_required flag is true. Implements EU AI Act Article 13 transparency obligations. Defined in ARSIA-Actions.md \u00a75.2. Note: when alternatives_considered is present (RECOMMENDED for risk_level \u2265 7), each element supports Article 14(4)(c) by showing what the agent decided and what it considered and rejected.",
   "type": "object",

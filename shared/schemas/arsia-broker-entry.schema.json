@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://arsiaprotocol.org/schemas/broker-entry/v1.0.json",
-  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See licenses/LICENSE-ARTIFACTS.md.",
   "title": "ARSIA Broker Entry",
   "description": "One entry in the response from the broker discovery endpoint (GET /.well-known/arsia/brokers?residency={zone}). Describes a single eligible Compliance Broker for a given data residency zone. The full response is a JSON array of BrokerEntry objects. Defined in ARSIA-Routing.md \u00a77.2.",
   "type": "object",

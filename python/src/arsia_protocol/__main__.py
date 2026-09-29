@@ -16,7 +16,7 @@ Commands
 * ``schemas``       — list bundled JSON Schemas (``schemas show NAME``
                       prints a single schema)
 * ``vectors``       — list bundled test vectors (``vectors run``
-                      executes the bundled conformance suite)
+                      checks every vector and reports PASS, FAIL and SKIP)
 * ``profiles``      — list bundled compliance profiles
 * ``version``       — print SDK + protocol versions
 
@@ -332,131 +332,6 @@ def vectors_list() -> None:
         click.echo(str(path.relative_to(root)))
 
 
-# Partition of invalid vectors by the validator that owns the rule they
-# violate. Mirrors python/tests/vectors/test_vectors.py — kept in sync
-# manually since the CLI intentionally does not import test code.
-_VECTORS_SLICE_1D_INVALID: dict[str, str] = {
-    "INV-01": "from",
-    "INV-02": "id",
-    "INV-03": "ts",
-    "INV-04": "from",
-    "INV-05": "expires_at",
-    "INV-06": "legal_basis",
-    "INV-07": "profile",
-    "INV-08": "retention_days",
-    "INV-11": "kid",
-}
-_VECTORS_SLICE_4D_INVALID: dict[str, str] = {
-    "INV-10": "capabilit",
-}
-_VECTORS_SLICE_6_INVALID: dict[str, str] = {
-    "INV-09": "currency amount precision exceeds 2 decimal places",
-    "INV-12": "reversal requires original transfer status completed",
-}
-
-
-def _run_schema_vector(vector: dict[str, Any]) -> tuple[bool, str]:
-    """Validate a Format B (schema) vector against its named schema."""
-    from arsia_protocol.core.validation import validate_schema
-
-    data = vector.get("data") or vector.get("message")
-    if data is None:
-        return False, "vector has neither 'data' nor 'message' key"
-    errors = validate_schema(data, vector["schema_ref"])
-    want_valid = vector["expected"] == "valid"
-    if want_valid:
-        if errors:
-            return False, f"L1 schema errors: {errors[0]}"
-        return True, ""
-    if not errors:
-        return False, "expected schema rejection but data passed"
-    return True, ""
-
-
-def _run_valid_vector(vector: dict[str, Any]) -> tuple[bool, str]:
-    """Reproduce canonicalization + signing + verification for a valid vector.
-
-    Returns (ok, detail). ``detail`` is empty on success, or a short
-    failure reason on error.
-    """
-    import copy
-
-    from arsia_protocol.hazmat.primitives.ed25519 import (
-        private_key_from_hex,
-        public_key_from_hex,
-        sign as raw_sign,
-    )
-    from arsia_protocol.core.validation import validate_schema
-
-    crypto = vector.get("crypto")
-    if not isinstance(crypto, dict):
-        return False, "missing crypto block"
-    alg = vector.get("message", {}).get("security", {}).get("alg", "EdDSA")
-    if alg != "EdDSA":
-        return True, f"skipped (algorithm {alg}, SDK supports EdDSA only)"
-    unsigned = copy.deepcopy(vector["message"])
-    unsigned.pop("security", None)
-    produced = _canonicalize(unsigned)
-    expected_bytes = bytes.fromhex(crypto["canonical_bytes_hex"])
-    if produced != expected_bytes:
-        return False, "canonical bytes mismatch"
-    sk = private_key_from_hex(crypto["private_key_hex"])
-    sig = raw_sign(sk, produced)
-    if base64url_encode(sig) != crypto["signature_base64url"]:
-        return False, "signature mismatch"
-    pk = public_key_from_hex(crypto["public_key_hex"])
-    if verify_message(vector["message"], pk) is not True:
-        return False, "verify_message returned False"
-    errors = validate_schema(vector["message"])
-    if errors:
-        return False, f"L1 schema errors: {errors[0]}"
-    return True, ""
-
-
-def _run_invalid_vector(vector: dict[str, Any]) -> tuple[bool, str]:
-    """Confirm an invalid vector is rejected by the correct validator.
-
-    Returns (ok, detail). ``ok`` is True when the vector is rejected
-    with an error mentioning the expected keyword.
-    """
-    from arsia_protocol.core.validation import validate_envelope
-
-    vid = vector["id"]
-    message = vector["message"]
-    if vid in _VECTORS_SLICE_1D_INVALID or vid in _VECTORS_SLICE_4D_INVALID:
-        keyword = _VECTORS_SLICE_1D_INVALID.get(vid) or _VECTORS_SLICE_4D_INVALID[vid]
-        errors = validate_envelope(message, strict=False)
-        if not errors:
-            return False, "validate_envelope accepted an invalid vector"
-        if not any(keyword.lower() in str(e).lower() for e in errors):
-            return False, f"no error mentioned {keyword!r}"
-        return True, ""
-    if vid in _VECTORS_SLICE_6_INVALID:
-        from arsia_protocol._errors import ValidationError as _VE
-        from arsia_protocol.assets.assets import (
-            validate_reversal_precondition,
-            validate_transfer_request,
-            validate_transfer_reversal,
-        )
-
-        keyword = _VECTORS_SLICE_6_INVALID[vid]
-        args = message["payload"]["args"]
-        asset_errors: list[_VE]
-        if vid == "INV-09":
-            asset_errors = validate_transfer_request(args)
-        else:  # INV-12
-            asset_errors = validate_transfer_reversal(args)
-            asset_errors.extend(
-                validate_reversal_precondition(args, original_status="pending")
-            )
-        if not asset_errors:
-            return False, "assets validator accepted an invalid vector"
-        if not any(keyword.lower() in str(e).lower() for e in asset_errors):
-            return False, f"no error mentioned {keyword!r}"
-        return True, ""
-    return False, f"unclassified invalid vector {vid!r}"
-
-
 @vectors.command("run")
 @click.option(
     "--output-format",
@@ -465,44 +340,66 @@ def _run_invalid_vector(vector: dict[str, Any]) -> tuple[bool, str]:
     help="Output format: 'text' (default) for human-readable, 'json' for machine-readable.",
 )
 def vectors_run(output_format: str) -> None:
-    """Execute the bundled conformance test vectors and report PASS/FAIL."""
-    vectors_path = _data_resolver.test_vectors_dir() / "arsia-test-vectors.json"
-    doc = _load_json(vectors_path)
-    entries = list(doc.get("vectors", []))
-    results: list[dict[str, Any]] = []
-    for entry in entries:
-        vid = entry["id"]
-        if "schema_ref" in entry:
-            ok, detail = _run_schema_vector(entry)
-            label = f"schema ({entry['expected']})"
-        elif entry.get("valid"):
-            ok, detail = _run_valid_vector(entry)
-            label = "valid"
-        else:
-            ok, detail = _run_invalid_vector(entry)
-            label = "invalid (correctly rejected)" if ok else "invalid"
-        results.append(
-            {
-                "vector_id": vid,
-                "status": "PASS" if ok else "FAIL",
-                "label": label,
-                "detail": detail if detail else None,
-            }
-        )
-    passed = sum(1 for r in results if r["status"] == "PASS")
-    failed = sum(1 for r in results if r["status"] == "FAIL")
+    """Check every bundled conformance vector and report PASS, FAIL and SKIP.
+
+    Each vector is checked in layers (schema, semantic, signature); see
+    ``arsia_protocol._vectors``. A SKIP is never counted as a PASS. The
+    command exits with status 1 when any vector FAILs.
+    """
+    import logging
+
+    from arsia_protocol._vectors import load_corpus, run_vector
+
+    # The SDK logs every rejected signature at WARNING; the report below
+    # already states each outcome, so those logs are silenced during the
+    # run and the logger level is restored afterwards.
+    sdk_logger = logging.getLogger("arsia_protocol")
+    previous_level = sdk_logger.level
+    sdk_logger.setLevel(logging.ERROR)
+    try:
+        entries, keypairs = load_corpus()
+        results = [run_vector(entry, keypairs) for entry in entries]
+    finally:
+        sdk_logger.setLevel(previous_level)
+    totals = {
+        status: sum(1 for r in results if r.result == status)
+        for status in ("PASS", "FAIL", "SKIP")
+    }
     if output_format == "json":
-        click.echo(json.dumps(results, indent=2))
+        click.echo(json.dumps([r.to_dict() for r in results], indent=2))
     else:
         click.echo(f"Running {len(entries)} test vectors...")
         for r in results:
-            line = f"  {r['vector_id']:<8} {r['label']:<30} {r['status']}"
-            if r["status"] == "FAIL" and r["detail"]:
-                line = f"{line} — {r['detail']}"
+            expected = "valid" if r.expected_valid else "invalid"
+            layers = ", ".join(f"{layer.name}={layer.status}" for layer in r.layers)
+            line = f"  {r.vector_id:<8} {r.vector_format:<12} {expected:<7} {r.result:<4}  [{layers}]"
+            if r.result == "FAIL" and r.expected_valid:
+                line += " — " + "; ".join(r.reasons("REJECT"))
+            elif r.result == "FAIL":
+                line += " — accepted by every layer"
+            elif r.result == "SKIP":
+                line += " — " + "; ".join(r.reasons("SKIP"))
+            if r.expected_error:
+                line += f" (expected_error: {r.expected_error})"
             click.echo(line)
         click.echo("")
-        click.echo(f"{passed} passed, {failed} failed")
-    if failed:
+        for name in ("schema", "semantic", "signature"):
+            counts = {
+                status: sum(
+                    1
+                    for r in results
+                    for layer in r.layers
+                    if layer.name == name and layer.status == status
+                )
+                for status in ("OK", "REJECT", "SKIP")
+            }
+            click.echo(
+                f"  {name:<10} OK {counts['OK']}, REJECT {counts['REJECT']}, SKIP {counts['SKIP']}"
+            )
+        click.echo(
+            f"{totals['PASS']} passed, {totals['FAIL']} failed, {totals['SKIP']} skipped"
+        )
+    if totals["FAIL"]:
         sys.exit(1)
 
 

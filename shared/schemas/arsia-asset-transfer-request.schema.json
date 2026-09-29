@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://arsiaprotocol.org/schemas/asset-transfer-request/v1.0.json",
-  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See licenses/LICENSE-ARTIFACTS.md.",
   "title": "ARSIA Asset Transfer Request",
   "description": "Validates the payload.args object of an AssetTransferRequest message (ARSIA-Assets.md \u00a73.1). Expresses an agent's intent to transfer value to another agent. Defined in ARSIA-Assets.md \u00a73.1.1. Decimal precision constraints are enforced via allOf/if/then multipleOf per asset_type (currency \u22642dp, token \u22648dp, entitlement \u22642dp, service_unit \u22644dp). The currency_or_unit ISO 4217 pattern for currency is enforced via if/then. Non-currency currency_or_unit format constraints are application-defined and MUST be enforced programmatically \u2014 implementations MUST reject violations with error code 'invalid_request'.",
   "type": "object",

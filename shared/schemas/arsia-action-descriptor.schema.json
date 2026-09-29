@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://arsiaprotocol.org/schemas/action-descriptor/v1.0.json",
-  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See licenses/LICENSE-ARTIFACTS.md.",
   "title": "ARSIA Action Descriptor",
   "description": "Describes a single action available at an ARSIA-conformant agent. Returned by the action discovery endpoint (ARSIA-Actions.md \u00a72.3). Defined in ARSIA-Actions.md \u00a72.1. Each descriptor declares the action's identity, capability requirements, risk level, and compliance obligations (human oversight, audit, explainability).",
   "type": "object",

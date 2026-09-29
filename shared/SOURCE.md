@@ -6,8 +6,18 @@ These files are copied from the ARSIA Protocol specification
 repository: `arsia-protocol`.
 
 **Source repo:** `github.com/arsialabs/arsia-protocol`
-**Copied on:** 2026-05-11
-**Spec version:** v1.0
+**Source ref:** `main`, merge commit
+`17dcf33fc4f31bd067024ca2f8f07bc3925e65aa` (pull request #1); content commit
+`bbbd8dfe3e41f8248d06d479199242007bcb165f` (identical tree)
+**Copied on:** 2026-09-29
+**Spec version:** Draft-01.1 (wire version `1.0`)
+
+The merge commit's tree is identical to the content commit's; every file
+listed below was re-verified against `main` by SHA-256 on 2026-09-29.
+
+Copied byte-for-byte: `schemas/*.json`, `profiles/arsia-compliance-profiles.json`,
+`test-vectors/arsia-test-vectors.json`, `test-vectors/keypairs.json`, and
+`rtm/` (from the protocol's `docs/rtm/`).
 
 ## Rule
 
@@ -23,7 +33,7 @@ To update: copy fresh from the protocol repo and re-run tests.
 | Directory | Files | Description |
 |-----------|-------|-------------|
 | schemas/ | 31 | JSON Schemas (Draft 2020-12) for all protocol data structures |
-| test-vectors/ | 2 files, 613 vectors (514 valid, 99 invalid), 9 keypairs | Conformance test vectors with reference keypairs |
+| test-vectors/ | 2 files: 611 vectors (413 valid, 123 invalid, 75 runtime-only, as reported by the protocol's `scripts/validate_vectors.py`); 57 keypairs (53 Ed25519, 2 ES256, 2 RS256) | Conformance test vectors with reference keypairs |
 | profiles/ | 1 file, 7 profiles (GDPR, EU AI Act High-Risk, EU AI Act Limited-Risk, MiFID II, PAC, DSA, DORA) | Compliance profiles |
 | rtm/ | 6 RTMs + README | Requirements Traceability Matrices (one per spec) |
 
@@ -33,6 +43,13 @@ README.md files from schemas/, test-vectors/, and profiles/ were
 excluded during copy. They contain links relative to the protocol
 repo that don't resolve in the SDK context. The RTM README
 (rtm/README.md) was kept — it documents the RTM column format.
+
+## Adapted files
+
+`LICENSE-ARTIFACTS.md` and `LICENSE-SPEC.md` are the only files in this
+directory that are not byte-for-byte copies. They come from the protocol's
+`licenses/` directory, with the reference to the code licence changed to
+`../LICENSE.md` so that it resolves in the SDK.
 
 ## Licensing
 

@@ -3,10 +3,12 @@
 
 """Resolve paths to bundled data artifacts (schemas, vectors, profiles).
 
-``_data/`` and ``shared/`` are two independently tracked copies of the same
-artifacts, kept in sync manually per ``shared/SOURCE.md``. Hatch
-``force-include`` bundles ``_data/`` into the wheel; ``shared/`` is the
-fallback for editable installs.
+``shared/`` at the repository root is the only tracked copy of the
+artifacts (see ``shared/SOURCE.md``). ``_data/`` is not tracked: the build
+hook (``python/hatch_build.py``) generates it from ``shared/`` on every
+build, including editable installs, and Hatch ``force-include`` bundles
+it into the wheel and sdist. ``shared/`` is the fallback when ``_data/``
+has not been generated, e.g. when running from a source checkout.
 """
 
 from __future__ import annotations
@@ -25,8 +27,8 @@ _REPO_SHARED = _PACKAGE_ROOT.parents[2] / "shared"
 def data_root() -> Path:
     """Return the root directory containing bundled data artifacts.
 
-    Prefers the wheel-bundled ``_data/`` directory. Falls back to the
-    repo-level ``shared/`` when running from an editable install.
+    Prefers the build-generated ``_data/`` directory. Falls back to the
+    repo-level ``shared/`` when ``_data/`` has not been generated.
 
     Raises:
         FileNotFoundError: if neither location is available.

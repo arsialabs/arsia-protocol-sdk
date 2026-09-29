@@ -40,11 +40,11 @@ from arsia_conformance.reporter import TestStatus
 
 def _load_test_keypair(
     context: ConformanceContext, agent_id: str
-) -> tuple[Any, Any] | None:
+) -> tuple[Any, Any] | str:
     """Resolve a shared test keypair to ``(private_key, public_key)``.
 
-    Returns ``None`` if the agent ID is not present in
-    ``shared/test-vectors/keypairs.json``.
+    Returns an error message instead if the agent ID is not present in
+    ``shared/test-vectors/keypairs.json`` or its key is not Ed25519.
     """
     from arsia_protocol.hazmat.primitives.ed25519 import (
         private_key_from_hex,
@@ -53,11 +53,13 @@ def _load_test_keypair(
 
     entry = context.keypairs.get(agent_id)
     if not isinstance(entry, dict):
-        return None
+        return f"unknown test keypair: {agent_id!r}"
     private_hex = entry.get("private_key_hex")
     public_hex = entry.get("public_key_hex")
     if not isinstance(private_hex, str) or not isinstance(public_hex, str):
-        return None
+        return f"unknown test keypair: {agent_id!r}"
+    if len(bytes.fromhex(public_hex)) != 32:
+        return f"test keypair {agent_id!r} is not Ed25519"
     return private_key_from_hex(private_hex), public_key_from_hex(public_hex)
 
 
@@ -103,8 +105,8 @@ def _run_validate_token(
     if not isinstance(claims, dict):
         return "error", "input.claims must be an object"
     pair = _load_test_keypair(context, signer)
-    if pair is None:
-        return "error", f"unknown test keypair: {signer!r}"
+    if isinstance(pair, str):
+        return "error", pair
     private_key, public_key = pair
     token = build_jwt(claims, private_key)
 
@@ -182,8 +184,8 @@ def _run_validate_dpop(
     if not isinstance(signer, str):
         return "error", "input.signer_agent_id must be a string"
     pair = _load_test_keypair(context, signer)
-    if pair is None:
-        return "error", f"unknown test keypair: {signer!r}"
+    if isinstance(pair, str):
+        return "error", pair
     private_key, public_key = pair
 
     access_token = case.input.get("access_token")
