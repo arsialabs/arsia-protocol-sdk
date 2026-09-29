@@ -109,6 +109,7 @@ arsia canonicalize doc.json                 # emit RFC 8785 canonical bytes
 arsia inspect envelope.json                 # pretty-print with diagnostics
 arsia schemas                               # list bundled JSON Schemas
 arsia vectors                               # list bundled test vectors
+arsia vectors run                           # check every vector: schema, semantics, signature
 arsia profiles GDPR-STANDARD                # print a compliance profile
 ```
 

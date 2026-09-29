@@ -5,6 +5,39 @@ All notable changes to the ARSIA Protocol SDK are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] — 2026-09-29
+
+Corrections to how the SDK consumes the conformance corpus. No change to
+the public API or to the wire format (`1.0`).
+
+### Fixed
+
+- **`arsia vectors run`** checks every bundled vector against its expected
+  outcome in layers — JSON Schema (runtime-only vectors reported as SKIP
+  with their reason), the SDK's semantic rules, and the signature
+  (EdDSA and ES256, with the vector's `crypto` block or the published
+  keypairs; RS256 reported as SKIP) — instead of hard-coded vector-ID
+  lists. It reports passed, failed and skipped separately and exits 1 on
+  any failure. On the bundled corpus: 545 passed, 0 failed, 66 skipped.
+- **Vector tests** derive their cases from the corpus: every vector goes
+  through the same layered check, every `crypto` block is checked for
+  canonical bytes, and signatures of valid vectors are verified. No
+  vector count or ID list is hard-coded.
+- **Conformance executors** report a non-Ed25519 test keypair as an error
+  instead of raising.
+- **`[1.0.0]` entry** — the test-vector counts now state what the
+  protocol's tools report for that corpus.
+
+### Changed
+
+- **Conformance corpus** re-synced from the ARSIA Protocol Draft-01.1
+  errata (see `shared/SOURCE.md`): 611 test vectors (413 valid, 124
+  invalid, 74 runtime-only); 57 keypairs (53 Ed25519, 2 ES256, 2 RS256);
+  every signature in a valid vector verifies with a published key.
+- **CI** runs `arsia vectors run` after the test suite.
+- **Conformance suites** that reference vectors state that they are
+  deliberate fixed subsets of the corpus.
+
 ## [1.0.0] — 2026-05-12
 
 First public release of the ARSIA Protocol SDK — the reference
@@ -209,9 +242,10 @@ between autonomous agents. Transport-agnostic. Python 3.12+.
 - **Python conformance runner** — standalone package
   (`conformance/runners/python/`) that imports the SDK as an external
   consumer. Per-category executors. JSON and human-readable output.
-- **613 test vectors** — 514 valid + 99 invalid across Core, Identity,
-  Actions, Routing, State, and Assets specs. 9 keypairs (Ed25519,
-  ES256, RS256).
+- **613 test vectors** — 415 valid, 125 invalid and 73 runtime-only, as
+  the protocol's `validate_vectors.py` reports them (corrected in 1.0.1),
+  across Core, Identity, Actions, Routing, State, and Assets specs.
+  9 keypairs (Ed25519, ES256, RS256).
 - **31 JSON Schemas** — Draft 2020-12, mirrored from the spec repo.
 - **7 compliance profiles** — all active.
 
