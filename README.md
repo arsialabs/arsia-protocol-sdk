@@ -50,6 +50,7 @@ Each demo is self-contained with its own README, Docker setup, and run script.
 | Demo | Description |
 |------|-------------|
 | [**Fintech Trade**](demos/fintech-trade/) | 3 autonomous AI agents execute a MiFID-II regulated securities trade — suitability assessment, human-in-the-loop oversight, order execution, full audit trail. Structural data isolation ensures each agent sees only what it needs. |
+| [**Healthcare Pipeline**](demos/healthcare-pipeline/) | 3 autonomous AI agents process health data through a regulated pipeline with strict PII isolation. The system generates clinical analyses from anonymized records, requires mandatory clinician approval, and produces a complete audit trail to guarantee GDPR Art. 9 and EU AI Act compliance. |
 
 Run the fintech demo in under a minute:
 
