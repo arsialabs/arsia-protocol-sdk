@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://arsiaprotocol.org/schemas/action-discovery-response/v1.0.json",
-  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See licenses/LICENSE-ARTIFACTS.md.",
   "title": "ARSIA Action Discovery Response",
   "description": "Paginated response from the action discovery endpoint (GET /.well-known/arsia/actions). Contains an array of ActionDescriptor objects with pagination metadata. Defined in ARSIA-Actions.md \u00a72.3. The endpoint MUST support 7 query parameters for filtering and pagination: category, human_oversight_required, risk_level_min (integer 0\u201310), risk_level_max (integer 0\u201310), audit_required (boolean), limit (integer, default 20, max 100), offset (integer, default 0). Multiple query parameters are combined with logical AND.",
   "type": "object",

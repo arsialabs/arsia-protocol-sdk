@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://arsiaprotocol.org/schemas/state-entry/v1.0.json",
-  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See licenses/LICENSE-ARTIFACTS.md.",
   "title": "ARSIA State Entry",
   "description": "A StateEntry is the fundamental unit of state in the ARSIA Protocol. It carries stored data, metadata, and compliance context. Every state operation (ARSIA-State.md \u00a73) reads, writes, or queries StateEntry objects. Defined in ARSIA-State.md \u00a72.1. Note: the serialized value MUST NOT exceed 1 MiB (1,048,576 bytes); this constraint is not expressible in JSON Schema and MUST be enforced programmatically \u2014 implementations MUST reject SET operations where the serialized value exceeds this limit with error code 'payload_too_large'.",
   "type": "object",

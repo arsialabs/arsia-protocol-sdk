@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://arsiaprotocol.org/schemas/websocket-frame/v1.0.json",
-  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See licenses/LICENSE-ARTIFACTS.md.",
   "title": "ARSIA WebSocket Frame",
   "description": "WebSocket control frames for the ARSIA Protocol v1.0. Covers the five frame types defined in ARSIA-Core.md \u00a78.2 (auth, auth_ok, auth_error, ping, pong) and extended by ARSIA-Routing.md \u00a72.2 (dpop_proof on auth, session_id on auth_ok). Discriminated on the type field.",
   "type": "object",

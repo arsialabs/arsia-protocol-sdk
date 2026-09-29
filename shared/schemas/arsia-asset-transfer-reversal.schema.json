@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://arsiaprotocol.org/schemas/asset-transfer-reversal/v1.0.json",
-  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See licenses/LICENSE-ARTIFACTS.md.",
   "title": "ARSIA Asset Transfer Reversal",
   "description": "Validates the payload.args object of an AssetTransferReversal message (ARSIA-Assets.md \u00a73.3). Requests the reversal of a previously completed transfer. Defined in ARSIA-Assets.md \u00a73.3.1. Note: cross-message invariants are enforced programmatically \u2014 the original transfer MUST exist and be in status 'completed'; reversal_amount (when present) MUST NOT exceed the original transfer's amount; cumulative partial reversals MUST NOT exceed the original amount; reversals are only allowed within provider-defined windows (T+1 for full, T+30 for partial by default). Violations produce not_found or conflict errors per \u00a73.3.2.",
   "type": "object",

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://arsiaprotocol.org/schemas/breach-notification/v1.0.json",
-  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See LICENSE-ARTIFACTS.md.",
+  "$comment": "Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda). Licensed under Apache 2.0. See licenses/LICENSE-ARTIFACTS.md.",
   "title": "ARSIA Breach Notification",
   "description": "Validates the payload data for a GDPR breach notification event message (ARSIA-State.md \u00a75.7). Carries structured breach information between agents for supervisory authority notification (Art. 33) or data subject notification (Art. 34). The notification_target discriminator selects the notification type; OPTIONAL fields carry SHOULD-level guidance in descriptions rather than structural enforcement.",
   "type": "object",
