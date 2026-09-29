@@ -367,10 +367,8 @@ class TestVectors:
 
     def test_run_passes_all_bundled_vectors(self, runner: CliRunner) -> None:
         result = runner.invoke(cli, ["vectors", "run"])
-        assert result.exception is None or isinstance(result.exception, SystemExit), (
-            f"CLI crashed: {result.exception!r}"
-        )
-        assert "passed" in result.output
+        assert result.exit_code == 0, result.output
+        assert " 0 failed" in result.output
 
 
 class TestProfiles:

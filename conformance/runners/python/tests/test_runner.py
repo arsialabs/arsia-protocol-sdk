@@ -297,6 +297,25 @@ def test_executors_table_covers_all_categories() -> None:
     }
 
 
+def test_executor_keypair_loaders_report_non_ed25519(
+    real_context: ConformanceContext,
+) -> None:
+    from arsia_conformance.executors.authorization import _load_test_keypair
+    from arsia_conformance.executors.encryption import _load_ed25519_keypair
+
+    other = next(
+        agent_id
+        for agent_id, entry in real_context.keypairs.items()
+        if len(bytes.fromhex(entry["public_key_hex"])) != 32
+    )
+    for load in (_load_test_keypair, _load_ed25519_keypair):
+        assert load(real_context, other) == f"test keypair {other!r} is not Ed25519"
+        assert load(real_context, "agent:acme.unknown") == (
+            "unknown test keypair: 'agent:acme.unknown'"
+        )
+        assert isinstance(load(real_context, "agent:acme.echo-client"), tuple)
+
+
 # ----------------------------------------------------------------------
 # reporter
 # ----------------------------------------------------------------------

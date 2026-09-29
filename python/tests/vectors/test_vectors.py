@@ -1,51 +1,33 @@
 # SPDX-License-Identifier: BUSL-1.1
 # Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda)
 
-"""Canonical test-vector processing — the Slice 1 exit gate.
+"""Conformance test vectors from ``shared/test-vectors/``.
 
-The file ``shared/test-vectors/arsia-test-vectors.json`` bundles
-113 cross-language conformance vectors in two formats:
+Every test here derives its cases from the bundled corpus; no vector ID
+list or count is hard-coded. The corpus has two formats:
 
-- **Format A (envelope):** 45 vectors (32 valid + 13 invalid). Each
-  valid vector carries a real Ed25519 signature computed over the
-  RFC 8785 canonical form of its envelope, using one of three test
-  keypairs from ``shared/test-vectors/keypairs.json``. Each invalid
-  vector carries an ``expected_error`` string pointing to the spec
-  section it violates. Discriminator: ``"valid" in vector``.
+- **Format A (envelope):** ``message`` + ``valid``.
+- **Format B (schema):** ``schema_ref`` + ``expected``, with either
+  ``data`` (schema-ref) or ``message`` (hybrid).
 
-- **Format B (schema):** 68 vectors (35 valid + 33 invalid). Each
-  vector validates a JSON data object against a named schema.
-  Discriminator: ``"schema_ref" in vector``.
+The tests assert:
 
-The tests in this file assert three things for the valid envelope vectors:
-
-1. Canonicalizing ``message`` (minus ``security``) reproduces the
-   byte sequence in ``crypto.canonical_bytes_hex`` exactly.
-2. Signing those canonical bytes with ``crypto.private_key_hex``
-   reproduces ``crypto.signature_base64url`` exactly.
-3. Verifying the signature in ``message.security`` against the
-   public key verifies to ``True``, and L1 schema validation of the
-   full envelope is clean.
-
-For the invalid envelope vectors the tests split into two groups:
-
-- **Slice 1D gate.** Eight invalid vectors exercise Core §4 or
-  Compliance §4.3.8 rules. They MUST be rejected by
-  :func:`arsia_protocol.validation.validate_envelope`, and the
-  returned error list MUST contain a stable keyword from the
-  vector's ``expected_error`` text.
-- **Slice 4D gate.** INV-10 (Actions §1.1 single-segment capability)
-  is rejected via ``validate_semantic``'s capability grammar check.
-- **Slice 6 gate.** INV-09 (currency precision),
-  INV-12 (reversal precondition), and INV-13 (escrow release_agent)
-  are rejected by the assets Layer 4 validators
-  (``validate_transfer_request`` / ``validate_transfer_reversal`` /
-  ``validate_reversal_precondition``). Core §4 / §4.3.8 does not
-  know about these rules.
-
-For the schema vectors (Format B), each vector's ``data`` object is
-validated against the schema named in ``schema_ref``. Valid vectors
-MUST produce zero L1 errors; invalid vectors MUST produce at least one.
+1. Corpus invariants: unique IDs, exactly one format per vector, a
+   determinable outcome, and published keypairs that follow the keying
+   rule and load as their key type.
+2. Every vector passes the layered check of ``arsia vectors run``
+   (:func:`arsia_protocol._vectors.run_vector`): a valid vector is not
+   rejected by any layer, and an invalid vector is rejected by at least
+   one. A vector no layer can decide (e.g. a runtime-only constraint) is
+   reported as skipped with its reasons.
+3. For every vector with a ``crypto`` block, canonicalizing ``message``
+   (minus ``security``) reproduces ``crypto.canonical_bytes_hex``. For
+   valid ones, the signature also verifies (EdDSA, ES256) and, for EdDSA,
+   signing reproduces ``crypto.signature_base64url``; RS256 is skipped.
+   This mirrors the protocol's ``validate_vectors.py --check-crypto``.
+4. L1 schema validation: valid vectors produce no errors, and invalid
+   Format B vectors produce at least one; ``skip_schema`` vectors are
+   skipped.
 
 Spec: ARSIA-Core.md §4, §4.3.8, §5.1, §5.2, §12.
 """
@@ -60,6 +42,7 @@ from typing import Any
 import pytest
 
 from arsia_protocol._data_resolver import test_vectors_dir as _test_vectors_dir
+from arsia_protocol._vectors import is_expected_valid, run_vector
 from arsia_protocol.hazmat.canonicalization import canonicalize
 from arsia_protocol.hazmat.primitives.ed25519 import (
     base64url_encode,
@@ -68,7 +51,7 @@ from arsia_protocol.hazmat.primitives.ed25519 import (
     sign as raw_sign,
 )
 from arsia_protocol.core.message import sign_message, verify_message
-from arsia_protocol.core.validation import validate_envelope, validate_schema
+from arsia_protocol.core.validation import validate_schema
 
 _VECTORS_FILE = _test_vectors_dir() / "arsia-test-vectors.json"
 _KEYPAIRS_FILE = _test_vectors_dir() / "keypairs.json"
@@ -88,8 +71,12 @@ _ALL_VECTORS: list[dict[str, Any]] = _load_all_vectors()
 # Format A (envelope): keyed by "valid" boolean field
 _ENVELOPE_VECTORS: list[dict[str, Any]] = [v for v in _ALL_VECTORS if "valid" in v]
 _VALID_VECTORS: list[dict[str, Any]] = [v for v in _ENVELOPE_VECTORS if v["valid"]]
+_INVALID_VECTORS: list[dict[str, Any]] = [v for v in _ENVELOPE_VECTORS if not v["valid"]]
+
+# Vectors with a ``crypto`` block, in any format (message-only or hybrid)
+_CRYPTO_VECTORS: list[dict[str, Any]] = [v for v in _ALL_VECTORS if "crypto" in v]
 _VALID_CRYPTO_VECTORS: list[dict[str, Any]] = [
-    v for v in _VALID_VECTORS if "crypto" in v
+    v for v in _CRYPTO_VECTORS if is_expected_valid(v)
 ]
 _EDDSA_CRYPTO_VECTORS: list[dict[str, Any]] = [
     v
@@ -106,7 +93,6 @@ _RS256_CRYPTO_VECTORS: list[dict[str, Any]] = [
     for v in _VALID_CRYPTO_VECTORS
     if v["message"].get("security", {}).get("alg") == "RS256"
 ]
-_INVALID_VECTORS: list[dict[str, Any]] = [v for v in _ENVELOPE_VECTORS if not v["valid"]]
 
 # Format B (schema): keyed by "schema_ref" + "expected" fields
 _SCHEMA_VECTORS: list[dict[str, Any]] = [v for v in _ALL_VECTORS if "schema_ref" in v]
@@ -116,39 +102,6 @@ _VALID_SCHEMA_VECTORS: list[dict[str, Any]] = [
 _INVALID_SCHEMA_VECTORS: list[dict[str, Any]] = [
     v for v in _SCHEMA_VECTORS if v["expected"] == "invalid"
 ]
-
-# Invalid vectors whose rejection is exercised by Slice 1D validation
-# (Core §4 structural rules + Compliance §4.3.8 R1–R5). Each entry maps
-# the vector ID to a case-insensitive keyword that MUST appear in at
-# least one error string returned by ``validate_envelope``.
-_SLICE_1D_INVALID: dict[str, str] = {
-    "INV-01": "from",
-    "INV-02": "id",
-    "INV-03": "ts",
-    "INV-04": "from",
-    "INV-05": "expires_at",
-    "INV-06": "legal_basis",
-    "INV-07": "profile",  # Identity §4.2 — high-risk needs profile (R7)
-    "INV-08": "retention_days",
-    "INV-11": "kid",
-}
-
-# Invalid vectors ungated in Slice 4D: the underlying rules are now
-# wired into validate_envelope via validation.validate_semantic.
-_SLICE_4D_INVALID: dict[str, str] = {
-    "INV-10": "capabilit",  # Actions §1.1 — single-segment capability
-}
-
-# Invalid vectors that exercise primitive-specific rules in the Assets
-# module (Slice 6). These are not gated by validate_envelope because
-# the rules live in Layer 4 validators, not Core §4 / §4.3.8.
-# Per-vector keyword expectations; the slice-6 test routes each vector
-# through the appropriate assets-level validator.
-_SLICE_6_INVALID: dict[str, str] = {
-    "INV-09": "currency amount precision exceeds 2 decimal places",
-    "INV-12": "reversal requires original transfer status completed",
-}
-
 
 # ----------------------------------------------------------------------
 # Invariants
@@ -180,25 +133,6 @@ def test_vector_corpus_invariants() -> None:
     assert len(_VALID_SCHEMA_VECTORS) + len(_INVALID_SCHEMA_VECTORS) == len(
         _SCHEMA_VECTORS
     )
-
-
-def test_all_invalid_vectors_partitioned() -> None:
-    """The slice-specific partitions are subsets of the invalid vector set.
-
-    The original INV-01..INV-12 (minus INV-13, removed in spec sync)
-    are classified into slice-specific partitions tested with their
-    respective validators. The remaining 87 invalid vectors (INV-14+
-    and ITV-*) are covered by the conformance runner, not by
-    per-vector parametrized tests in this file.
-    """
-    invalid_ids = {v["id"] for v in _INVALID_VECTORS}
-    classified = (
-        set(_SLICE_1D_INVALID.keys())
-        | set(_SLICE_4D_INVALID.keys())
-        | set(_SLICE_6_INVALID.keys())
-    )
-    extra = classified - invalid_ids
-    assert not extra, f"classified IDs not in vectors: {extra}"
 
 
 def test_all_keypairs_load() -> None:
@@ -240,11 +174,36 @@ def test_all_keypairs_load() -> None:
 
 
 # ----------------------------------------------------------------------
-# Valid vectors — cryptographic reproduction
+# Every vector — the layered check of ``arsia vectors run``
 # ----------------------------------------------------------------------
 
 
-_SIGNABLE_CRYPTO_VECTORS: list[dict[str, Any]] = _EDDSA_CRYPTO_VECTORS + _ES256_CRYPTO_VECTORS
+with _KEYPAIRS_FILE.open("r", encoding="utf-8") as _fh:
+    _KEYPAIRS: dict[str, dict[str, Any]] = json.load(_fh)["keypairs"]
+
+
+@pytest.mark.parametrize("vector", _ALL_VECTORS, ids=[v["id"] for v in _ALL_VECTORS])
+def test_vector_passes_layered_check(vector: dict[str, Any]) -> None:
+    """The vector's expected outcome holds under schema, semantic and signature checks.
+
+    A valid vector must not be rejected by any layer; an invalid vector
+    must be rejected by at least one. A vector that no layer rejects but
+    one layer skips (e.g. a runtime-only constraint) is skipped with the
+    layers' reasons.
+
+    Spec: ARSIA-Core.md §4, §5.2, §12.
+    """
+    result = run_vector(vector, _KEYPAIRS)
+    if result.result == "FAIL":
+        detail = result.reasons("REJECT") if result.expected_valid else ["no layer rejects it"]
+        pytest.fail(f"{vector['id']}: " + "; ".join(detail))
+    if result.result == "SKIP":
+        pytest.skip("; ".join(result.reasons("SKIP")))
+
+
+# ----------------------------------------------------------------------
+# Vectors with a ``crypto`` block — cryptographic reproduction
+# ----------------------------------------------------------------------
 
 
 def _eddsa_crypto_vector_ids() -> list[str]:
@@ -253,16 +212,16 @@ def _eddsa_crypto_vector_ids() -> list[str]:
 
 @pytest.mark.parametrize(
     "vector",
-    _SIGNABLE_CRYPTO_VECTORS,
-    ids=[v["id"] for v in _SIGNABLE_CRYPTO_VECTORS],
+    _CRYPTO_VECTORS,
+    ids=[v["id"] for v in _CRYPTO_VECTORS],
 )
-def test_valid_vector_canonical_bytes_reproduce(vector: dict[str, Any]) -> None:
+def test_crypto_vector_canonical_bytes_reproduce(vector: dict[str, Any]) -> None:
     """Canonicalizing ``message`` (minus ``security``) matches ``canonical_bytes_hex``.
 
+    Checked for every vector with a ``crypto`` block, valid or invalid.
     Spec: ARSIA-Core.md §5.1 Step 3 — RFC 8785 canonicalization.
     """
-    crypto = vector.get("crypto")
-    assert crypto is not None, f"valid vector {vector['id']} must carry a crypto block"
+    crypto = vector["crypto"]
     unsigned = copy.deepcopy(vector["message"])
     unsigned.pop("security", None)
     produced = canonicalize(unsigned)
@@ -327,8 +286,8 @@ def test_es256_vector_signature_verifies(vector: dict[str, Any]) -> None:
     ids=[v["id"] for v in _RS256_CRYPTO_VECTORS],
 )
 def test_rs256_vector_skipped(vector: dict[str, Any]) -> None:
-    """RS256 vectors are skipped — SDK does not implement RS256."""
-    pytest.skip("RS256 not implemented")
+    """RS256 vectors are skipped — the SDK does not verify RS256."""
+    pytest.skip("RS256 is not verified by the SDK (Core §5.1: MAY)")
 
 
 @pytest.mark.parametrize("vector", _VALID_VECTORS, ids=[v["id"] for v in _VALID_VECTORS])
@@ -341,132 +300,6 @@ def test_valid_vector_passes_l1_schema(vector: dict[str, Any]) -> None:
         pytest.skip("skip_schema: runtime-only vector")
     errors = validate_schema(vector["message"])
     assert errors == [], f"L1 errors on {vector['id']}: {errors}"
-
-
-# ----------------------------------------------------------------------
-# Invalid vectors — Slice 1D-gated rejections
-# ----------------------------------------------------------------------
-
-
-def _slice_1d_invalid_params() -> list[tuple[dict[str, Any], str]]:
-    """Return (vector, keyword) pairs for the Slice 1D invalid group."""
-    out: list[tuple[dict[str, Any], str]] = []
-    for vid, keyword in _SLICE_1D_INVALID.items():
-        vector = next(v for v in _INVALID_VECTORS if v["id"] == vid)
-        out.append((vector, keyword))
-    return out
-
-
-@pytest.mark.parametrize(
-    "vector,keyword",
-    _slice_1d_invalid_params(),
-    ids=list(_SLICE_1D_INVALID.keys()),
-)
-def test_slice_1d_invalid_rejected(
-    vector: dict[str, Any], keyword: str
-) -> None:
-    """Each Slice 1D-gated invalid vector is rejected with the right keyword.
-
-    Spec: ARSIA-Core.md §4, §4.3.8.
-    """
-    errors = validate_envelope(vector["message"], strict=False)
-    assert errors, f"{vector['id']} should be rejected but passed validation"
-    keyword_lower = keyword.lower()
-    matched = any(keyword_lower in str(e).lower() for e in errors)
-    assert matched, (
-        f"{vector['id']}: no error mentioned {keyword!r}; errors={errors}"
-    )
-
-
-def _slice_4d_invalid_params() -> list[tuple[dict[str, Any], str]]:
-    """Return (vector, keyword) pairs for the Slice 4D invalid group."""
-    out: list[tuple[dict[str, Any], str]] = []
-    for vid, keyword in _SLICE_4D_INVALID.items():
-        vector = next(v for v in _INVALID_VECTORS if v["id"] == vid)
-        out.append((vector, keyword))
-    return out
-
-
-@pytest.mark.parametrize(
-    "vector,keyword",
-    _slice_4d_invalid_params(),
-    ids=list(_SLICE_4D_INVALID.keys()),
-)
-def test_slice_4d_invalid_rejected(
-    vector: dict[str, Any], keyword: str
-) -> None:
-    """Each Slice 4D-ungated invalid vector is rejected with the right keyword.
-
-    INV-07 (§4.2 high-risk profile) was moved to _SLICE_1D_INVALID.
-    INV-10 (§1.1 capability grammar) is checked via validate_semantic's
-    capability grammar enforcement wired in Slice 4D.
-
-    Spec: ARSIA-Identity.md §4.2; ARSIA-Actions.md §1.1.
-    """
-    errors = validate_envelope(vector["message"], strict=False)
-    assert errors, f"{vector['id']} should be rejected but passed validation"
-    keyword_lower = keyword.lower()
-    matched = any(keyword_lower in str(e).lower() for e in errors)
-    assert matched, (
-        f"{vector['id']}: no error mentioned {keyword!r}; errors={errors}"
-    )
-
-
-def _slice_6_invalid_params() -> list[tuple[dict[str, Any], str]]:
-    """Return (vector, keyword) pairs for the Slice 6 invalid group."""
-    out: list[tuple[dict[str, Any], str]] = []
-    for vid, keyword in _SLICE_6_INVALID.items():
-        vector = next(v for v in _INVALID_VECTORS if v["id"] == vid)
-        out.append((vector, keyword))
-    return out
-
-
-@pytest.mark.parametrize(
-    "vector,keyword",
-    _slice_6_invalid_params(),
-    ids=list(_SLICE_6_INVALID.keys()),
-)
-def test_slice_6_invalid_rejected(
-    vector: dict[str, Any], keyword: str
-) -> None:
-    """Each Slice 6 invalid vector is rejected by the assets validators.
-
-    Each vector is routed through the Layer-4 validator that owns the
-    rule it violates, rather than through ``validate_envelope``: the
-    Core §4 / §4.3.8 layer does not know about asset precision,
-    reversal preconditions, or escrow-conditions coupling. This is the
-    same separation used for INV-10 (Actions §1.1), which is wired
-    into ``validate_semantic`` rather than a new slice-specific layer.
-
-    Spec: ARSIA-Assets.md §2.1 (INV-09), §3.3 (INV-12), §4.1 (INV-13).
-    """
-    from arsia_protocol.assets.assets import (
-        validate_reversal_precondition,
-        validate_transfer_request,
-        validate_transfer_reversal,
-    )
-
-    message = vector["message"]
-    args = message["payload"]["args"]
-    vid = vector["id"]
-    if vid == "INV-09":
-        errors = validate_transfer_request(args)
-    elif vid == "INV-12":
-        errors = validate_transfer_reversal(args)
-        errors.extend(
-            validate_reversal_precondition(args, original_status="pending")
-        )
-    elif vid == "INV-13":
-        errors = validate_transfer_request(args)
-    else:  # pragma: no cover — defensive
-        raise AssertionError(f"unexpected slice-6 vector {vid!r}")
-
-    assert errors, f"{vid} should be rejected but assets validators passed"
-    keyword_lower = keyword.lower()
-    matched = any(keyword_lower in str(e).lower() for e in errors)
-    assert matched, (
-        f"{vid}: no error mentioned {keyword!r}; errors={errors}"
-    )
 
 
 # ----------------------------------------------------------------------
@@ -505,10 +338,9 @@ def test_tampering_invalidates_signature() -> None:
 def test_schema_suite_covers_all_vectors() -> None:
     """The conformance suite YAML references a subset of Format B vector IDs.
 
-    After the data sync to 613 vectors (318 schema), the suite covers
-    the original set. New schema vectors are validated directly by the
-    parametrized tests below; suite coverage will catch up in a future
-    sync.
+    The suite is a deliberate fixed subset; every Format B vector is
+    validated by the parametrized tests below and by
+    ``test_vector_passes_layered_check``.
     """
     import yaml
 

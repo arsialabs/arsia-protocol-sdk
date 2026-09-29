@@ -26,9 +26,11 @@ def pytest_configure(config: pytest.Config) -> None:
 
 @pytest.fixture(scope="session")
 def keypairs() -> dict[str, dict[str, Any]]:
-    """Load all Ed25519 test keypairs from ``shared/test-vectors/keypairs.json``.
+    """Load the Ed25519 test keypairs from ``shared/test-vectors/keypairs.json``.
 
-    Returns a dict keyed by agent identifier. Each entry contains:
+    Returns a dict with the file's keys: the agent identifier, or the full
+    ``kid`` when an agent publishes more than one key. Entries that are not
+    Ed25519 (the ES256 and RS256 keys) are skipped. Each entry contains:
 
     - ``private_key``: ``Ed25519PrivateKey``
     - ``public_key``: ``Ed25519PublicKey``

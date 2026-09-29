@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BUSL-1.1
 # Schema validation of Format B test vectors
-# Generated from shared/test-vectors/arsia-test-vectors.json (ITV-05..ITV-46).
+# A deliberate fixed subset of shared/test-vectors/arsia-test-vectors.json;
+# every vector is checked by `arsia vectors run` and python/tests/vectors.
 # Language-agnostic — any ARSIA runner consumes this file.
 name: schema-validation
 description: 'Validates Format B test vectors against their named JSON Schema'
