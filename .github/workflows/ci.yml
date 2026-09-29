@@ -19,6 +19,7 @@ jobs:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
       - run: pytest tests/ -v
+      - run: arsia vectors run
 
   typecheck:
     runs-on: ubuntu-latest
