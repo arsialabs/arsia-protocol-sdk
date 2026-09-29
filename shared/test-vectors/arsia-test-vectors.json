@@ -17128,9 +17128,11 @@
     },
     {
       "id": "INV-21",
-      "description": "State \u00a72.1.11: INVALID \u2014 SET with pii_classification 'sensitive' but pii_special_categories absent. Schema conditional requires pii_special_categories when pii_classification is 'sensitive'.",
+      "description": "State \u00a72.1.11: INVALID \u2014 SET with pii_classification 'sensitive' but pii_special_categories absent. pii_special_categories is REQUIRED when pii_classification is 'sensitive' (State \u00a72.1.10, \u00a72.1.11).",
       "category": "state",
       "valid": false,
+      "skip_schema": true,
+      "skip_reason": "Runtime constraint \u2014 payload.args of a SET request is not validated by the message schema, so the pii_special_categories requirement for sensitive entries is not enforceable by JSON Schema",
       "message": {
         "v": "1.0",
         "id": "d0557001-b1c2-4a3d-8e4f-567890abcdef",
@@ -17160,6 +17162,11 @@
           "legal_basis": "health_medicine",
           "audit_required": true,
           "data_residency": "EU"
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.health-processor#key1",
+          "sig": "ru6S5EW7pGU6VRaJjT31oiKzf51hL734mWSwOfjMmzo28gvAxopHoAHUtRRxvmKEb8f7rbKbfMniS88clMkIAw"
         }
       },
       "expected_error": "pii_special_categories required when pii_classification is sensitive \u2014 State \u00a72.1.11"
