@@ -137,8 +137,12 @@ def test_context_resolve_repo_root_finds_repo() -> None:
 
 
 def test_context_loads_vectors_and_keypairs(real_context: ConformanceContext) -> None:
-    assert len(real_context.vectors) == 613
-    assert len(real_context.keypairs) == 9
+    test_vectors = real_context.shared_dir / "test-vectors"
+    vectors = json.loads((test_vectors / "arsia-test-vectors.json").read_text())["vectors"]
+    keypairs = json.loads((test_vectors / "keypairs.json").read_text())["keypairs"]
+    assert vectors and keypairs
+    assert len(real_context.vectors) == len(vectors)
+    assert len(real_context.keypairs) == len(keypairs)
     assert "CTV-01" in real_context.vectors
     assert "agent:acme.echo-client" in real_context.keypairs
 

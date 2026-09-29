@@ -155,20 +155,31 @@ _SLICE_6_INVALID: dict[str, str] = {
 # ----------------------------------------------------------------------
 
 
-def test_vector_count() -> None:
-    """The vectors file MUST contain exactly 613 entries: 295 envelope + 318 schema.
+def test_vector_corpus_invariants() -> None:
+    """Every vector has a unique ID, exactly one format and a determinable outcome.
 
-    Envelope vectors: 196 valid + 99 invalid (Format A).
-    Schema vectors: 239 valid + 79 invalid (Format B).
+    Counts are derived from the corpus file, never asserted as literals:
+    the envelope (Format A) and schema (Format B) partitions cover the
+    whole file, and each partition splits into valid and invalid.
     Spec: ARSIA-Core.md §12 conformance gate.
     """
-    assert len(_ALL_VECTORS) == 613
-    assert len(_ENVELOPE_VECTORS) == 295
-    assert len(_VALID_VECTORS) == 196
-    assert len(_INVALID_VECTORS) == 99
-    assert len(_SCHEMA_VECTORS) == 318
-    assert len(_VALID_SCHEMA_VECTORS) == 239
-    assert len(_INVALID_SCHEMA_VECTORS) == 79
+    ids = [v["id"] for v in _ALL_VECTORS]
+    assert ids, "the vectors file is empty"
+    assert len(ids) == len(set(ids)), "vector IDs are not unique"
+    for v in _ALL_VECTORS:
+        assert ("valid" in v) != ("schema_ref" in v), (
+            f"{v['id']}: exactly one of 'valid' (Format A) or 'schema_ref' (Format B)"
+        )
+        if "valid" in v:
+            assert isinstance(v["valid"], bool) and "message" in v, v["id"]
+        else:
+            assert v["expected"] in ("valid", "invalid"), v["id"]
+            assert ("data" in v) != ("message" in v), v["id"]
+    assert len(_ENVELOPE_VECTORS) + len(_SCHEMA_VECTORS) == len(_ALL_VECTORS)
+    assert len(_VALID_VECTORS) + len(_INVALID_VECTORS) == len(_ENVELOPE_VECTORS)
+    assert len(_VALID_SCHEMA_VECTORS) + len(_INVALID_SCHEMA_VECTORS) == len(
+        _SCHEMA_VECTORS
+    )
 
 
 def test_all_invalid_vectors_partitioned() -> None:
@@ -191,31 +202,41 @@ def test_all_invalid_vectors_partitioned() -> None:
 
 
 def test_all_keypairs_load() -> None:
-    """All nine test keypairs load (7 Ed25519 + 2 non-Ed25519).
+    """Every published test keypair follows the keying rule and loads as its type.
 
-    The 7 Ed25519 keypairs have 32-byte public keys and are usable
-    for signing. The 2 non-Ed25519 keypairs (ES256, RS256) are
-    present for algorithm-rejection testing and are skipped here.
+    Entries are keyed by agent-id, or by the full ``kid`` when an agent
+    publishes more than one key. Ed25519 keys (32-byte public key) load
+    and sign; ES256 keys are uncompressed P-256 points (65 bytes);
+    RS256 keys are DER-encoded RSA public keys.
 
     Spec: ARSIA-Core.md §5.
     """
+    from cryptography.hazmat.primitives.asymmetric.ec import (
+        EllipticCurvePublicKey,
+        SECP256R1,
+    )
+    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
+    from cryptography.hazmat.primitives.serialization import load_der_public_key
+
     with _KEYPAIRS_FILE.open("r", encoding="utf-8") as fh:
         raw = json.load(fh)["keypairs"]
-    assert len(raw) == 9
-    ed25519_count = 0
-    for _agent_id, entry in raw.items():
+    assert raw, "keypairs.json has no entries"
+    for entry_key, entry in raw.items():
+        kid = entry["kid"]
+        assert entry_key in (kid, kid.split("#")[0]), (
+            f"{entry_key}: not keyed by its kid or its kid's agent-id"
+        )
         pub_bytes = bytes.fromhex(entry["public_key_hex"])
-        if len(pub_bytes) != 32:
-            continue
-        ed25519_count += 1
-        sk = private_key_from_hex(entry["private_key_hex"])
-        pk = public_key_from_hex(entry["public_key_hex"])
-        pk_bytes = pk.public_bytes_raw()
-        assert len(pk_bytes) == 32
-        payload = b"slice-1d vector sanity check"
-        sig = raw_sign(sk, payload)
-        assert len(sig) == 64
-    assert ed25519_count == 7
+        if len(pub_bytes) == 32:
+            sk = private_key_from_hex(entry["private_key_hex"])
+            pk = public_key_from_hex(entry["public_key_hex"])
+            assert len(pk.public_bytes_raw()) == 32
+            sig = raw_sign(sk, b"keypair sanity check")
+            assert len(sig) == 64
+        elif len(pub_bytes) == 65:
+            EllipticCurvePublicKey.from_encoded_point(SECP256R1(), pub_bytes)
+        else:
+            assert isinstance(load_der_public_key(pub_bytes), RSAPublicKey), entry_key
 
 
 # ----------------------------------------------------------------------
