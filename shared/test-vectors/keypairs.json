@@ -276,6 +276,16 @@
       "private_key_hex": "4f4b2b521acadd070c1ecd3fe25cc2a47c4694cbf7662a3587b514129a3ac236",
       "public_key_hex": "fdac1af7aaa126d53a11ad249214b9d0f64df2830d6b0344c49067b98dfed0f0",
       "kid": "agent:acme.audit-inspector#key1"
+    },
+    "agent:acme.state-extension": {
+      "private_key_hex": "486e0ee2cc9b1e36993ecdce654f50541977cb3a6c647b45a2d12b398a7d0b2d",
+      "public_key_hex": "899ead3157deabaedecdb7331d5855790926da655b53b01e7a1990961b6eec38",
+      "kid": "agent:acme.state-extension#key1"
+    },
+    "agent:arsialabs.aiact.hr-screener": {
+      "private_key_hex": "9ae4106601118e87cb032c0eb24a8ef9b6af0fb9cdbacf4e33c34e887f9e847f",
+      "public_key_hex": "13e399ee5c5c9bf26bc6523668a07892473ddf247b612b42af809dada9e63a13",
+      "kid": "agent:arsialabs.aiact.hr-screener#key1"
     }
   }
 }

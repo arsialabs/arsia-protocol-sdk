@@ -203,7 +203,7 @@
 | IDENT-§7.5-04 | 7.5 | MAY | operational_policy | informational | Organization's human oversight process MAY use provenance as an input to approval | — | — |
 | IDENT-§7.6-01 | 7.6 | MUST | sdk | structural | Onboarding decision message MUST conform to the approval_decision envelope structure | arsia-onboarding-decision | ITV-03, ITV-04, ITV-38, ITV-130 |
 | IDENT-§7.6-02 | 7.6 | REQUIRED | sdk | structural | Decision message compliance field is REQUIRED with the organization's applicable profile | arsia-onboarding-decision | — |
-| IDENT-§7.6-03 | 7.6 | REQUIRED | sdk | behavioural_positive | Decision message security field is REQUIRED, signed with the gateway's Ed25519 key | arsia-message | ITV-482 |
+| IDENT-§7.6-03 | 7.6 | REQUIRED | sdk | behavioural_positive | Decision message security field is REQUIRED, signed with the gateway's Ed25519 key | arsia-message | — |
 | IDENT-§7.6-04 | 7.6 | MUST | sdk | behavioural_positive | Approval token MUST be a valid JWT with scope matching effective_capabilities | arsia-jwt-claims, arsia-onboarding-decision | ITV-38, ITV-130 |
 | IDENT-§7.6-05 | 7.6 | MUST | sdk | structural | Approval decision token_expires_at MUST be present in RFC 3339 format | arsia-onboarding-decision | ITV-130 |
 | IDENT-§7.6-06 | 7.6 | MUST | sdk | structural | Approval decision effective_capabilities, freely_allowed, and oversight_required MUST be non-empty | arsia-onboarding-decision | ITV-130 |
@@ -268,10 +268,10 @@
 
 | Metric | Count |
 |--------|-------|
-| Total requirements | 257 |
-| Schema ≠ — | 114 |
-| Vector ≠ — | 78 |
-| Both ≠ — | 39 |
+| Total requirements | 259 |
+| Schema ≠ — | 115 |
+| Vector ≠ — | 77 |
+| Both ≠ — | 37 |
 | Both = — (gaps) | 104 |
 
 ### Gaps by section
@@ -279,12 +279,12 @@
 | Section | Gaps | Total |
 |---------|------|-------|
 | §1 (Identity) | 15 | 38 |
-| §2 (Cryptographic) | 20 | 27 |
+| §2 (Cryptographic) | 19 | 27 |
 | §3 (Verification) | 8 | 15 |
 | §4 (Compliance) | 6 | 11 |
 | §5 (Conformance L1) | 1 | 2 |
 | §6 (Certificate Trust) | 27 | 51 |
-| §7 (Onboarding) | 19 | 75 |
+| §7 (Onboarding) | 20 | 77 |
 | §8 (Capability Policy) | 2 | 16 |
 | §9 (Token & Audit) | 5 | 21 |
 | §10 (Conformance L2) | 1 | 1 |

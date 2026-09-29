@@ -6798,6 +6798,11 @@
             "pii_classification": "personal",
             "data_residency": "PT"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.billing#key1",
+          "sig": "SHeMCe8L206xaTTTR2305Yz4gAS-vMNYawUYAjvfHsAXH_jeoHkiKmyIkfyRhdb_eWhQDQwti6oQDXuovIVnCA"
         }
       },
       "expected_error": "invalid_request"
@@ -8196,6 +8201,11 @@
           "args": {
             "key": "agent:acme.state-extension/agent/archive-batch"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.state-extension#key1",
+          "sig": "c2KE88r63pWSh2nMgamWK1qUzDyspJw_kiBcHqsg1--nAj6cF9LeDJAO-l4uUgJ2-raS7mZA1XEMMEeCS5AXCQ"
         }
       },
       "expected_error": "forbidden"
@@ -12457,6 +12467,9 @@
         "to": "agent:acme.transfer-processor",
         "intent": "approval_decision",
         "correlation_id": "e5000402-0000-4000-a000-000000000002",
+        "capabilities": [
+          "arsiaprotocol.oversight.approve"
+        ],
         "payload": {
           "type": "arsiaprotocol.oversight/decision",
           "result": {
@@ -12643,6 +12656,11 @@
             "amount": 100,
             "currency": "EUR"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.billing#key1",
+          "sig": "CIwYNUiR2UfKWrPWzUNvDktdfthpVMQCn2C7UHK3ExYTojZekY8FBupJROPxpPfa5SO9d4nplq6YkGo4GU0yAQ"
         }
       },
       "expected_error": "unauthorized"
@@ -12671,6 +12689,11 @@
             "amount": 100,
             "currency": "EUR"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.billing#key1",
+          "sig": "XK9CxeLPmUfhCAvHUoWPaVa6FhgUFfcNq_Hl1p3w0RegG7SoGaTZ9cNbneQJqWwQYIq7_dMPigogZIFYKW7OBQ"
         }
       },
       "expected_error": "unauthorized"
@@ -12699,6 +12722,11 @@
             "amount": 100,
             "currency": "EUR"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.billing#key1",
+          "sig": "bs93sALby6RUeHKYYw7NVe9Wio-JEj5QtYPsDyhiZoPR0uO_AO-3envqx0xiOwm7CeVXjPdRfLbA1JhMnmkFDw"
         }
       },
       "expected_error": "invalid_request"
@@ -12728,6 +12756,11 @@
             "amount": 100,
             "currency": "EUR"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.billing#key1",
+          "sig": "Zg0hMmo5wUVUCZ-7jLhjFu7bEYhyj5FPPKRjnCMa9LPYFJKMme3XMyGBSadgSLhdERZZFtoGs2vVQxxHn9rMBQ"
         }
       },
       "expected_error": "forbidden"
@@ -12757,6 +12790,11 @@
             "amount": 100,
             "currency": "EUR"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.billing#key1",
+          "sig": "8r7Jrb7irwntu0Om_wFH0Y-FfHsr4z1C-05BaWwR9KVco0h1dPWFYyjJAm2iFyZ7SrTJJZn38HmwGh15jJM2DA"
         }
       },
       "expected_error": "not_implemented"
@@ -12789,6 +12827,11 @@
             "amount": 100,
             "currency": "EUR"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.billing#key1",
+          "sig": "x-FDsO1SsZqO1bnB9oLCkXAvywOhquHjTtqn3DUM8BqxNIOK8EWoNs0KtE74_IO_Yc_BUQGBYCITUZlbCP2bDw"
         }
       },
       "expected_error": "invalid_request"
@@ -12862,6 +12905,11 @@
             "amount": 100,
             "currency": "EUR"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.billing#key1",
+          "sig": "94E5w6iE0rq8UhIkuYZ9iJkxBzRX3Gsrmnf7LR-slacBK2_2AW90Qc06XwHmqTmsuaPSi-Flo-r6NezUzSouAA"
         }
       },
       "expected_error": "invalid_request"
@@ -12913,6 +12961,11 @@
             "amount": 100,
             "currency": "EUR"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.billing#key1",
+          "sig": "KRysgTRqroOUdmkgO5_2v1sedBpEC4IFAPR9W5tvMSn5ALL6WnML1QQY5awP6P1-4G5oE7F0wFkrso110hETBg"
         }
       },
       "expected_error": "invalid_request"
@@ -13007,6 +13060,11 @@
           "args": {
             "data": "test"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.billing#key1",
+          "sig": "9WYNHpd-AHhaLxW5r32k5Vaphuy4xCV-IejBt_IF0m9rDYaHop3he4W0wG0a0tCDGZYp28OrWNebXtIAyAHgBA"
         }
       },
       "expected_error": "not_implemented"
@@ -13035,6 +13093,11 @@
           "result": {
             "status": "success"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.billing#key1",
+          "sig": "niqu9VnNkwqbQKGn6s4LzZHgQS4RYzAeDw45S4JNhlspZTxanPqdr_NHeisc-AnM0SkSmdlwH3JtpKrnMH-FBw"
         }
       },
       "expected_error": "payload must not contain both args and result \u2014 Core \u00a74.4.7"
@@ -13062,6 +13125,11 @@
           "args": {
             "note": "This message would exceed the recipient max_message_bytes limit in production"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.billing#key1",
+          "sig": "6z23sdkXzcnP8zrzQFmDJY8LDtuNTm089Qv8aPN_XIRcKChKDHaSmoSuPAqdVev_kZB8wBVynN-OOlsbWYmfCg"
         }
       },
       "expected_error": "payload_too_large"
@@ -13729,7 +13797,7 @@
       "id": "ITV-448",
       "description": "Identity \u00a73.2: INVALID \u2014 JWT iat is 3600 seconds in the future, far exceeding the \u00b1300-second clock-skew tolerance (ARSIA-Core.md \u00a78.3). Receivers MUST NOT accept tokens whose iat is in the future beyond the clock-skew tolerance. Per ARSIA-Identity.md \u00a73.2.",
       "schema_ref": "arsia-jwt-claims.schema.json",
-      "expected": "valid",
+      "expected": "invalid",
       "skip_schema": true,
       "skip_reason": "Runtime constraint \u2014 iat temporal validation (\u00b1300s clock skew per Core \u00a78.3) not enforceable by JSON Schema",
       "data": {
@@ -13749,7 +13817,7 @@
       "schema_ref": "arsia-jwt-claims.schema.json",
       "expected": "valid",
       "skip_schema": true,
-      "skip_reason": "Runtime constraint \u2014 nbf temporal validation not enforceable by JSON Schema; schema does not define nbf field (additionalProperties: false rejects it)",
+      "skip_reason": "Runtime constraint \u2014 nbf temporal validation not enforceable by JSON Schema; schema does not define nbf field",
       "data": {
         "iss": "agent:arsialabs.demo.gateway",
         "sub": "agent:acme.echo-client",
@@ -13766,7 +13834,7 @@
       "id": "ITV-450",
       "description": "Identity \u00a73.2: INVALID \u2014 JWT nbf (not-before) is 7200 seconds in the future. Token MUST NOT be used before this time. Receivers MUST reject pre-nbf usage. Per ARSIA-Identity.md \u00a73.2.",
       "schema_ref": "arsia-jwt-claims.schema.json",
-      "expected": "valid",
+      "expected": "invalid",
       "skip_schema": true,
       "skip_reason": "Runtime constraint \u2014 nbf temporal validation not enforceable by JSON Schema; schema does not define nbf field",
       "data": {
@@ -14410,6 +14478,11 @@
           "result": {
             "status": "ok"
           }
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.echo-client#key1",
+          "sig": "eiHit45Eafi_YGzH5-0M7LtvvF9w5HCz8ZF6YT4IZ3_SDxrGGWX-fvxL2OJH3ycEE1zCpAUtKnDAKDXocc-YCg"
         }
       },
       "expected_error": "conformance_failed"
@@ -14552,29 +14625,6 @@
         }
       },
       "expected_error": "expires_at required for pending_approval intent"
-    },
-    {
-      "id": "ITV-482",
-      "description": "Identity \u00a77.6: INVALID \u2014 approval_decision message missing required security block. The schema requires security when intent is 'approval_decision'. Onboarding decisions MUST be signed with the gateway's Ed25519 key. Per ARSIA-Identity.md \u00a77.6.",
-      "category": "identity",
-      "valid": false,
-      "message": {
-        "v": "1.0",
-        "id": "d0900482-b1c2-4a3d-8e4f-567890abcdef",
-        "ts": "2026-04-30T12:00:00.000Z",
-        "from": "agent:arsialabs.demo.gateway",
-        "to": "agent:acme.echo-client",
-        "intent": "approval_decision",
-        "correlation_id": "d0900482-ffff-4a3d-8e4f-567890abcdef",
-        "payload": {
-          "type": "arsiaprotocol.onboarding/decision",
-          "result": {
-            "decision": "denied",
-            "denial_reason": "conformance_failed"
-          }
-        }
-      },
-      "expected_error": "security required for approval_decision intent"
     },
     {
       "id": "ITV-483",
@@ -16466,53 +16516,23 @@
       }
     },
     {
-      "id": "ITV-545",
-      "description": "Core \u00a78.3: INVALID \u2014 MIFID-II message with ts 120 seconds in the past exceeds the profile's 60-second clock skew tolerance (clock_skew_seconds: 60)",
-      "category": "core",
-      "valid": false,
-      "skip_schema": true,
-      "skip_reason": "Runtime clock skew validation \u2014 schema cannot compare ts against current time or profile tolerance",
-      "message": {
-        "v": "1.0",
-        "id": "a0545001-c3d4-4e5f-b012-334455667788",
-        "ts": "2026-05-01T11:58:00.000Z",
-        "from": "agent:arsialabs.mifid.risk-assessor",
-        "to": "agent:arsialabs.mifid.compliance-checker",
-        "intent": "request",
-        "payload": {
-          "type": "com.arsialabs.mifid/risk-check",
-          "data": {
-            "instrument": "ISIN-DE0001234567",
-            "assessment_type": "suitability"
-          }
-        },
-        "compliance": {
-          "profile": "MIFID-II",
-          "data_residency": "EU",
-          "audit_required": true,
-          "retention_days": 1827,
-          "human_oversight": "required_before_execution",
-          "explainability_required": true,
-          "pii_involved": true,
-          "legal_basis": "contract"
-        }
-      },
-      "expected_error": "CLOCK_SKEW_EXCEEDED"
-    },
-    {
       "id": "ITV-546",
-      "description": "Core \u00a78.3: INVALID \u2014 EU-AI-ACT-HIGH-RISK message with ts 90 seconds in the past exceeds the profile's 120-second clock skew tolerance (clock_skew_seconds: 120)",
+      "description": "Core \u00a78.3: VALID \u2014 EU-AI-ACT-HIGH-RISK message with ts 90 seconds in the past is within the profile's 120-second clock skew tolerance (clock_skew_seconds: 120)",
       "category": "core",
-      "valid": false,
+      "valid": true,
       "skip_schema": true,
       "skip_reason": "Runtime clock skew validation \u2014 schema cannot compare ts against current time or profile tolerance",
       "message": {
         "v": "1.0",
-        "id": "b0546001-d4e5-4f60-c123-445566778899",
+        "id": "b0546001-d4e5-4f60-a123-445566778899",
         "ts": "2026-05-01T11:58:30.000Z",
         "from": "agent:arsialabs.aiact.hr-screener",
         "to": "agent:arsialabs.aiact.bias-auditor",
         "intent": "request",
+        "expires_at": "2026-05-01T12:03:30.000Z",
+        "capabilities": [
+          "bias.audit"
+        ],
         "payload": {
           "type": "com.arsialabs.aiact/bias-audit",
           "data": {
@@ -16527,10 +16547,22 @@
           "retention_days": 180,
           "human_oversight": "required_before_execution",
           "explainability_required": true,
-          "pii_involved": true
+          "pii_involved": true,
+          "legal_basis": "contract"
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:arsialabs.aiact.hr-screener#key1",
+          "sig": "JHviAK3ZooAE7-SLiZULf6Ks_L5iuLwxK8_XTbiMEMnONjQHDr_er_L3Xr6lMjI2dAjanyvrmxtmWnrEFqDhBg"
         }
       },
-      "expected_error": "CLOCK_SKEW_EXCEEDED"
+      "expected_error": null,
+      "crypto": {
+        "private_key_hex": "9ae4106601118e87cb032c0eb24a8ef9b6af0fb9cdbacf4e33c34e887f9e847f",
+        "public_key_hex": "13e399ee5c5c9bf26bc6523668a07892473ddf247b612b42af809dada9e63a13",
+        "canonical_bytes_hex": "7b226361706162696c6974696573223a5b22626961732e6175646974225d2c22636f6d706c69616e6365223a7b2261756469745f7265717569726564223a747275652c22646174615f7265736964656e6379223a224555222c226578706c61696e6162696c6974795f7265717569726564223a747275652c2268756d616e5f6f7665727369676874223a2272657175697265645f6265666f72655f657865637574696f6e222c226c6567616c5f6261736973223a22636f6e7472616374222c227069695f696e766f6c766564223a747275652c2270726f66696c65223a2245552d41492d4143542d484947482d5249534b222c22726574656e74696f6e5f64617973223a3138307d2c22657870697265735f6174223a22323032362d30352d30315431323a30333a33302e3030305a222c2266726f6d223a226167656e743a61727369616c6162732e61696163742e68722d73637265656e6572222c226964223a2262303534363030312d643465352d346636302d613132332d343435353636373738383939222c22696e74656e74223a2272657175657374222c227061796c6f6164223a7b2264617461223a7b2263616e6469646174655f6964223a2243414e442d323032362d30303432222c226d6f64656c5f76657273696f6e223a2276322e312e30227d2c2274797065223a22636f6d2e61727369616c6162732e61696163742f626961732d6175646974227d2c22746f223a226167656e743a61727369616c6162732e61696163742e626961732d61756469746f72222c227473223a22323032362d30352d30315431313a35383a33302e3030305a222c2276223a22312e30227d",
+        "signature_base64url": "JHviAK3ZooAE7-SLiZULf6Ks_L5iuLwxK8_XTbiMEMnONjQHDr_er_L3Xr6lMjI2dAjanyvrmxtmWnrEFqDhBg"
+      }
     },
     {
       "id": "ITV-547",
@@ -16637,7 +16669,7 @@
       "expected": "invalid",
       "data": {
         "v": "1.0",
-        "id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+        "id": "c3d4e5f6-a7b8-4c9d-ae1f-2a3b4c5d6e7f",
         "ts": "2026-04-27T12:04:00.000Z",
         "from": "agent:arsialabs.demo.sender",
         "to": "agent:arsialabs.demo.receiver",
@@ -17085,6 +17117,11 @@
           "legal_basis": "consent",
           "audit_required": true,
           "data_residency": "EU"
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.health-processor#key1",
+          "sig": "K4JYSbe7bVkFUkCrO13AmLCKD71JxPgn1hygFwm-ufmkI2k5gO2qQK2vIB9OUcz3XWW4qKqLq0n7f7BumBPsAw"
         }
       },
       "expected_error": "sensitive entry requires Art. 9(2) legal basis \u2014 Core \u00a74.3.8, Rule 8"
@@ -17166,6 +17203,11 @@
           "legal_basis": "consent",
           "audit_required": true,
           "data_residency": "EU"
+        },
+        "security": {
+          "alg": "EdDSA",
+          "kid": "agent:acme.health-processor#key1",
+          "sig": "oFil6cIoXVtHgEOpKNmNUl3UitnY9zMm7H3GymSLqmIZswKy8tR7KaLnDJtaTnzD7dI86K_-zEpGLRXFWbTHAg"
         }
       },
       "expected_error": "pii_special_categories MUST NOT be present when pii_classification is not sensitive \u2014 State \u00a72.1.11"

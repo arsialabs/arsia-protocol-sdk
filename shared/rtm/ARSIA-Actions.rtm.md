@@ -337,17 +337,17 @@
 
 | Metric | Count |
 |--------|-------|
-| Total requirements | 323 |
+| Total requirements | 328 |
 | Schema ≠ — | 151 |
-| Vector ≠ — | 112 |
+| Vector ≠ — | 115 |
 | Both ≠ — | 59 |
-| Both = — (gaps) | 119 |
+| Both = — (gaps) | 121 |
 
 ### Gaps by section
 
 | Section | Gaps | Total |
 |---------|------|-------|
-| §1 (Capabilities) | 32 | 70 |
+| §1 (Capabilities) | 33 | 72 |
 | §2 (Action Descriptor) | 26 | 82 |
 | §3 (Human Oversight) | 23 | 85 |
 | §4 (Execution) | 31 | 52 |

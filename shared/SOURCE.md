@@ -7,7 +7,7 @@ repository: `arsia-protocol`.
 
 **Source repo:** `github.com/arsialabs/arsia-protocol`
 **Source ref:** branch `fix/draft-01-vector-signatures`, commit
-`9c1316a87b70571d0f5664bc7ed65d6384dfdec2`
+`67246cc226cf501ef0bc965505e82e2ff6ead101`
 **Copied on:** 2026-09-29
 **Spec version:** Draft-01.1 (wire version `1.0`)
 
@@ -35,7 +35,7 @@ To update: copy fresh from the protocol repo and re-run tests.
 | Directory | Files | Description |
 |-----------|-------|-------------|
 | schemas/ | 31 | JSON Schemas (Draft 2020-12) for all protocol data structures |
-| test-vectors/ | 2 files: 613 vectors (413 valid, 125 invalid, 75 runtime-only, as reported by the protocol's `scripts/validate_vectors.py`); 55 keypairs (51 Ed25519, 2 ES256, 2 RS256) | Conformance test vectors with reference keypairs |
+| test-vectors/ | 2 files: 611 vectors (413 valid, 124 invalid, 74 runtime-only, as reported by the protocol's `scripts/validate_vectors.py`); 57 keypairs (53 Ed25519, 2 ES256, 2 RS256) | Conformance test vectors with reference keypairs |
 | profiles/ | 1 file, 7 profiles (GDPR, EU AI Act High-Risk, EU AI Act Limited-Risk, MiFID II, PAC, DSA, DORA) | Compliance profiles |
 | rtm/ | 6 RTMs + README | Requirements Traceability Matrices (one per spec) |
 
