@@ -40,6 +40,8 @@ the public API or to the wire format (`1.0`).
 - **Packaging** — the wheel and sdist declare core metadata version 2.4
   (`core-metadata-version`), as the published 1.0.0 releases do, so
   `twine check` passes with twine 6.2 and later.
+- **Lint** — the ruff version is fixed and the lint rule set is declared, so
+  local and CI results match.
 
 ## [1.0.0] — 2026-05-12
 

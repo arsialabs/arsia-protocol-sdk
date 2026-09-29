@@ -60,7 +60,7 @@ dev = [
     "pytest-asyncio>=0.23.0",
     "hypothesis>=6.100.0",
     "mypy>=1.10.0",
-    "ruff>=0.5.0",
+    "ruff==0.15.10",
     "httpx>=0.27.0",
     "types-jsonschema>=4.21.0",
     "build>=1.0",
@@ -119,6 +119,10 @@ packages = ["src/arsia_protocol"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "src/arsia_protocol/_data" = "arsia_protocol/_data"
+
+[tool.ruff.lint]
+# ruff 0.15 default rule set, declared so that newer ruff releases do not change it
+select = ["E4", "E7", "E9", "F"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
