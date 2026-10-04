@@ -246,6 +246,13 @@ async def get_audit():
     return {"records": [r.model_dump() for r in records]}
 
 
+def _eur(value: Any) -> str:
+    """Format an amount with thousands separators, or insert it as text when not a number."""
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return f"{value:,}"
+    return str(value)
+
+
 async def _assess_risk(args: dict[str, Any]) -> dict[str, Any]:
     """Call the LLM for risk assessment, with fallback to deterministic result."""
     prompt = (
@@ -256,10 +263,10 @@ async def _assess_risk(args: dict[str, Any]) -> dict[str, Any]:
         f"Portfolio — equity: {args.get('current_portfolio', {}).get('equity_pct', 'N/A')}%, "
         f"fixed income: {args.get('current_portfolio', {}).get('fixed_income_pct', 'N/A')}%, "
         f"cash: {args.get('current_portfolio', {}).get('cash_pct', 'N/A')}%\n"
-        f"Portfolio total value: EUR {args.get('current_portfolio', {}).get('total_value_eur', 'N/A'):,}\n"
+        f"Portfolio total value: EUR {_eur(args.get('current_portfolio', {}).get('total_value_eur', 'N/A'))}\n"
         f"Proposed trade — asset class: {args.get('proposed_trade', {}).get('asset_class', 'N/A')}, "
         f"region: {args.get('proposed_trade', {}).get('region', 'N/A')}, "
-        f"amount: EUR {args.get('proposed_trade', {}).get('amount_eur', 'N/A'):,}\n\n"
+        f"amount: EUR {_eur(args.get('proposed_trade', {}).get('amount_eur', 'N/A'))}\n\n"
         f"Provide your suitability assessment as JSON."
     )
 
