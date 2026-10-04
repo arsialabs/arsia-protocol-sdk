@@ -48,10 +48,15 @@ for arg in "$@"; do
 done
 
 # ── Cleanup handler ───────────────────────────────────────
+# Runs once, on exit. Ctrl+C or a termination signal ends the script (and
+# with it any start-up still in progress) before the cleanup runs.
 cleanup() {
+    trap - EXIT INT TERM
     echo ""
     echo "Shutting down..."
-    for pid in "${PIDS[@]}"; do
+    # The array may still be empty when stopped during start-up; this form
+    # is safe under `set -u` on every bash version.
+    for pid in ${PIDS[@]+"${PIDS[@]}"}; do
         if kill -0 "$pid" 2>/dev/null; then
             kill "$pid" 2>/dev/null || true
         fi
@@ -59,7 +64,9 @@ cleanup() {
     wait 2>/dev/null || true
     echo "All services stopped."
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # ── Colour helpers ────────────────────────────────────────
 if [ -t 1 ]; then
