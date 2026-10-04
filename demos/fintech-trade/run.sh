@@ -123,14 +123,25 @@ if [ "$NO_OLLAMA" = false ]; then
         if curl -sf "$OLLAMA_URL/api/tags" >/dev/null 2>&1; then
             ok "Ollama reachable at $OLLAMA_URL"
 
-            # Pull models if missing
+            # Pull models if missing. Read the model list once and in full:
+            # stopping early on a match closes the pipe under pipefail and
+            # makes a present model look absent.
+            AVAILABLE_MODELS="$(ollama list 2>/dev/null | awk 'NR > 1 { print $1 }' || true)"
             for model in "$MODEL_A" "$MODEL_B" "$MODEL_C"; do
-                if ollama list 2>/dev/null | grep -q "^${model}"; then
+                # A name without a tag means ":latest", which is how
+                # `ollama list` shows it.
+                model_ref="$model"
+                case "${model##*/}" in
+                    *:*) ;;
+                    *) model_ref="${model}:latest" ;;
+                esac
+                if grep -qxF -- "$model_ref" <<< "$AVAILABLE_MODELS"; then
                     ok "Model $model available"
                 else
                     info "Pulling model $model (this may take a while)..."
                     if ollama pull "$model" 2>/dev/null; then
                         ok "Model $model pulled"
+                        AVAILABLE_MODELS="${AVAILABLE_MODELS}"$'\n'"${model_ref}"
                     else
                         warn "Failed to pull $model — agent will use fallback"
                     fi
