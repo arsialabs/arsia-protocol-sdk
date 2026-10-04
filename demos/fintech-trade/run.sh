@@ -118,66 +118,117 @@ if ! python3 -c "import uvicorn" 2>/dev/null; then
 fi
 ok "uvicorn installed"
 
-# Ollama (unless --no-ollama)
-if [ "$NO_OLLAMA" = false ]; then
-    if ! command -v ollama &>/dev/null; then
-        warn "ollama command not found. Install from https://ollama.com"
-        warn "Continuing anyway — agents will use deterministic fallbacks if Ollama is unreachable."
-    else
-        ok "ollama installed"
-
-        # Check Ollama is running
-        if curl -sf "$OLLAMA_URL/api/tags" >/dev/null 2>&1; then
-            ok "Ollama reachable at $OLLAMA_URL"
-
-            # Pull models if missing. Read the model list once and in full:
-            # stopping early on a match closes the pipe under pipefail and
-            # makes a present model look absent.
-            AVAILABLE_MODELS="$(ollama list 2>/dev/null | awk 'NR > 1 { print $1 }' || true)"
-            for model in "$MODEL_A" "$MODEL_B" "$MODEL_C"; do
-                # A name without a tag means ":latest", which is how
-                # `ollama list` shows it.
-                model_ref="$model"
-                case "${model##*/}" in
-                    *:*) ;;
-                    *) model_ref="${model}:latest" ;;
-                esac
-                if grep -qxF -- "$model_ref" <<< "$AVAILABLE_MODELS"; then
-                    ok "Model $model available"
-                else
-                    info "Pulling model $model (this may take a while)..."
-                    if ollama pull "$model" 2>/dev/null; then
-                        ok "Model $model pulled"
-                        AVAILABLE_MODELS="${AVAILABLE_MODELS}"$'\n'"${model_ref}"
-                    else
-                        warn "Failed to pull $model — agent will use fallback"
-                    fi
-                fi
-            done
-        else
-            warn "Ollama not running at $OLLAMA_URL"
-            warn "Start it with: ollama serve"
-            warn "Continuing — agents will use deterministic fallbacks."
-        fi
-    fi
-else
-    info "Skipping Ollama checks (--no-ollama)"
-fi
-
-echo ""
-
-# ── Point all agents at one Ollama for local mode ─────────
-# In local mode, there's typically one Ollama instance on :11434.
+# ── LLM URL for each agent ────────────────────────────────
+# In local mode, there's typically one Ollama instance on :11434, and an
+# agent without its own URL uses Agent A's.
 # With --no-ollama the agents get no Ollama URL at all, so they never call
 # an LLM and use their deterministic fallback responses.
 if [ "$NO_OLLAMA" = true ]; then
     export AGENT_A_OLLAMA_URL="" AGENT_B_OLLAMA_URL="" AGENT_C_OLLAMA_URL=""
-    info "LLM disabled — agents use deterministic fallback responses."
 else
     export AGENT_A_OLLAMA_URL="${AGENT_A_OLLAMA_URL:-$OLLAMA_URL}"
     export AGENT_B_OLLAMA_URL="${AGENT_B_OLLAMA_URL:-$OLLAMA_URL}"
     export AGENT_C_OLLAMA_URL="${AGENT_C_OLLAMA_URL:-$OLLAMA_URL}"
 fi
+
+# Print "local:<port>" when a URL points at this machine, or "other" when
+# it does not or cannot be read. With "cli", the argument is OLLAMA_HOST,
+# read the way the ollama command reads it: it is the Ollama that
+# `ollama list` and `ollama pull` act on.
+llm_endpoint() {
+    python3 - "$1" "$2" <<'EOF'
+import ipaddress
+import sys
+from urllib.parse import urlsplit
+
+value, kind = sys.argv[1].strip(), sys.argv[2]
+scheme, sep, rest = value.partition("://")
+if not sep:
+    scheme, rest = "http", value
+default_port = {"http": 80, "https": 443}.get(scheme)
+if kind == "cli" and not sep:
+    default_port = 11434
+try:
+    parts = urlsplit(f"{scheme}://{rest}")
+    port = parts.port or default_port
+    host = (parts.hostname or "").lower()
+    local = host in ("", "localhost") or ipaddress.ip_address(host).is_loopback \
+        or ipaddress.ip_address(host).is_unspecified
+except ValueError:
+    local = False
+print(f"local:{port}" if local and port else "other")
+EOF
+}
+
+# ── Ollama models (unless --no-ollama) ───────────────────
+# Models are checked and pulled only for agents that use the local Ollama.
+# A model configured for any other LLM URL is never pulled here.
+if [ "$NO_OLLAMA" = false ]; then
+    HOST_OLLAMA="$(llm_endpoint "${OLLAMA_HOST:-}" cli)"
+    LOCAL_URL=""
+    LOCAL_MODELS=()
+    for agent in A B C; do
+        url_var="AGENT_${agent}_OLLAMA_URL"
+        model_var="MODEL_${agent}"
+        if [ "$HOST_OLLAMA" != other ] && [ "$(llm_endpoint "${!url_var}" url)" = "$HOST_OLLAMA" ]; then
+            LOCAL_URL="${LOCAL_URL:-${!url_var}}"
+            LOCAL_MODELS+=("${!model_var}")
+        else
+            info "Agent $agent uses an LLM URL other than the local Ollama; its model is not checked or pulled here."
+        fi
+    done
+fi
+
+if [ "$NO_OLLAMA" = true ]; then
+    info "Skipping Ollama checks (--no-ollama)"
+elif [ -z "$LOCAL_URL" ]; then
+    info "No agent uses the local Ollama; skipping Ollama checks."
+elif ! command -v ollama &>/dev/null; then
+    warn "ollama command not found. Install from https://ollama.com"
+    warn "Continuing anyway — agents will use deterministic fallbacks if Ollama is unreachable."
+else
+    ok "ollama installed"
+
+    # Check Ollama is running
+    if curl -sf "$LOCAL_URL/api/tags" >/dev/null 2>&1; then
+        ok "Ollama reachable at $LOCAL_URL"
+
+        # Pull models if missing. Read the model list once and in full:
+        # stopping early on a match closes the pipe under pipefail and
+        # makes a present model look absent.
+        AVAILABLE_MODELS="$(ollama list 2>/dev/null | awk 'NR > 1 { print $1 }' || true)"
+        for model in "${LOCAL_MODELS[@]}"; do
+            # A name without a tag means ":latest", which is how
+            # `ollama list` shows it.
+            model_ref="$model"
+            case "${model##*/}" in
+                *:*) ;;
+                *) model_ref="${model}:latest" ;;
+            esac
+            if grep -qxF -- "$model_ref" <<< "$AVAILABLE_MODELS"; then
+                ok "Model $model available"
+            else
+                info "Pulling model $model (this may take a while)..."
+                if ollama pull "$model" 2>/dev/null; then
+                    ok "Model $model pulled"
+                    AVAILABLE_MODELS="${AVAILABLE_MODELS}"$'\n'"${model_ref}"
+                else
+                    warn "Failed to pull $model — agent will use fallback"
+                fi
+            fi
+        done
+    else
+        warn "Ollama not running at $LOCAL_URL"
+        warn "Start it with: ollama serve"
+        warn "Continuing — agents will use deterministic fallbacks."
+    fi
+fi
+
+if [ "$NO_OLLAMA" = true ]; then
+    info "LLM disabled — agents use deterministic fallback responses."
+fi
+
+echo ""
 
 export AGENT_A_PORT AGENT_B_PORT AGENT_C_PORT DASHBOARD_PORT
 export PEER_B_URL="http://localhost:$AGENT_B_PORT"
