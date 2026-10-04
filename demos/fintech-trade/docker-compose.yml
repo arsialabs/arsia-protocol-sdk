@@ -71,8 +71,6 @@ services:
   agent-a:
     build:
       context: .
-      args:
-        SDK_PATH: /sdk
     command: ["python", "-m", "uvicorn", "agents.advisor:app", "--host", "0.0.0.0", "--port", "8001"]
     ports:
       - "8001:8001"
@@ -89,8 +87,6 @@ services:
       PEER_B_URL: http://agent-b:8002
       PEER_C_URL: http://agent-c:8003
       DASHBOARD_URL: http://dashboard:3000
-    volumes:
-      - ../../python:/sdk:ro
     depends_on:
       ollama-a:
         condition: service_healthy
@@ -100,8 +96,6 @@ services:
   agent-b:
     build:
       context: .
-      args:
-        SDK_PATH: /sdk
     command: ["python", "-m", "uvicorn", "agents.risk_assessor:app", "--host", "0.0.0.0", "--port", "8002"]
     ports:
       - "8002:8002"
@@ -114,8 +108,6 @@ services:
       AGENT_A_ID: agent:acme.advisor
       AGENT_A_PORT: "8001"
       PEER_A_URL: http://agent-a:8001
-    volumes:
-      - ../../python:/sdk:ro
     depends_on:
       ollama-b:
         condition: service_healthy
@@ -125,8 +117,6 @@ services:
   agent-c:
     build:
       context: .
-      args:
-        SDK_PATH: /sdk
     command: ["python", "-m", "uvicorn", "agents.trade_executor:app", "--host", "0.0.0.0", "--port", "8003"]
     ports:
       - "8003:8003"
@@ -139,8 +129,6 @@ services:
       AGENT_A_ID: agent:acme.advisor
       AGENT_A_PORT: "8001"
       PEER_A_URL: http://agent-a:8001
-    volumes:
-      - ../../python:/sdk:ro
     depends_on:
       ollama-c:
         condition: service_healthy
@@ -151,16 +139,12 @@ services:
   dashboard:
     build:
       context: .
-      args:
-        SDK_PATH: /sdk
     command: ["python", "-m", "uvicorn", "dashboard.app:app", "--host", "0.0.0.0", "--port", "3000"]
     ports:
       - "3000:3000"
     environment:
       DASHBOARD_PORT: "3000"
       DASHBOARD_AGENT_A_URL: http://agent-a:8001
-    volumes:
-      - ../../python:/sdk:ro
     depends_on:
       - agent-a
     networks:

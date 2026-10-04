@@ -9,7 +9,6 @@ set -euo pipefail
 
 # ── Configuration ─────────────────────────────────────────
 DEMO_DIR="$(cd "$(dirname "$0")" && pwd)"
-SDK_DIR="$(cd "$DEMO_DIR/../../python" && pwd)"
 
 AGENT_A_PORT="${AGENT_A_PORT:-8001}"
 AGENT_B_PORT="${AGENT_B_PORT:-8002}"
@@ -100,7 +99,7 @@ ok "Python $PY_VERSION"
 # arsia-protocol SDK
 if ! python3 -c "import arsia_protocol" 2>/dev/null; then
     fail "arsia-protocol SDK not installed."
-    echo "  Run: cd $SDK_DIR && pip install -e '.[dev]'"
+    echo "  Run: pip install -r $DEMO_DIR/requirements.txt"
     exit 1
 fi
 ok "arsia-protocol SDK installed"
