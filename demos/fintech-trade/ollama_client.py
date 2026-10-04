@@ -29,6 +29,9 @@ class OllamaClient:
         timeout: float = 300.0,
     ) -> None:
         self.base_url = base_url.rstrip("/")
+        # An empty URL disables the LLM: no request is made and callers
+        # use their deterministic fallback (`./run.sh --no-ollama`).
+        self.enabled = bool(self.base_url)
         self.model = model
         self.system_prompt = system_prompt
         self.timeout = timeout
@@ -50,6 +53,8 @@ class OllamaClient:
         Returns:
             The full API response as a dict.
         """
+        if not self.enabled:
+            raise RuntimeError("LLM disabled: no Ollama URL configured")
         messages: list[dict[str, str]] = []
         if self.system_prompt:
             messages.append({"role": "system", "content": self.system_prompt})
@@ -108,6 +113,8 @@ class OllamaClient:
         Returns:
             The parsed JSON from the accumulated response content.
         """
+        if not self.enabled:
+            raise RuntimeError("LLM disabled: no Ollama URL configured")
         messages: list[dict[str, str]] = []
         if self.system_prompt:
             messages.append({"role": "system", "content": self.system_prompt})
@@ -151,6 +158,8 @@ class OllamaClient:
 
     async def health_check(self) -> bool:
         """Check if the Ollama instance is reachable and has the model loaded."""
+        if not self.enabled:
+            return False
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.get(f"{self.base_url}/api/tags")

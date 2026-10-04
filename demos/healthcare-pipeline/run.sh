@@ -168,9 +168,16 @@ echo ""
 
 # ── Point all agents at one Ollama for local mode ─────────
 # In local mode, there's typically one Ollama instance on :11434.
-export AGENT_A_OLLAMA_URL="${AGENT_A_OLLAMA_URL:-$OLLAMA_URL}"
-export AGENT_B_OLLAMA_URL="${AGENT_B_OLLAMA_URL:-$OLLAMA_URL}"
-export AGENT_C_OLLAMA_URL="${AGENT_C_OLLAMA_URL:-$OLLAMA_URL}"
+# With --no-ollama the agents get no Ollama URL at all, so they never call
+# an LLM and use their deterministic fallback responses.
+if [ "$NO_OLLAMA" = true ]; then
+    export AGENT_A_OLLAMA_URL="" AGENT_B_OLLAMA_URL="" AGENT_C_OLLAMA_URL=""
+    info "LLM disabled — agents use deterministic fallback responses."
+else
+    export AGENT_A_OLLAMA_URL="${AGENT_A_OLLAMA_URL:-$OLLAMA_URL}"
+    export AGENT_B_OLLAMA_URL="${AGENT_B_OLLAMA_URL:-$OLLAMA_URL}"
+    export AGENT_C_OLLAMA_URL="${AGENT_C_OLLAMA_URL:-$OLLAMA_URL}"
+fi
 
 export AGENT_A_PORT AGENT_B_PORT AGENT_C_PORT DASHBOARD_PORT
 export PEER_B_URL="http://localhost:$AGENT_B_PORT"
