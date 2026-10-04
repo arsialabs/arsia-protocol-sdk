@@ -53,7 +53,7 @@ from arsia_protocol import (
 from audit_store import AuditStore
 from config import load_agent_config
 from flow_state import FlowState, PipelineStatus
-from keys import KeyStore, exchange_keys
+from keys import KeyStore, PeerKeyReadiness, exchange_keys
 from ollama_client import OllamaClient
 from transport import send_envelope
 
@@ -154,6 +154,7 @@ cfg = load_agent_config("AGENT_A", {
 })
 
 key_store = KeyStore(cfg.agent_id)
+readiness = PeerKeyReadiness(key_store)
 intake_keys = KeyStore("agent:meddata.intake-system")
 clinician_keys = KeyStore("agent:meddata.clinician")
 audit_store = AuditStore()
@@ -210,10 +211,9 @@ async def lifespan(app: FastAPI):
     PEER_B_URL = os.environ.get("PEER_B_URL", f"http://localhost:{os.environ.get('AGENT_B_PORT', '8002')}")
     PEER_C_URL = os.environ.get("PEER_C_URL", f"http://localhost:{os.environ.get('AGENT_C_PORT', '8003')}")
 
-    task = asyncio.create_task(exchange_keys(key_store, {
-        AGENT_B_ID: PEER_B_URL,
-        AGENT_C_ID: PEER_C_URL,
-    }))
+    peers = {AGENT_B_ID: PEER_B_URL, AGENT_C_ID: PEER_C_URL}
+    task = asyncio.create_task(exchange_keys(key_store, peers))
+    readiness.track(list(peers), task)
 
     logger.info("Agent A (Data Collector) ready — %s on port %s", cfg.agent_id, cfg.port)
     yield
@@ -240,12 +240,13 @@ async def get_keys():
 
 @app.get("/health")
 async def health():
-    return {
+    code, readiness_fields = readiness.report()
+    return JSONResponse(status_code=code, content={
         "agent_id": cfg.agent_id,
-        "status": "healthy",
+        **readiness_fields,
         "pipeline_status": flow.status.value,
         "capabilities": cfg.capabilities,
-    }
+    })
 
 
 @app.get("/state")

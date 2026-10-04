@@ -226,6 +226,7 @@ wait_healthy() {
         elapsed=$((elapsed + 1))
     done
     fail "$name did not become healthy within ${max_wait}s"
+    echo "  Last health response: $(curl -s "$url/health" 2>/dev/null || echo "no response")"
     return 1
 }
 

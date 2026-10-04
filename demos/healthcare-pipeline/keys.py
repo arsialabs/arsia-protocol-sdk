@@ -84,6 +84,38 @@ class KeyStore:
         return agent_id in self._peer_public_keys
 
 
+class PeerKeyReadiness:
+    """Report whether an agent holds the public key of every expected peer.
+
+    It only reads the key store: it never fetches, trusts or verifies a key,
+    so key handling and signature verification are unchanged. An agent is
+    ready once every peer key passed to the start-up key exchange is held.
+    If that exchange has ended without them, the agent reports the failure
+    and never becomes ready.
+    """
+
+    def __init__(self, key_store: KeyStore) -> None:
+        self._key_store = key_store
+        self._expected: list[str] = []
+        self._exchange: asyncio.Task[None] | None = None
+
+    def track(self, peer_ids: list[str], exchange: asyncio.Task[None]) -> None:
+        """Record the peers the start-up key exchange is fetching."""
+        self._expected = list(peer_ids)
+        self._exchange = exchange
+
+    def report(self) -> tuple[int, dict[str, Any]]:
+        """Return an HTTP status (200 ready, 503 not ready) and readiness fields."""
+        missing = [p for p in self._expected if not self._key_store.has_peer(p)]
+        if self._exchange is None or missing:
+            failed = self._exchange is not None and self._exchange.done()
+            return 503, {
+                "status": "key_exchange_failed" if failed else "starting",
+                "missing_peer_keys": missing,
+            }
+        return 200, {"status": "healthy", "peer_keys": list(self._expected)}
+
+
 def _decode_jwk_public_key(jwk: dict[str, str]) -> Ed25519PublicKey:
     """Decode an Ed25519 public key from a JWK dict."""
     import base64

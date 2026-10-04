@@ -35,7 +35,7 @@ from arsia_protocol import (
 
 from audit_store import AuditStore
 from config import load_agent_config
-from keys import KeyStore, exchange_keys
+from keys import KeyStore, PeerKeyReadiness, exchange_keys
 from ollama_client import OllamaClient
 from transport import IncomingEnvelopeError, validate_incoming
 
@@ -95,6 +95,7 @@ cfg = load_agent_config("AGENT_B", {
 })
 
 key_store = KeyStore(cfg.agent_id)
+readiness = PeerKeyReadiness(key_store)
 audit_store = AuditStore()
 ollama = OllamaClient(
     base_url=cfg.ollama_url,
@@ -149,7 +150,9 @@ async def lifespan(app: FastAPI):
     PEER_A_URL = os.environ.get("PEER_A_URL", f"http://localhost:{os.environ.get('AGENT_A_PORT', '8001')}")
     agent_a_id = os.environ.get("AGENT_A_ID", "agent:meddata.data-collector")
 
-    task = asyncio.create_task(exchange_keys(key_store, {agent_a_id: PEER_A_URL}))
+    peers = {agent_a_id: PEER_A_URL}
+    task = asyncio.create_task(exchange_keys(key_store, peers))
+    readiness.track(list(peers), task)
 
     logger.info("Agent B (Anonymizer) ready — %s on port %s", cfg.agent_id, cfg.port)
     yield
@@ -171,13 +174,14 @@ async def get_keys():
 @app.get("/health")
 async def health():
     ollama_ok = await ollama.health_check()
-    return {
+    code, readiness_fields = readiness.report()
+    return JSONResponse(status_code=code, content={
         "agent_id": cfg.agent_id,
-        "status": "healthy",
+        **readiness_fields,
         "ollama_reachable": ollama_ok,
         "ollama_model": cfg.ollama_model,
         "capabilities": cfg.capabilities,
-    }
+    })
 
 
 @app.post("/envelope")
