@@ -304,7 +304,7 @@ Subsequent runs cycle through five built-in patient profiles.
 ### Watching the pipeline progress
 
 - **Steps 1-5** execute automatically. On our test machine (an Apple
-  silicon laptop) they took about 16–17 s with `gemma4:e2b` on the host
+  silicon laptop) they took 16–20 s across our runs with `gemma4:e2b` on the host
   Ollama, and under a second without an LLM; the time depends on your
   machine and on the LLM you choose.
 - The **Pipeline Status** bar shows each step lighting up in sequence.
@@ -397,7 +397,7 @@ docker compose -f docker-compose.yml -f docker-compose.no-llm.yml up --build -d 
 
 `--wait` returns once every agent holds its peers' public keys and the
 dashboard is up; then open **http://localhost:3000**. On our test machine
-this took about 8 s, with the Python base image already downloaded. To
+this took 7–20 s, with the Python base image already downloaded. To
 stop, run the same command with `down` in place of `up --build -d --wait`.
 
 - **Provider keys** — the provider files read `OPENAI_API_KEY`,
