@@ -145,6 +145,57 @@ requires clinician review before clinical action."
 }
 """
 
+
+# The reply structure SYSTEM_PROMPT asks for, as a JSON schema. Sent to Anthropic,
+# whose JSON output requires one (every object closed with additionalProperties).
+RESPONSE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "report_title",
+        "patient",
+        "summary",
+        "risk_level",
+        "findings",
+        "recommendations",
+        "report_date",
+        "disclaimer",
+    ],
+    "properties": {
+        "report_title": {"type": "string"},
+        "patient": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["name", "date_of_birth", "health_number"],
+            "properties": {
+                "name": {"type": "string"},
+                "date_of_birth": {"type": "string"},
+                "health_number": {"type": "string"},
+            },
+        },
+        "summary": {"type": "string"},
+        "risk_level": {"type": "string"},
+        "findings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["test", "value", "reference_range", "interpretation", "clinical_note"],
+                "properties": {
+                    "test": {"type": "string"},
+                    "value": {"type": "string"},
+                    "reference_range": {"type": "string"},
+                    "interpretation": {"type": "string", "enum": ["normal", "borderline", "abnormal", "critical"]},
+                    "clinical_note": {"type": "string"},
+                },
+            },
+        },
+        "recommendations": {"type": "array", "items": {"type": "string"}},
+        "report_date": {"type": "string"},
+        "disclaimer": {"type": "string"},
+    },
+}
+
 cfg = load_agent_config("AGENT_A", {
     "id": "agent:meddata.data-collector",
     "port": "8001",
@@ -160,6 +211,7 @@ flow = FlowState()
 llm = LLMClient(
     load_llm_settings(),
     system_prompt=SYSTEM_PROMPT,
+    json_schema=RESPONSE_SCHEMA,
 )
 
 PEER_B_URL = ""

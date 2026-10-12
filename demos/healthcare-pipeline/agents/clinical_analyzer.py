@@ -88,6 +88,46 @@ You must NEVER request PII. Your analysis is based solely on \
 the lab values provided.\
 """
 
+
+# The reply structure SYSTEM_PROMPT asks for, as a JSON schema. Sent to Anthropic,
+# whose JSON output requires one (every object closed with additionalProperties).
+RESPONSE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "anonymization_token",
+        "diagnosis",
+        "risk_level",
+        "confidence",
+        "findings",
+        "recommendations",
+        "guidelines_cited",
+    ],
+    "properties": {
+        "anonymization_token": {"type": "string"},
+        "diagnosis": {"type": "string"},
+        "risk_level": {"type": "string", "enum": ["low", "moderate", "high", "critical"]},
+        "confidence": {"type": "number"},
+        "findings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["test", "value", "reference_range", "interpretation", "clinical_note"],
+                "properties": {
+                    "test": {"type": "string"},
+                    "value": {"type": "string"},
+                    "reference_range": {"type": "string"},
+                    "interpretation": {"type": "string", "enum": ["normal", "borderline", "abnormal", "critical"]},
+                    "clinical_note": {"type": "string"},
+                },
+            },
+        },
+        "recommendations": {"type": "array", "items": {"type": "string"}},
+        "guidelines_cited": {"type": "array", "items": {"type": "string"}},
+    },
+}
+
 cfg = load_agent_config("AGENT_C", {
     "id": "agent:meddata.clinical-analyzer",
     "port": "8003",
@@ -100,6 +140,7 @@ audit_store = AuditStore()
 llm = LLMClient(
     load_llm_settings(),
     system_prompt=SYSTEM_PROMPT,
+    json_schema=RESPONSE_SCHEMA,
 )
 
 PEER_A_URL = ""

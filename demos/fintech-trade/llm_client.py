@@ -39,7 +39,9 @@ class LLMError(Exception):
 class LLMClient:
     """Async client for the LLM selected by the demo's settings.
 
-    ``chat_json_stream`` is the only call the agents use. With mode ``none``
+    ``chat_json_stream`` is the only call the agents use. ``json_schema``
+    describes the reply the agent expects; Anthropic offers JSON output only
+    as a schema, so it is sent there. With mode ``none``
     the client is disabled: no request is made and callers use their
     deterministic fallback.
     """
@@ -48,6 +50,7 @@ class LLMClient:
         self,
         settings: LLMSettings,
         system_prompt: str = "",
+        json_schema: dict[str, Any] | None = None,
         timeout: float = 300.0,
     ) -> None:
         self._settings = settings
@@ -55,6 +58,7 @@ class LLMClient:
         self.model = settings.model
         self.enabled = settings.mode != "none"
         self.system_prompt = system_prompt
+        self.json_schema = json_schema
         self.timeout = timeout
 
     async def chat_json_stream(
@@ -139,6 +143,10 @@ class LLMClient:
             }
             if self.system_prompt:
                 body["system"] = self.system_prompt
+            if self.json_schema:
+                body["output_config"] = {
+                    "format": {"type": "json_schema", "schema": self.json_schema},
+                }
             if self.model == "claude-haiku-5-5":
                 body["thinking"] = {"type": "disabled"}
             headers = {

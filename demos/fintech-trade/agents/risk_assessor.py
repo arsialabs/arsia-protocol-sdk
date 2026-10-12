@@ -82,6 +82,40 @@ Assessment guidelines:
 - Consider currency risk for cross-currency positions
 """
 
+
+# The reply structure SYSTEM_PROMPT asks for, as a JSON schema. Sent to Anthropic,
+# whose JSON output requires one (every object closed with additionalProperties).
+RESPONSE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "suitability_score",
+        "suitability_classification",
+        "risk_category",
+        "warnings",
+        "recommendation",
+        "regulatory_basis",
+    ],
+    "properties": {
+        "suitability_score": {"type": "number"},
+        "suitability_classification": {"type": "string", "enum": ["suitable", "suitable_with_warnings", "unsuitable"]},
+        "risk_category": {"type": "string", "enum": ["conservative", "moderate", "aggressive"]},
+        "warnings": {"type": "array", "items": {"type": "string"}},
+        "recommendation": {"type": "string", "enum": ["suitable", "suitable_with_warnings", "unsuitable"]},
+        "regulatory_basis": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["framework", "article", "method", "factors"],
+            "properties": {
+                "framework": {"type": "string"},
+                "article": {"type": "string"},
+                "method": {"type": "string"},
+                "factors": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+    },
+}
+
 cfg = load_agent_config("AGENT_B", {
     "id": "agent:acme.risk-assessor",
     "port": "8002",
@@ -94,6 +128,7 @@ audit_store = AuditStore()
 llm = LLMClient(
     load_llm_settings(),
     system_prompt=SYSTEM_PROMPT,
+    json_schema=RESPONSE_SCHEMA,
 )
 
 PEER_A_URL = ""

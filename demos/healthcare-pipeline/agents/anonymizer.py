@@ -84,6 +84,37 @@ dates of birth, or health numbers. The output must be safe to \
 send to a clinical analyzer that has no authorization to see PII.\
 """
 
+
+# The reply structure SYSTEM_PROMPT asks for, as a JSON schema. Sent to Anthropic,
+# whose JSON output requires one (every object closed with additionalProperties).
+RESPONSE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["anonymization_token", "method", "lab_values", "fields_stripped", "pii_leak_check"],
+    "properties": {
+        "anonymization_token": {"type": "string"},
+        "method": {"type": "string"},
+        "lab_values": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["ldl_cholesterol", "hdl_cholesterol", "fasting_glucose", "hemoglobin"],
+            "properties": {
+                "ldl_cholesterol": {"type": "number"},
+                "hdl_cholesterol": {"type": "number"},
+                "fasting_glucose": {"type": "number"},
+                "hemoglobin": {"type": "number"},
+            },
+        },
+        "fields_stripped": {"type": "array", "items": {"type": "string"}},
+        "pii_leak_check": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["passed", "details"],
+            "properties": {"passed": {"type": "boolean"}, "details": {"type": "string"}},
+        },
+    },
+}
+
 PII_FIELDS = {"patient_name", "date_of_birth", "health_number"}
 
 cfg = load_agent_config("AGENT_B", {
@@ -98,6 +129,7 @@ audit_store = AuditStore()
 llm = LLMClient(
     load_llm_settings(),
     system_prompt=SYSTEM_PROMPT,
+    json_schema=RESPONSE_SCHEMA,
 )
 
 PEER_A_URL = ""

@@ -94,6 +94,64 @@ Produce a JSON response with exactly this structure:
 }
 """
 
+
+# The reply structure SYSTEM_PROMPT asks for, as a JSON schema. Sent to Anthropic,
+# whose JSON output requires one (every object closed with additionalProperties).
+RESPONSE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "execution_status",
+        "strategy",
+        "orders",
+        "total_amount",
+        "total_units",
+        "average_price",
+        "currency",
+        "venue",
+        "settlement_date",
+    ],
+    "properties": {
+        "execution_status": {"type": "string"},
+        "strategy": {"type": "string"},
+        "orders": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": [
+                    "order_id",
+                    "instrument",
+                    "quantity",
+                    "price",
+                    "amount",
+                    "currency",
+                    "venue",
+                    "status",
+                    "fill_time",
+                ],
+                "properties": {
+                    "order_id": {"type": "string"},
+                    "instrument": {"type": "string"},
+                    "quantity": {"type": "integer"},
+                    "price": {"type": "number"},
+                    "amount": {"type": "number"},
+                    "currency": {"type": "string"},
+                    "venue": {"type": "string"},
+                    "status": {"type": "string"},
+                    "fill_time": {"type": "string"},
+                },
+            },
+        },
+        "total_amount": {"type": "number"},
+        "total_units": {"type": "integer"},
+        "average_price": {"type": "number"},
+        "currency": {"type": "string"},
+        "venue": {"type": "string"},
+        "settlement_date": {"type": "string"},
+    },
+}
+
 cfg = load_agent_config("AGENT_C", {
     "id": "agent:acme.trade-executor",
     "port": "8003",
@@ -106,6 +164,7 @@ audit_store = AuditStore()
 llm = LLMClient(
     load_llm_settings(),
     system_prompt=SYSTEM_PROMPT,
+    json_schema=RESPONSE_SCHEMA,
 )
 
 PEER_A_URL = ""
