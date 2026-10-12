@@ -1,0 +1,18 @@
+# Gemini mode: the agents call Gemini with your own API key, read from
+# GEMINI_API_KEY (in the environment, or in this folder's .env). Use it with:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.gemini.yml up --build -d --wait
+#
+# Without GEMINI_API_KEY set, Compose stops before building or starting anything.
+# The key is passed only to the agents that call the LLM; like any
+# container setting, it is visible to `docker inspect` and
+# `docker compose config` on this machine. DEMO_LLM_BASE_URL is for testing.
+services:
+  agent-b:
+    environment: &llm-environment
+      DEMO_LLM: gemini
+      DEMO_LLM_MODEL: ${DEMO_LLM_MODEL:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?set GEMINI_API_KEY to your Gemini API key}
+      DEMO_LLM_BASE_URL: ${DEMO_LLM_BASE_URL:-}
+  agent-c:
+    environment: *llm-environment
