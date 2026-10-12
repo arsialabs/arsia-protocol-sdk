@@ -52,10 +52,12 @@ Each demo is self-contained with its own README, Docker setup, and run script.
 | [**Fintech Trade**](demos/fintech-trade/) | 3 autonomous AI agents execute a MiFID-II regulated securities trade — suitability assessment, human-in-the-loop oversight, order execution, full audit trail. Structural data isolation ensures each agent sees only what it needs. |
 | [**Healthcare Pipeline**](demos/healthcare-pipeline/) | 3 autonomous AI agents process health data through a regulated pipeline with strict PII isolation. The system generates clinical analyses from anonymized records, requires mandatory clinician approval, and produces a complete audit trail to guarantee GDPR Art. 9 and EU AI Act compliance. |
 
-Run the fintech demo in under a minute:
+Run the fintech demo with Python 3.12+. By default it uses the Ollama on
+your machine; its README shows how to use OpenAI, Anthropic or Gemini
+with your own key, no LLM, or Docker Compose:
 
 ```bash
-cd demos/fintech-trade && ./run.sh
+cd demos/fintech-trade && pip install -r requirements.txt && ./run.sh
 ```
 
 ## Documentation

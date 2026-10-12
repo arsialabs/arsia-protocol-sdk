@@ -5,6 +5,42 @@ All notable changes to the ARSIA Protocol SDK are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+Changes to the demos only; the SDK package is unchanged.
+
+### Added
+
+- **Demos** can use OpenAI, Anthropic or Gemini with your own API key, as
+  well as the Ollama on your machine, or run without an LLM; each way works
+  with `run.sh` and with Docker Compose. Keys are read from the environment
+  and are never written to logs or responses.
+
+### Changed
+
+- **Demos** install the published `arsia-protocol` 1.0.1 with every direct
+  dependency pinned; a local SDK checkout is an optional, documented step.
+- **Docker mode** runs the agents and the dashboard only, and starts with
+  `docker compose up --build -d --wait` (Docker Engine 25.0 and Docker
+  Compose 2.20.2 or later).
+- **Running without an LLM** uses `./run.sh --no-llm`.
+
+### Removed
+
+- **Ollama containers**, the Single Ollama mode and the GPU passthrough
+  instructions from Docker mode.
+
+### Fixed
+
+- **Demos** report ready only after every agent holds its peers' public
+  keys, so a pipeline triggered right away completes.
+- **Fintech demo** — the documented capability-denial request reaches
+  Agent C's 403 error envelope.
+- **Demos** never re-download an Ollama model that is present, and never
+  pull a model meant for another LLM.
+- **Demo run scripts** stop cleanly at any point.
+- **Demo images** contain only the demos' tracked files.
+
 ## [1.0.1] — 2026-09-29
 
 Corrections to how the SDK consumes the conformance corpus. No change to

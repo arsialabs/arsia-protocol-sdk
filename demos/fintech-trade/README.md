@@ -20,8 +20,11 @@ the ARSIA Protocol.
   payload hashes, MiFID-II compliance profile, and 5-year retention
   metadata.
 - **LLM-powered decision-making** — Agent B uses an LLM for suitability
-  analysis; Agent C uses an LLM for trade execution splitting. Both fall
-  back to deterministic results if the LLM is unavailable.
+  analysis; Agent C uses an LLM for trade execution splitting. The LLM is
+  your choice — the Ollama on your machine, OpenAI, Anthropic or Gemini
+  with your own key, or none (see [Choosing the LLM](#choosing-the-llm)).
+  Both agents fall back to deterministic results if the LLM is
+  unavailable.
 - **Real-time LLM streaming** — the dashboard shows LLM output
   token-by-token as each agent generates its response, with a live
   cursor and agent identification.
@@ -56,11 +59,11 @@ the ARSIA Protocol.
                        │                                 │
                        ▼                                 ▼
               ┌──────────────┐              ┌──────────────────┐
-              │   Ollama     │              │     Ollama       │
-              │ gemma4:e2b   │              │   gemma4:e2b     │
+              │     LLM      │              │       LLM        │
               └──────────────┘              └──────────────────┘
 
-  Default model: gemma4:e2b for all agents (configurable per agent)
+  One LLM for the whole demo: the Ollama on your machine (default,
+  gemma4:e2b), OpenAI, Anthropic or Gemini with your own key, or none.
 ```
 
 ### Data isolation — who sees what
@@ -203,51 +206,58 @@ capabilities.
 ## Prerequisites
 
 - **Python 3.12+**
-- **Ollama** installed and running (optional — agents fall back to
-  deterministic responses)
-- **arsia-protocol SDK** installed in development mode
+- **An LLM, or none** — the [Ollama](https://ollama.com) on your machine
+  (the default), OpenAI, Anthropic or Gemini with your own API key, or no
+  LLM at all, in which case the agents use deterministic fallback
+  responses. See [Choosing the LLM](#choosing-the-llm).
+- **Docker** — only for [Docker mode](#running-with-docker).
 
 ## Quick start
 
 ### 1. Install dependencies
 
 ```bash
-# From the repo root:
-cd python && pip install -e ".[dev]"
-cd ../demos/fintech-trade && pip install -r requirements.txt
-```
-
-### 2. Pull Ollama model (optional)
-
-```bash
-ollama pull gemma4:e2b
-```
-
-Skip this step to run without LLM — agents use deterministic fallback
-responses automatically.
-
-### 3. Run
-
-```bash
 cd demos/fintech-trade
-./run.sh
+pip install -r requirements.txt
 ```
 
-Or skip Ollama checks:
+This installs the published `arsia-protocol` SDK and the demo's other
+dependencies, at the versions the demo is tested with.
+
+<details>
+<summary>Optional: use a local SDK checkout</summary>
+
+To run the demo against your own copy of the SDK, install it after the
+requirements:
 
 ```bash
-./run.sh --no-ollama
+pip install -e ../../python
 ```
 
-The script validates prerequisites, starts all four services in the
-correct order, waits for health checks, and prints a summary. Press
-Ctrl+C to stop everything.
+Docker mode always installs the published SDK.
+
+</details>
+
+### 2. Run
+
+```bash
+./run.sh                    # the Ollama on this machine (default)
+./run.sh --llm openai       # or anthropic, gemini: needs your API key
+./run.sh --no-llm           # no LLM: deterministic fallback responses
+```
+
+The script checks the LLM settings before starting anything, starts the
+four services, waits until every agent holds its peers' public keys, and
+prints a summary. With the default mode it also checks that Ollama is
+running and pulls `gemma4:e2b` if it is missing. Press Ctrl+C to stop
+everything.
 
 <details>
 <summary>Manual startup (four separate terminals)</summary>
 
-Start Agent B and C before Agent A — Agent A exchanges public keys with
-its peers on startup and will retry until they respond.
+Every agent fetches its peers' public keys at start-up and retries for
+about 60 seconds, so start all three within that time. The terminals read
+the LLM settings from the environment or from `.env`, as `run.sh` does.
 
 ```bash
 # Terminal 1 — Agent B (Risk Assessor)
@@ -269,7 +279,7 @@ python -m uvicorn dashboard.app:app --host 127.0.0.1 --port 3000
 
 </details>
 
-### 4. Open the dashboard
+### 3. Open the dashboard
 
 Navigate to **http://localhost:3000** in your browser.
 
@@ -286,8 +296,10 @@ Navigate to **http://localhost:3000** in your browser.
 
 ### Watching the pipeline progress
 
-- **Steps 1-3** execute automatically (~10-15s with `gemma4:e2b`,
-  instant with fallback).
+- **Steps 1-3** execute automatically. On our test machine (an Apple
+  silicon laptop) they took about 13 s with `gemma4:e2b` on the host
+  Ollama, and under a second without an LLM; the time depends on your
+  machine and on the LLM you choose.
 - The **Pipeline Status** bar shows each step lighting up in sequence.
 - The **LLM Streaming** panel appears during step 2, showing Agent B's
   response being generated token-by-token in real time.
@@ -310,8 +322,8 @@ Navigate to **http://localhost:3000** in your browser.
 - The **Audit Trail** table populates progressively as steps complete.
 - Click any row to expand it and see: record ID, envelope ID, payload
   hash (SHA-256), correlation ID, compliance profile, retention period.
-- After completion, you should see 6-8 audit records (depending on the
-  path taken).
+- After an approved run you should see 7 audit records; after a denied
+  run, 6.
 
 ### Inspecting envelopes
 
@@ -322,7 +334,8 @@ Navigate to **http://localhost:3000** in your browser.
 
 ### Triggering capability denial
 
-Add `?demo_denial=true` to the trigger:
+The dashboard has no button for this; use the trigger endpoint with
+`?demo_denial=true`:
 
 ```bash
 curl -X POST http://localhost:8001/trigger?demo_denial=true \
@@ -330,44 +343,109 @@ curl -X POST http://localhost:8001/trigger?demo_denial=true \
   -d '{"client_ref":"CLT-TEST","proposed_trade":{"amount_eur":100000}}'
 ```
 
-This asks Agent C for `risk.assess` (which it doesn't have), triggering
-a 403 Forbidden response with an ARSIA error envelope.
+The command answers `{"status": "started", "message": "Pipeline
+triggered"}` (HTTP 200): it starts a normal pipeline run. When that run
+reaches the approval step, Agent A also asks Agent C for `risk.assess`,
+which Agent C does not have. Agent C refuses with 403 Forbidden and a
+signed ARSIA error envelope. You can see the refusal:
+
+- in Agent C's log: `"POST /envelope HTTP/1.1" 403 Forbidden`;
+- in Agent C's audit trail (`curl http://localhost:8003/audit`): an
+  `error` record from Agent C to Agent A, carrying the envelope's SHA-256
+  payload hash (not its content).
+
+The dashboard does not show this refusal; the pipeline waits for approval
+as usual.
 
 ## Running with Docker
 
+Docker mode runs the three agents and the dashboard in containers. The
+LLM runs outside Docker: the Ollama on your machine, or a provider.
+
+**Requirements:** Docker Engine 25.0 or later and Docker Compose 2.20.2 or
+later. The health checks use `start_interval`, which Docker documents as
+introduced in Compose 2.20.2 and as needing Engine API 1.44 (Engine 25.0).
+
 ```bash
 cd demos/fintech-trade
-docker compose up --build
+
+# The Ollama on this machine (pull the model first: ollama pull gemma4:e2b)
+docker compose up --build -d --wait
+
+# Or OpenAI, Anthropic or Gemini with your key, or no LLM:
+docker compose -f docker-compose.yml -f docker-compose.openai.yml up --build -d --wait
+docker compose -f docker-compose.yml -f docker-compose.anthropic.yml up --build -d --wait
+docker compose -f docker-compose.yml -f docker-compose.gemini.yml up --build -d --wait
+docker compose -f docker-compose.yml -f docker-compose.no-llm.yml up --build -d --wait
 ```
 
-The first startup will pull Ollama images and models (this takes time).
+`--wait` returns once every agent holds its peers' public keys and the
+dashboard is up; then open **http://localhost:3000**. On our test machine
+this took 8–18 s, with the Python base image already downloaded. To stop,
+run the same command with `down` in place of `up --build -d --wait`.
 
-### Single Ollama mode
+- **Provider keys** — the provider files read `OPENAI_API_KEY`,
+  `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` from your environment or from
+  the demo's `.env`. Without it, Compose stops before building or
+  starting anything. The key is passed only to the agents that call the
+  LLM; like any container setting, `docker inspect` and
+  `docker compose config` show it on your machine.
+- **The host's Ollama** — the agents reach it at
+  `http://host.docker.internal:11434` (set `DEMO_OLLAMA_URL` to change
+  it). Docker Desktop resolves that name; we tested it on macOS with
+  Ollama's default settings. Nothing is pulled in Docker mode.
+- **Linux** (from Docker's and Ollama's documentation; not tested here) —
+  the compose file maps `host.docker.internal` to the host with
+  `extra_hosts: host-gateway`. Ollama "binds 127.0.0.1 port 11434 by
+  default. Change the bind address with the `OLLAMA_HOST` environment
+  variable" (Ollama FAQ), so on Linux it must listen on an address the
+  containers can reach, for example `OLLAMA_HOST=0.0.0.0:11434`. That
+  also exposes Ollama to your network; restrict access with a firewall.
+- **The demo's `.env` is read by both `run.sh` and Docker Compose.** Keys
+  and `DEMO_LLM_MODEL` set there apply to both. Do not put
+  `DEMO_OLLAMA_URL=http://localhost:11434` there when you use Docker
+  mode: inside a container, `localhost` is the container itself, so the
+  agents cannot reach Ollama and fall back. `.env.example` keeps that
+  line commented for this reason. In Docker mode the `-f` file chooses
+  the LLM; `DEMO_LLM` in `.env` is used by `run.sh` only. The `.env` file
+  is never copied into the images.
 
-For machines with limited resources, point all agents at one Ollama
-instance. Create a `.env` file:
+## Choosing the LLM
 
-```bash
-cp .env.example .env
-```
+The demo uses one LLM for all its agents. The same choice works with
+`./run.sh` and with Docker Compose.
 
-Then uncomment the single-Ollama overrides:
+| LLM | `run.sh` | Docker Compose file | Default model |
+|-----|----------|---------------------|---------------|
+| The Ollama on your machine (default) | `./run.sh` | `docker-compose.yml` alone | `gemma4:e2b` |
+| OpenAI, your key | `./run.sh --llm openai` | `docker-compose.openai.yml` | `gpt-4.1-nano` |
+| Anthropic, your key | `./run.sh --llm anthropic` | `docker-compose.anthropic.yml` | `claude-haiku-5-5` |
+| Gemini, your key | `./run.sh --llm gemini` | `docker-compose.gemini.yml` | `gemini-3.5-flash-lite` |
+| No LLM | `./run.sh --no-llm` | `docker-compose.no-llm.yml` | — |
 
-```
-AGENT_A_OLLAMA_URL=http://localhost:11434
-AGENT_B_OLLAMA_URL=http://localhost:11434
-AGENT_C_OLLAMA_URL=http://localhost:11434
-```
-
-### GPU passthrough (NVIDIA)
-
-Uncomment the `deploy.resources.reservations.devices` block in
-`docker-compose.yml` for each Ollama service to enable GPU acceleration.
+- **API keys** — set `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` or
+  `GEMINI_API_KEY` in your environment or in the demo's `.env`. Without
+  the key for the chosen provider, `run.sh` and Docker Compose stop
+  before starting anything and name the missing variable. The key is
+  sent only in the request header the provider documents, never in a
+  URL, and is never written to logs, health responses, the dashboard or
+  the audit trail.
+- **Each provider is called through its own API** — OpenAI and Ollama
+  through chat completions, Anthropic through its Messages API (each
+  agent asks for its reply as a JSON schema), Gemini through
+  `streamGenerateContent`.
+- **If an LLM call fails** (wrong key, rate limit, timeout), the agent
+  logs `LLM call failed (openai returned HTTP 401), using fallback
+  result` (or similar, without the key or the address) and uses its
+  deterministic result; the pipeline still completes.
+- **No LLM** — `--no-llm` (or `DEMO_LLM=none`) makes no LLM call at all.
+  `--no-ollama` still works the same way and points to `--no-llm`.
 
 ## Configuration
 
-All configuration is via environment variables. See `.env.example` for
-the full list. Copy it to `.env` to customize:
+All configuration is via environment variables, read from your
+environment first and then from the demo's `.env`. See `.env.example`
+for the full list; copy it to `.env` to customize:
 
 ```bash
 cp .env.example .env
@@ -375,48 +453,26 @@ cp .env.example .env
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `DEMO_LLM` | `ollama` | The LLM for all agents: `ollama`, `openai`, `anthropic`, `gemini` or `none` (`run.sh`; `--llm` overrides it) |
+| `DEMO_LLM_MODEL` | per LLM, see above | The model to use |
+| `DEMO_OLLAMA_URL` | `http://localhost:11434` (Docker: `http://host.docker.internal:11434`) | Where the host's Ollama listens |
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` | — | Your key for the chosen provider |
+| `DEMO_LLM_BASE_URL` | — | Advanced, for testing only: sends the provider's requests to another address; `run.sh` says when it is set, without showing it |
 | `AGENT_A_PORT` | `8001` | Agent A listen port |
 | `AGENT_B_PORT` | `8002` | Agent B listen port |
 | `AGENT_C_PORT` | `8003` | Agent C listen port |
 | `DASHBOARD_PORT` | `3000` | Dashboard listen port |
-| `AGENT_A_OLLAMA_URL` | `http://localhost:11434` | Ollama endpoint for Agent A |
-| `AGENT_B_OLLAMA_URL` | `http://localhost:11435` | Ollama endpoint for Agent B |
-| `AGENT_C_OLLAMA_URL` | `http://localhost:11436` | Ollama endpoint for Agent C |
-| `AGENT_A_OLLAMA_MODEL` | `gemma4:e2b` | Model for Agent A |
-| `AGENT_B_OLLAMA_MODEL` | `gemma4:e2b` | Model for Agent B |
-| `AGENT_C_OLLAMA_MODEL` | `gemma4:e2b` | Model for Agent C |
 | `DASHBOARD_AGENT_A_URL` | `http://localhost:8001` | How the dashboard reaches Agent A |
 
-### Changing Ollama model
+**Removed variables.** The per-agent `AGENT_A_OLLAMA_URL`,
+`AGENT_B_OLLAMA_URL`, `AGENT_C_OLLAMA_URL` and `AGENT_A/B/C_OLLAMA_MODEL`
+are no longer read. One setting now covers all agents: `DEMO_OLLAMA_URL`
+for the Ollama address and `DEMO_LLM_MODEL` for the model.
 
-Set the model per agent via environment variables:
-
-```bash
-AGENT_B_OLLAMA_MODEL=llama3.2:3b ./run.sh
-```
-
-### Single Ollama instance
-
-Point all agents at one Ollama (typical for local development):
+For example, to use another Ollama model:
 
 ```bash
-export AGENT_A_OLLAMA_URL=http://localhost:11434
-export AGENT_B_OLLAMA_URL=http://localhost:11434
-export AGENT_C_OLLAMA_URL=http://localhost:11434
-./run.sh
-```
-
-The run script does this automatically — in local mode, all agents
-default to `http://localhost:11434`.
-
-### Using a different LLM provider
-
-The agents use Ollama's OpenAI-compatible endpoint
-(`/v1/chat/completions`). Any provider with the same API works —
-set the Ollama URL to your provider's base URL:
-
-```bash
-AGENT_B_OLLAMA_URL=http://your-openai-compatible-api:8080 ./run.sh
+DEMO_LLM_MODEL=llama3.2:3b ./run.sh
 ```
 
 ## Compliance
@@ -447,7 +503,7 @@ included in each envelope varies by recipient.
 
 ### What a regulator can verify
 
-**Audit trail (6-8 records per completed pipeline):**
+**Audit trail (7 records per approved pipeline):**
 
 | # | Event type | From → To | What it proves |
 |---|-----------|-----------|----------------|
@@ -458,7 +514,10 @@ included in each envelope varies by recipient.
 | 5 | `approval_decision` | officer → A | Compliance officer approved/denied with reason |
 | 6 | `request` | A → C | Trade execution requested (no identity, no risk) |
 | 7 | `response` | C → A | Execution report with TWAP order splitting |
-| 8 | `response` | A → client | Pipeline complete — audit sealed |
+
+If the officer denies the trade, record 5 records the denial and a sixth
+record (`error`, officer → A) closes the pipeline; rows 6 and 7 never
+occur.
 
 Each record includes: SHA-256 payload hash, correlation ID, compliance
 profile, retention period, data residency, and processing timestamp.
@@ -519,13 +578,17 @@ demos/fintech-trade/
 ├── config.py                     # Agent/demo configuration from env vars
 ├── keys.py                       # Ed25519 key generation and peer exchange
 ├── transport.py                  # HTTP envelope sending and validation
-├── ollama_client.py              # Ollama OpenAI-compatible API client
+├── llm_client.py                 # LLM client: host Ollama, OpenAI, Anthropic, Gemini
 ├── audit_store.py                # In-memory audit record store
 ├── flow_state.py                 # Pipeline state tracking with SSE broadcast
-├── docker-compose.yml            # 3 Ollama + 3 agents + dashboard
-├── Dockerfile                    # Python 3.12 slim with SDK volume mount
-├── entrypoint.sh                 # Installs SDK from volume on first run
-├── requirements.txt              # Python dependencies
+├── docker-compose.yml            # 3 agents + dashboard (host Ollama by default)
+├── docker-compose.openai.yml     # Docker: OpenAI with your key
+├── docker-compose.anthropic.yml  # Docker: Anthropic with your key
+├── docker-compose.gemini.yml     # Docker: Gemini with your key
+├── docker-compose.no-llm.yml     # Docker: no LLM
+├── Dockerfile                    # Python 3.12.15 slim; installs requirements.txt
+├── .dockerignore                 # Keeps .env and local files out of the images
+├── requirements.txt              # Pinned Python dependencies (published SDK)
 ├── .env.example                  # Environment variable reference
 └── README.md                     # This file
 ```
@@ -535,21 +598,49 @@ demos/fintech-trade/
 ### Ollama not running
 
 ```
-[warn] Ollama not running at http://localhost:11434
+[warn]  Ollama not running at http://localhost:11434
 ```
 
-Start Ollama: `ollama serve`. Or run without it: `./run.sh --no-ollama`.
-Agents automatically use deterministic fallback responses when Ollama is
-unreachable.
+Start Ollama (`ollama serve`), choose another LLM (`./run.sh --llm
+openai`, …), or run without one: `./run.sh --no-llm`. The agents use
+deterministic fallback responses when Ollama is unreachable.
 
 ### Model not pulled
 
 ```
-[warn] Failed to pull gemma4:e2b
+[warn]  Failed to pull gemma4:e2b — agents will use fallback
 ```
 
 Pull manually: `ollama pull gemma4:e2b`. Check available models with
-`ollama list`.
+`ollama list`. In Docker mode nothing is pulled: pull the model on your
+machine before starting.
+
+### Missing API key
+
+```
+[fail]  DEMO_LLM=openai needs OPENAI_API_KEY to be set
+```
+
+Set the key in your environment or in `.env`. Docker Compose reports the
+same as `required variable OPENAI_API_KEY is missing a value`.
+
+### LLM call failed
+
+```
+LLM call failed (openai returned HTTP 401), using fallback result
+```
+
+401 means the provider rejected the key; 429 means a rate limit or a
+spending limit. The pipeline still completes with the deterministic
+result.
+
+### Docker agents cannot reach Ollama
+
+`curl http://localhost:8002/health` shows `"llm_reachable": false`.
+Check that Ollama is running on your machine, that `DEMO_OLLAMA_URL` is
+not set to a `localhost` address in `.env`, and, on Linux, that Ollama
+listens on an address the containers can reach (see
+[Running with Docker](#running-with-docker)).
 
 ### Port conflicts
 
@@ -571,19 +662,18 @@ AGENT_A_PORT=9001 AGENT_B_PORT=9002 AGENT_C_PORT=9003 DASHBOARD_PORT=9000 ./run.
 
 ### LLM timeout
 
-The default timeout is 120 seconds for LLM calls. If the LLM is slow,
-agents automatically fall back to deterministic responses and log a
-warning. The pipeline completes successfully either way.
+Each LLM call times out after 300 seconds (requests between agents after
+360 seconds). The agent then logs `LLM call failed (… request timed
+out), using fallback result` and uses its deterministic result; the
+pipeline completes either way.
 
 ### Key exchange timeout
 
-```
-Key exchange incomplete — missing peers: [...]
-```
-
-Agent A retries key exchange for 60 seconds. If peers don't start in
-time, Agent A will log a warning and continue. Restart Agent A after the
-peers are healthy.
+Every agent fetches its peers' public keys at start-up and retries for
+about 60 seconds. Until it has them, its `/health` answers 503 with
+`"status": "starting"`; if it gives up, 503 with
+`"status": "key_exchange_failed"` and the missing peers. `run.sh` then
+stops and prints the last health response. Start the demo again.
 
 ### Checking service health
 
