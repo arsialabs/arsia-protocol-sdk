@@ -60,8 +60,6 @@ logger = logging.getLogger(__name__)
 cfg = load_agent_config("AGENT_A", {
     "id": "agent:acme.advisor",
     "port": "8001",
-    "ollama_url": "http://localhost:11434",
-    "ollama_model": "gemma4:e2b",
     "capabilities": "client.profile,trade.request",
 })
 

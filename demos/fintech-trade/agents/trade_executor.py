@@ -35,9 +35,9 @@ from arsia_protocol import (
 )
 
 from audit_store import AuditStore
-from config import load_agent_config
+from config import load_agent_config, load_llm_settings
 from keys import KeyStore, PeerKeyReadiness, exchange_keys
-from ollama_client import OllamaClient
+from llm_client import LLMClient
 from transport import IncomingEnvelopeError, validate_incoming
 
 logger = logging.getLogger(__name__)
@@ -97,17 +97,14 @@ Produce a JSON response with exactly this structure:
 cfg = load_agent_config("AGENT_C", {
     "id": "agent:acme.trade-executor",
     "port": "8003",
-    "ollama_url": "http://localhost:11436",
-    "ollama_model": "gemma4:e2b",
     "capabilities": "trade.execute",
 })
 
 key_store = KeyStore(cfg.agent_id)
 readiness = PeerKeyReadiness(key_store)
 audit_store = AuditStore()
-ollama = OllamaClient(
-    base_url=cfg.ollama_url,
-    model=cfg.ollama_model,
+llm = LLMClient(
+    load_llm_settings(),
     system_prompt=SYSTEM_PROMPT,
 )
 
@@ -272,13 +269,14 @@ async def get_keys():
 
 @app.get("/health")
 async def health():
-    ollama_ok = await ollama.health_check()
+    llm_ok = await llm.health_check()
     code, readiness_fields = readiness.report()
     return JSONResponse(status_code=code, content={
         "agent_id": cfg.agent_id,
         **readiness_fields,
-        "ollama_reachable": ollama_ok,
-        "ollama_model": cfg.ollama_model,
+        "llm_mode": llm.mode,
+        "llm_model": llm.model,
+        "llm_reachable": llm_ok,
         "capabilities": cfg.capabilities,
     })
 
@@ -403,7 +401,7 @@ async def _execute_trade(args: dict[str, Any]) -> dict[str, Any]:
             except Exception:
                 pass
 
-        result = await ollama.chat_json_stream(prompt, on_token=on_token)
+        result = await llm.chat_json_stream(prompt, on_token=on_token)
         if isinstance(result, dict) and "orders" in result:
             return _validate_execution(result, args)
         logger.warning("LLM returned unexpected structure, using fallback")

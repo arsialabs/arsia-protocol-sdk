@@ -51,10 +51,10 @@ from arsia_protocol import (
 )
 
 from audit_store import AuditStore
-from config import load_agent_config
+from config import load_agent_config, load_llm_settings
 from flow_state import FlowState, PipelineStatus
 from keys import KeyStore, PeerKeyReadiness, exchange_keys
-from ollama_client import OllamaClient
+from llm_client import LLMClient
 from transport import send_envelope
 
 logger = logging.getLogger(__name__)
@@ -148,8 +148,6 @@ requires clinician review before clinical action."
 cfg = load_agent_config("AGENT_A", {
     "id": "agent:meddata.data-collector",
     "port": "8001",
-    "ollama_url": "http://localhost:11434",
-    "ollama_model": "gemma4:e2b",
     "capabilities": "patient.collect,patient.result",
 })
 
@@ -159,9 +157,8 @@ intake_keys = KeyStore("agent:meddata.intake-system")
 clinician_keys = KeyStore("agent:meddata.clinician")
 audit_store = AuditStore()
 flow = FlowState()
-ollama = OllamaClient(
-    base_url=cfg.ollama_url,
-    model=cfg.ollama_model,
+llm = LLMClient(
+    load_llm_settings(),
     system_prompt=SYSTEM_PROMPT,
 )
 
@@ -672,7 +669,7 @@ async def _reassociate(
         })
 
     try:
-        result = await ollama.chat_json_stream(prompt, on_token=on_token)
+        result = await llm.chat_json_stream(prompt, on_token=on_token)
         await flow.broadcast_llm_event({
             "agent": cfg.agent_id, "event": "end",
         })

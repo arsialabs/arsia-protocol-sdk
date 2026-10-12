@@ -125,6 +125,7 @@ ok "uvicorn installed"
 # an LLM and use their deterministic fallback responses.
 if [ "$NO_OLLAMA" = true ]; then
     export AGENT_A_OLLAMA_URL="" AGENT_B_OLLAMA_URL="" AGENT_C_OLLAMA_URL=""
+    export DEMO_LLM=none
 else
     export AGENT_A_OLLAMA_URL="${AGENT_A_OLLAMA_URL:-$OLLAMA_URL}"
     export AGENT_B_OLLAMA_URL="${AGENT_B_OLLAMA_URL:-$OLLAMA_URL}"
