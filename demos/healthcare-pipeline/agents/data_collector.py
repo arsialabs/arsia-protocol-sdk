@@ -339,7 +339,10 @@ async def receive_llm_stream(request: Request):
 
 @app.post("/trigger")
 async def trigger_pipeline(request: Request, demo_denial: bool = False):
-    if flow.status not in (PipelineStatus.IDLE, PipelineStatus.COMPLETED, PipelineStatus.ERROR):
+    # A denied pipeline has ended, like a completed one: a new run may start.
+    if flow.status not in (
+        PipelineStatus.IDLE, PipelineStatus.COMPLETED, PipelineStatus.DENIED, PipelineStatus.ERROR,
+    ):
         return JSONResponse(
             status_code=409,
             content={"error": f"Pipeline already active (status={flow.status.value})"},

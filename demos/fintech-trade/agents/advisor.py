@@ -186,7 +186,10 @@ async def trigger_pipeline(request: Request, demo_denial: bool = False):
     Query param ?demo_denial=true triggers the capability denial
     demonstration path (Agent C asked for risk.assess → 403).
     """
-    if flow.status not in (PipelineStatus.IDLE, PipelineStatus.COMPLETED, PipelineStatus.ERROR):
+    # A denied pipeline has ended, like a completed one: a new run may start.
+    if flow.status not in (
+        PipelineStatus.IDLE, PipelineStatus.COMPLETED, PipelineStatus.DENIED, PipelineStatus.ERROR,
+    ):
         return JSONResponse(
             status_code=409,
             content={"error": f"Pipeline already active (status={flow.status.value})"},

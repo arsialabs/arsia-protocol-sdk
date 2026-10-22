@@ -40,6 +40,8 @@ Changes to the demos only; the SDK package is unchanged.
   pull a model meant for another LLM.
 - **Demo run scripts** stop cleanly at any point.
 - **Demo images** contain only the demos' tracked files.
+- **Demos** start a new pipeline after a denied one without needing a reset
+  first.
 
 ## [1.0.1] — 2026-09-29
 
