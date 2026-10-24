@@ -42,6 +42,9 @@ Changes to the demos only; the SDK package is unchanged.
 - **Demo images** contain only the demos' tracked files.
 - **Demos** start a new pipeline after a denied one without needing a reset
   first.
+- **Fintech dashboard** shows the trade the pipeline is processing and the
+  amount awaiting approval, not the next client profile it would send, and
+  no longer says the risk assessor is not sent the trade amount.
 
 ## [1.0.1] — 2026-09-29
 

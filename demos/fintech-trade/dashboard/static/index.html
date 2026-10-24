@@ -311,7 +311,7 @@
     };
 
     var ABSENT_FIELDS = {
-        2: ["client_name", "client_account", "proposed_trade.amount_eur"],
+        2: ["client_name", "client_account"],
         5: ["client_name", "client_account", "risk_tolerance", "investment_horizon",
             "current_portfolio", "suitability_score", "suitability_classification", "warnings"]
     };
@@ -480,7 +480,7 @@
         renderPipeline(data.current_step, data.status);
         renderStatusBadge(data.status);
         renderTimes(data.started_at, data.completed_at);
-        if (data.status !== "idle") renderTradeDetails();
+        if (data.status !== "idle") renderTradeDetails(extractClientRequest(data.step_envelopes));
         if (data.current_step >= 3 && data.step_envelopes) {
             var suit = extractSuitability(data.step_envelopes);
             if (suit) {
@@ -515,7 +515,7 @@
         renderPipeline(data.step, data.status);
         renderStatusBadge(data.status);
         renderTimes(data.started_at, null);
-        renderTradeDetails();
+        renderTradeDetails(null);
         $llmCard.classList.add("panel-hidden");
         $suitCard.classList.add("panel-hidden");
         $overCard.classList.add("panel-hidden");
@@ -528,6 +528,8 @@
         renderPipeline(data.step, (state && state.status) || "running");
         fetchState().then(function(s) {
             if (!s) return;
+            var request = extractClientRequest(s.step_envelopes);
+            if (request) renderTradeDetails(request);
             if (data.step >= 3) {
                 var suit = extractSuitability(s.step_envelopes);
                 if (suit) { $suitCard.classList.remove("panel-hidden"); renderSuitability(suit); }
@@ -710,8 +712,19 @@
         $times.textContent = parts.join(" · ");
     }
 
-    function renderTradeDetails() {
-        var t = DEMO_TRADE;
+    // The trade request the pipeline is processing: the client request
+    // recorded in step 1, not the profile this page would send next.
+    function extractClientRequest(envelopes) {
+        var env = envelopes && envelopes["1"];
+        var args = env && env.payload && env.payload.args;
+        return args && args.proposed_trade && args.current_portfolio ? args : null;
+    }
+
+    function renderTradeDetails(t) {
+        if (!t) {
+            $trade.innerHTML = '<div class="empty-state"><div class="icon">&#x21C4;</div>Waiting for the client request…</div>';
+            return;
+        }
         $trade.innerHTML =
             detail("Client Ref", t.client_ref, true) +
             detail("Client", t.client_name) +
@@ -780,12 +793,14 @@
 
         var score = suit ? suit.score : 0;
         var warningCount = suit ? suit.warnings.length : 0;
-        var amount = DEMO_TRADE.proposed_trade.amount_eur;
+        // The amount in the approval request itself, which is what is approved.
+        var args = pending && pending.payload && pending.payload.args;
+        var amount = args ? args.amount_eur : null;
 
         var html = '<div class="oversight-form">';
 
         html += '<div class="oversight-summary">';
-        html += '<div class="summary-stat"><div class="stat-value">€' + num(amount) + '</div><div class="stat-label">Amount</div></div>';
+        html += '<div class="summary-stat"><div class="stat-value">' + (amount == null ? "—" : "€" + num(amount)) + '</div><div class="stat-label">Amount</div></div>';
         html += '<div class="summary-stat"><div class="stat-value">' + score.toFixed(2) + '</div><div class="stat-label">Suitability</div></div>';
         html += '<div class="summary-stat"><div class="stat-value">' + warningCount + '</div><div class="stat-label">Warnings</div></div>';
         html += '</div>';
