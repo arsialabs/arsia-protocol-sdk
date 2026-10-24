@@ -45,6 +45,9 @@ Changes to the demos only; the SDK package is unchanged.
 - **Fintech dashboard** shows the trade the pipeline is processing and the
   amount awaiting approval, not the next client profile it would send, and
   no longer says the risk assessor is not sent the trade amount.
+- **Demos** date trade executions and clinical reports with the current date
+  (settlement two business days later) instead of dates invented by the LLM
+  or fixed in May 2026.
 
 ## [1.0.1] — 2026-09-29
 

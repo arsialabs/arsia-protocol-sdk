@@ -700,8 +700,12 @@ async def _reassociate(
     anon_token: str,
 ) -> dict[str, Any]:
     """Reassociate diagnosis with patient identity. LLM formats the report."""
+    # The report date is set here, never taken from the LLM, which does not
+    # know the current date.
+    report_date = format_timestamp()
     prompt = (
         f"Format a clinical lab report reassociating these results.\n\n"
+        f"Report date: {report_date}\n"
         f"Patient: {patient_data.get('patient_name', 'Unknown')}\n"
         f"DOB: {patient_data.get('date_of_birth', 'Unknown')}\n"
         f"Health Number: {patient_data.get('health_number', 'Unknown')}\n"
@@ -729,6 +733,7 @@ async def _reassociate(
             "agent": cfg.agent_id, "event": "end",
         })
         if isinstance(result, dict) and "patient" in result:
+            result["report_date"] = report_date
             return result
     except Exception as exc:
         await flow.broadcast_llm_event({

@@ -17,6 +17,7 @@ import math
 import os
 import sys
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -170,6 +171,24 @@ llm = LLMClient(
 PEER_A_URL = ""
 
 
+def _execution_schedule(num_orders: int, now: datetime | None = None) -> tuple[list[str], str]:
+    """Fill times five minutes apart from now, and the T+2 business-day settlement date.
+
+    The execution dates are set here, never taken from the LLM, which does not
+    know the current date.
+    """
+    start = (now or datetime.now(UTC)).replace(second=0, microsecond=0)
+    fill_times = [
+        f"{start + timedelta(minutes=5 * i):%Y-%m-%dT%H:%M:%S}.000Z" for i in range(num_orders)
+    ]
+    day, business_days = start.date(), 0
+    while business_days < 2:
+        day += timedelta(days=1)
+        if day.weekday() < 5:
+            business_days += 1
+    return fill_times, day.isoformat()
+
+
 def _build_fallback_result(args: dict[str, Any]) -> dict[str, Any]:
     """Deterministic fallback: split into EUR 50K orders."""
     instrument = args.get("instrument", "UCITS-EU-BLEND-50")
@@ -181,6 +200,7 @@ def _build_fallback_result(args: dict[str, Any]) -> dict[str, Any]:
     num_orders = (total_amount + 49_999) // 50_000
     order_amount = total_amount // num_orders
     units_per_order = int(order_amount / price_per_unit)
+    fill_times, settlement_date = _execution_schedule(num_orders)
 
     orders = []
     for i in range(num_orders):
@@ -195,7 +215,7 @@ def _build_fallback_result(args: dict[str, Any]) -> dict[str, Any]:
             "currency": currency,
             "venue": venue,
             "status": "filled",
-            "fill_time": f"2026-05-12T14:{15 + i * 5:02d}:00.000Z",
+            "fill_time": fill_times[i],
         })
 
     return {
@@ -207,7 +227,7 @@ def _build_fallback_result(args: dict[str, Any]) -> dict[str, Any]:
         "average_price": price_per_unit,
         "currency": currency,
         "venue": venue,
-        "settlement_date": "2026-05-14",
+        "settlement_date": settlement_date,
     }
 
 
@@ -236,6 +256,7 @@ def _validate_execution(result: dict[str, Any], args: dict[str, Any]) -> dict[st
             price = float(p)
             break
 
+    fill_times, settlement_date = _execution_schedule(num_orders)
     orders: list[dict[str, Any]] = []
     remaining = total_amount
     for i in range(num_orders):
@@ -263,9 +284,7 @@ def _validate_execution(result: dict[str, Any], args: dict[str, Any]) -> dict[st
             "currency": currency,
             "venue": venue,
             "status": "filled",
-            "fill_time": llm_order.get(
-                "fill_time", f"2026-05-12T14:{15 + i * 5:02d}:00.000Z"
-            ),
+            "fill_time": fill_times[i],
         })
 
     computed_total = sum(o["amount"] for o in orders)
@@ -292,7 +311,7 @@ def _validate_execution(result: dict[str, Any], args: dict[str, Any]) -> dict[st
         "average_price": computed_avg,
         "currency": currency,
         "venue": venue,
-        "settlement_date": result.get("settlement_date", "2026-05-14"),
+        "settlement_date": settlement_date,
     }
 
 
@@ -424,6 +443,7 @@ async def _execute_trade(args: dict[str, Any]) -> dict[str, Any]:
     """Call the LLM for trade execution planning, with fallback."""
     prompt = (
         f"Execute this trade:\n\n"
+        f"Execution date: {datetime.now(UTC).date().isoformat()}\n"
         f"Trade reference: {args.get('trade_ref', 'TRD-UNKNOWN')}\n"
         f"Instrument: {args.get('instrument', 'UNKNOWN')}\n"
         f"Total amount: EUR {args.get('amount', 0):,}\n"
