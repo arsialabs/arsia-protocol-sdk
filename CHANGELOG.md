@@ -48,6 +48,12 @@ Changes to the demos only; the SDK package is unchanged.
 - **Demos** date trade executions and clinical reports with the current date
   (settlement two business days later) instead of dates invented by the LLM
   or fixed in May 2026.
+- **Fintech demo** executes the instrument, venue and limit price of the
+  client request instead of always UCITS-EU-BLEND-50 on XETRA at €50; the
+  five dashboard profiles carry illustrative prices and venues.
+- **Fintech demo** prices every order at the limit price and reports each
+  order's amount as quantity × price, so totals and average price agree
+  with the orders at any price.
 
 ## [1.0.1] — 2026-09-29
 

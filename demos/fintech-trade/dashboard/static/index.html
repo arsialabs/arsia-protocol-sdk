@@ -206,7 +206,9 @@
                 asset_class: "EU equities",
                 region: "EU",
                 amount_eur: 200000,
-                instrument: "UCITS-EU-BLEND-50"
+                instrument: "UCITS-EU-BLEND-50",
+                limit_price: 50.00,
+                venue: "XETRA"
             }
         },
         {
@@ -225,7 +227,9 @@
                 asset_class: "Emerging market equities",
                 region: "APAC",
                 amount_eur: 150000,
-                instrument: "MSCI-EM-ASIA-ETF"
+                instrument: "MSCI-EM-ASIA-ETF",
+                limit_price: 40.00,
+                venue: "XETRA"
             }
         },
         {
@@ -244,7 +248,9 @@
                 asset_class: "EU equities",
                 region: "EU",
                 amount_eur: 500000,
-                instrument: "STOXX-600-TECH"
+                instrument: "STOXX-600-TECH",
+                limit_price: 80.00,
+                venue: "Euronext Amsterdam"
             }
         },
         {
@@ -263,7 +269,9 @@
                 asset_class: "Crypto derivatives",
                 region: "Global",
                 amount_eur: 90000,
-                instrument: "BTC-EUR-PERP"
+                instrument: "BTC-EUR-PERP",
+                limit_price: 1000.00,
+                venue: "CRYPTO-MTF"
             }
         },
         {
@@ -282,7 +290,9 @@
                 asset_class: "EU government bonds",
                 region: "EU",
                 amount_eur: 120000,
-                instrument: "EUR-GOVT-BOND-AGG"
+                instrument: "EUR-GOVT-BOND-AGG",
+                limit_price: 100.00,
+                venue: "Borsa Italiana"
             }
         }
     ];
@@ -732,6 +742,9 @@
             detail("Amount", "€" + num(t.proposed_trade.amount_eur)) +
             detail("Asset Class", t.proposed_trade.asset_class) +
             detail("Region", t.proposed_trade.region) +
+            detail("Instrument", t.proposed_trade.instrument || "—", true) +
+            detail("Limit Price", t.proposed_trade.limit_price != null ? "€" + Number(t.proposed_trade.limit_price).toFixed(2) : "—", true) +
+            detail("Venue", t.proposed_trade.venue || "—") +
             detail("Risk Tolerance", t.risk_tolerance) +
             detail("Horizon", t.investment_horizon) +
             detail("Portfolio Value", "€" + num(t.current_portfolio.total_value_eur)) +

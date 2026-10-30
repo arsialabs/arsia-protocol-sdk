@@ -167,7 +167,9 @@ types a justification and clicks Approve or Deny.
 **Step 5 — On approval, Agent A sends trade parameters to Agent C.**
 After approval, Agent A constructs another new envelope — this time for
 Agent C. This envelope contains only trade execution parameters:
-instrument, amount, currency, venue, execution strategy. It does **not**
+instrument, amount, currency, venue, limit price, execution strategy.
+The instrument, venue and limit price come from the client request; a
+request without them gets UCITS-EU-BLEND-50 on XETRA at €50. It does **not**
 contain the client name, account, risk tolerance, investment horizon,
 portfolio composition, suitability score, or warnings. Agent C knows
 **what** to trade but not **who** is trading or **why**.
@@ -177,8 +179,10 @@ Agent C calls an LLM (or falls back to deterministic logic) to split the
 [trade](https://github.com/arsialabs/arsia-protocol/blob/main/spec/ARSIA-Assets.md)
 into orders of up to €50,000 each using a TWAP (Time-Weighted Average
 Price) strategy. The response includes individual orders with fill
-times, quantities, and prices. Agent C signs the response and sends it
-back to Agent A.
+times, quantities, and prices. Every order buys whole units at the limit
+price, and its amount is quantity × price; Agent C's code computes the
+orders and their dates, whatever the LLM replies. Agent C signs the
+response and sends it back to Agent A.
 
 **Step 7 — Audit trail finalized.**
 All envelopes have been recorded in the
@@ -291,8 +295,12 @@ Navigate to **http://localhost:3000** in your browser.
 2. The SSE connection indicator (top-right) should show **Connected**.
 3. Click **Start Pipeline**. The demo sends a pre-filled trade request:
    - Client: Maria Torres, CLT-2026-4471
-   - Amount: €200,000 in EU equities
+   - Amount: €200,000 in EU equities (UCITS-EU-BLEND-50 on XETRA, €50 limit price)
    - Risk tolerance: moderate, 5-10 year horizon
+
+   Each **Reset** moves the dashboard to the next of its five client
+   profiles, each with its own instrument, amount, limit price and venue.
+   The prices and venues are illustrative, not market quotes.
 
 ### Watching the pipeline progress
 
@@ -340,7 +348,7 @@ The dashboard has no button for this; use the trigger endpoint with
 ```bash
 curl -X POST http://localhost:8001/trigger?demo_denial=true \
   -H "Content-Type: application/json" \
-  -d '{"client_ref":"CLT-TEST","proposed_trade":{"amount_eur":100000}}'
+  -d '{"client_ref":"CLT-TEST","proposed_trade":{"amount_eur":100000,"instrument":"UCITS-EU-BLEND-50","limit_price":50.00,"venue":"XETRA"}}'
 ```
 
 The command answers `{"status": "started", "message": "Pipeline
