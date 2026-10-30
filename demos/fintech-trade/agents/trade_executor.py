@@ -172,16 +172,17 @@ PEER_A_URL = ""
 
 
 def _execution_schedule(num_orders: int, now: datetime | None = None) -> tuple[list[str], str]:
-    """Fill times five minutes apart from now, and the T+2 business-day settlement date.
+    """Fill times five minutes apart from the next whole minute, and the T+2 settlement date.
 
     The execution dates are set here, never taken from the LLM, which does not
     know the current date.
     """
-    start = (now or datetime.now(UTC)).replace(second=0, microsecond=0)
+    now = now or datetime.now(UTC)
+    start = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
     fill_times = [
         f"{start + timedelta(minutes=5 * i):%Y-%m-%dT%H:%M:%S}.000Z" for i in range(num_orders)
     ]
-    day, business_days = start.date(), 0
+    day, business_days = now.date(), 0
     while business_days < 2:
         day += timedelta(days=1)
         if day.weekday() < 5:
