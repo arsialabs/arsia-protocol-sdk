@@ -426,7 +426,7 @@ The demo uses one LLM for all its agents. The same choice works with
 | LLM | `run.sh` | Docker Compose file | Default model |
 |-----|----------|---------------------|---------------|
 | The Ollama on your machine (default) | `./run.sh` | `docker-compose.yml` alone | `gemma4:e2b` |
-| OpenAI, your key | `./run.sh --llm openai` | `docker-compose.openai.yml` | `gpt-4.1-nano` |
+| OpenAI, your key | `./run.sh --llm openai` | `docker-compose.openai.yml` | `gpt-5.6-luna` |
 | Anthropic, your key | `./run.sh --llm anthropic` | `docker-compose.anthropic.yml` | `claude-haiku-5-5` |
 | Gemini, your key | `./run.sh --llm gemini` | `docker-compose.gemini.yml` | `gemini-3.5-flash-lite` |
 | No LLM | `./run.sh --no-llm` | `docker-compose.no-llm.yml` | — |

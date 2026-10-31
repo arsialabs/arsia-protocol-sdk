@@ -77,7 +77,7 @@ DEFAULT_LLM_MODE = "ollama"
 
 DEFAULT_MODELS = {
     "ollama": "gemma4:e2b",
-    "openai": "gpt-4.1-nano",
+    "openai": "gpt-5.6-luna",
     "anthropic": "claude-haiku-5-5",
     "gemini": "gemini-3.5-flash-lite",
 }

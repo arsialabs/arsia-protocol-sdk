@@ -54,6 +54,8 @@ Changes to the demos only; the SDK package is unchanged.
 - **Fintech demo** prices every order at the limit price and reports each
   order's amount as quantity × price, so totals and average price agree
   with the orders at any price.
+- **Demos** use `gpt-5.6-luna` by default with OpenAI: `gpt-4.1-nano` was
+  shut down on 2026-10-23, and the demos fell back to canned responses.
 
 ## [1.0.1] — 2026-09-29
 
