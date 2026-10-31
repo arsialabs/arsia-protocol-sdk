@@ -56,6 +56,9 @@ Changes to the demos only; the SDK package is unchanged.
   with the orders at any price.
 - **Demos** use `gpt-5.6-luna` by default with OpenAI: `gpt-4.1-nano` was
   shut down on 2026-10-23, and the demos fell back to canned responses.
+- **Demos** send each agent's JSON schema to Gemini, as they do to
+  Anthropic: without it, Gemini returned malformed JSON for about half of
+  the risk assessor's replies, and the agent fell back to its canned result.
 
 ## [1.0.1] — 2026-09-29
 

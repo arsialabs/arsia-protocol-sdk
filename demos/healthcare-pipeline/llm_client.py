@@ -40,8 +40,9 @@ class LLMClient:
     """Async client for the LLM selected by the demo's settings.
 
     ``chat_json_stream`` is the only call the agents use. ``json_schema``
-    describes the reply the agent expects; Anthropic offers JSON output only
-    as a schema, so it is sent there. With mode ``none``
+    describes the reply the agent expects. It is sent to Anthropic, which
+    offers JSON output only as a schema, and to Gemini, whose JSON mode
+    without one returned malformed JSON for some agents. With mode ``none``
     the client is disabled: no request is made and callers use their
     deterministic fallback.
     """
@@ -160,6 +161,8 @@ class LLMClient:
                 "contents": [{"role": "user", "parts": [{"text": user_message}]}],
                 "generationConfig": {"responseMimeType": "application/json"},
             }
+            if self.json_schema:
+                body["generationConfig"]["responseJsonSchema"] = self.json_schema
             if self.system_prompt:
                 body["systemInstruction"] = {"parts": [{"text": self.system_prompt}]}
             headers = {"x-goog-api-key": s.api_key}

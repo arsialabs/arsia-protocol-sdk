@@ -86,7 +86,8 @@ send to a clinical analyzer that has no authorization to see PII.\
 
 
 # The reply structure SYSTEM_PROMPT asks for, as a JSON schema. Sent to Anthropic,
-# whose JSON output requires one (every object closed with additionalProperties).
+# whose JSON output requires one (every object closed with additionalProperties),
+# and to Gemini, whose JSON mode without one can return malformed JSON.
 RESPONSE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,

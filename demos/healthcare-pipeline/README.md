@@ -447,13 +447,13 @@ The demo uses one LLM for all its agents. The same choice works with
   URL, and is never written to logs, health responses, the dashboard or
   the audit trail.
 - **Each provider is called through its own API** — OpenAI and Ollama
-  through chat completions, Anthropic through its Messages API (each
-  agent asks for its reply as a JSON schema), Gemini through
-  `streamGenerateContent`.
-- **Anthropic and lab values** — on the Anthropic path the anonymizer's
-  lab values are limited to the four keys the bundled patient profiles
-  use: `ldl_cholesterol`, `hdl_cholesterol`, `fasting_glucose` and
-  `hemoglobin`.
+  through chat completions, Anthropic through its Messages API, Gemini
+  through `streamGenerateContent`. With Anthropic and Gemini, each agent
+  asks for its reply as a JSON schema.
+- **Anthropic, Gemini and lab values** — on the Anthropic and Gemini
+  paths the anonymizer's lab values are limited to the four keys the
+  bundled patient profiles use: `ldl_cholesterol`, `hdl_cholesterol`,
+  `fasting_glucose` and `hemoglobin`.
 - **If an LLM call fails** (wrong key, rate limit, timeout), the agent
   logs `LLM call failed (openai returned HTTP 401), using fallback
   result` (Agent A: `LLM reassociation failed (…), using template`),
@@ -516,9 +516,10 @@ curl -X POST http://localhost:3000/api/trigger \
   }'
 ```
 
-On the Anthropic path the anonymizer's reply follows a fixed schema, so
-its lab values are limited to the four keys the bundled profiles use:
-`ldl_cholesterol`, `hdl_cholesterol`, `fasting_glucose` and `hemoglobin`.
+On the Anthropic and Gemini paths the anonymizer's reply follows a fixed
+schema, so its lab values are limited to the four keys the bundled
+profiles use: `ldl_cholesterol`, `hdl_cholesterol`, `fasting_glucose` and
+`hemoglobin`.
 
 ## Compliance
 
