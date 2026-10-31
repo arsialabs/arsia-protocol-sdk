@@ -96,7 +96,7 @@ always has the complete picture.
 | 3 | Agent B returns suitability assessment (LLM) | B → A |
 | 4 | Agent A creates pending approval — pipeline stops | A (internal) |
 | 5 | On approval: Agent A sends trade to Agent C (no identity, no risk) | A → C |
-| 6 | Agent C returns execution report (LLM, 4×€50K TWAP split) | C → A |
+| 6 | Agent C returns execution report (LLM, TWAP split into orders of at most €50K) | C → A |
 | 7 | Audit trail finalized — all records sealed | — |
 
 ## Understanding the flow
@@ -305,9 +305,9 @@ Navigate to **http://localhost:3000** in your browser.
 ### Watching the pipeline progress
 
 - **Steps 1-3** execute automatically. On our test machine (an Apple
-  silicon laptop) they took 11–13 s across our runs with `gemma4:e2b` on the host
-  Ollama, and under a second without an LLM; the time depends on your
-  machine and on the LLM you choose.
+  silicon laptop) they took 6–13 s across our runs with `gemma4:e2b` on
+  the host Ollama, and under a second without an LLM; the time depends on
+  your machine and on the LLM you choose.
 - The **Pipeline Status** bar shows each step lighting up in sequence.
 - The **LLM Streaming** panel appears during step 2, showing Agent B's
   response being generated token-by-token in real time.
@@ -324,6 +324,7 @@ Navigate to **http://localhost:3000** in your browser.
 - On approval: steps 5-7 execute automatically. The **LLM Streaming**
   panel reappears showing Agent C generating the execution plan.
 - On denial: the pipeline terminates and the denial is recorded.
+  **Start Pipeline** then starts a new run directly, without a reset.
 
 ### Inspecting the audit trail
 
@@ -639,8 +640,12 @@ LLM call failed (openai returned HTTP 401), using fallback result
 ```
 
 401 means the provider rejected the key; 429 means a rate limit or a
-spending limit. The pipeline still completes with the deterministic
-result.
+spending limit; 404 usually means the model is not available to your
+key, for example because the provider has retired it: set
+`DEMO_LLM_MODEL` to a current model. A JSON error in the parentheses
+(for example `Expecting property name enclosed in double quotes`) means
+the model's reply was not valid JSON. In every case the pipeline still
+completes with the deterministic result.
 
 ### Docker agents cannot reach Ollama
 
