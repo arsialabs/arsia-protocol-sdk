@@ -204,10 +204,12 @@ audit trail, and terminates the pipeline. Step 7 never executes.
 The demo includes a capability denial scenario that proves Agent C
 cannot access PII even if asked.
 
-During the pipeline run, Agent A sends an additional request to Agent C
-asking for `pii.read` — a capability Agent C does not have. Agent C
-responds with a 403 Forbidden and an ARSIA error envelope listing the
-required vs. provided capabilities.
+In a run started with **Demo: PII Access Denial** (see
+[Triggering capability denial](#triggering-capability-denial)), Agent A
+sends an additional request to Agent C asking for `pii.read` — a
+capability Agent C does not have. Agent C responds with a 403 Forbidden
+and an ARSIA error envelope listing the required vs. provided
+capabilities.
 
 ## Prerequisites
 
@@ -304,9 +306,9 @@ Subsequent runs cycle through five built-in patient profiles.
 ### Watching the pipeline progress
 
 - **Steps 1-5** execute automatically. On our test machine (an Apple
-  silicon laptop) they took 16–20 s across our runs with `gemma4:e2b` on the host
-  Ollama, and under a second without an LLM; the time depends on your
-  machine and on the LLM you choose.
+  silicon laptop) they took 12–20 s across our runs with `gemma4:e2b` on
+  the host Ollama, and under a second without an LLM; the time depends on
+  your machine and on the LLM you choose.
 - The **Pipeline Status** bar shows each step lighting up in sequence.
 - The **PII Isolation** grid highlights which agent is active and what
   data it can see at each step.
@@ -330,6 +332,7 @@ Subsequent runs cycle through five built-in patient profiles.
   Report** appears with patient identity reassociated via the
   anonymization token.
 - On denial: the pipeline terminates and the denial is recorded.
+  **Start Pipeline** then starts a new run directly, without a reset.
 
 ### Inspecting the audit trail
 
@@ -708,8 +711,12 @@ LLM call failed (openai returned HTTP 401), using fallback result
 ```
 
 401 means the provider rejected the key; 429 means a rate limit or a
-spending limit. The pipeline still completes with the deterministic
-result.
+spending limit; 404 usually means the model is not available to your
+key, for example because the provider has retired it: set
+`DEMO_LLM_MODEL` to a current model. A JSON error in the parentheses
+(for example `Expecting property name enclosed in double quotes`) means
+the model's reply was not valid JSON. In every case the pipeline still
+completes with the deterministic result.
 
 ### Docker agents cannot reach Ollama
 
