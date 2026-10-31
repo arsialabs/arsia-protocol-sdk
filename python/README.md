@@ -130,7 +130,7 @@ arsia profiles GDPR-STANDARD                # print a compliance profile
 | [Cookbook](https://github.com/arsialabs/arsia-protocol-sdk/blob/main/python/docs/cookbook.md) | 22 copy-pasteable recipes for common tasks |
 | [Examples](https://github.com/arsialabs/arsia-protocol-sdk/tree/main/python/examples) | 14 runnable scripts (10 basic + 4 regulated use cases) |
 | [API Reference](https://github.com/arsialabs/arsia-protocol-sdk/tree/main/python/docs/api) | Full API documentation (run `mkdocs serve`) |
-| [Demos](https://github.com/arsialabs/arsia-protocol-sdk/tree/main/demos) | Production-realistic multi-agent scenarios — run any of them in under a minute |
+| [Demos](https://github.com/arsialabs/arsia-protocol-sdk/tree/main/demos) | Production-realistic multi-agent scenarios — each runs with `./run.sh` or Docker Compose |
 
 ## Development
 

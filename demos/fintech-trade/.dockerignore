@@ -1,0 +1,31 @@
+# Keep local artefacts out of the demo images: the images need only the
+# demo's own source, and install the SDK and dependencies from
+# requirements.txt. `**/` also matches the demo root.
+
+# ── Local configuration (may hold machine-specific values) ──────────
+**/.env
+**/.env.*
+!.env.example
+
+# ── Virtual environments and local data ─────────────────────────────
+**/.venv
+**/venv
+**/_data
+
+# ── Python caches and build output ──────────────────────────────────
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.egg-info
+**/dist
+**/build
+**/.pytest_cache
+**/.hypothesis
+**/.mypy_cache
+**/.ruff_cache
+**/.coverage
+**/htmlcov
+
+# ── OS files ────────────────────────────────────────────────────────
+**/.DS_Store
+**/Thumbs.db

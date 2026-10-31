@@ -34,9 +34,9 @@ from arsia_protocol import (
 )
 
 from audit_store import AuditStore
-from config import load_agent_config
-from keys import KeyStore, exchange_keys
-from ollama_client import OllamaClient
+from config import load_agent_config, load_llm_settings
+from keys import KeyStore, PeerKeyReadiness, exchange_keys
+from llm_client import LLMClient
 from transport import IncomingEnvelopeError, validate_incoming
 
 logger = logging.getLogger(__name__)
@@ -88,20 +88,60 @@ You must NEVER request PII. Your analysis is based solely on \
 the lab values provided.\
 """
 
+
+# The reply structure SYSTEM_PROMPT asks for, as a JSON schema. Sent to Anthropic,
+# whose JSON output requires one (every object closed with additionalProperties),
+# and to Gemini, whose JSON mode without one can return malformed JSON.
+RESPONSE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "anonymization_token",
+        "diagnosis",
+        "risk_level",
+        "confidence",
+        "findings",
+        "recommendations",
+        "guidelines_cited",
+    ],
+    "properties": {
+        "anonymization_token": {"type": "string"},
+        "diagnosis": {"type": "string"},
+        "risk_level": {"type": "string", "enum": ["low", "moderate", "high", "critical"]},
+        "confidence": {"type": "number"},
+        "findings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["test", "value", "reference_range", "interpretation", "clinical_note"],
+                "properties": {
+                    "test": {"type": "string"},
+                    "value": {"type": "string"},
+                    "reference_range": {"type": "string"},
+                    "interpretation": {"type": "string", "enum": ["normal", "borderline", "abnormal", "critical"]},
+                    "clinical_note": {"type": "string"},
+                },
+            },
+        },
+        "recommendations": {"type": "array", "items": {"type": "string"}},
+        "guidelines_cited": {"type": "array", "items": {"type": "string"}},
+    },
+}
+
 cfg = load_agent_config("AGENT_C", {
     "id": "agent:meddata.clinical-analyzer",
     "port": "8003",
-    "ollama_url": "http://localhost:11436",
-    "ollama_model": "gemma4:e2b",
     "capabilities": "analysis.interpret",
 })
 
 key_store = KeyStore(cfg.agent_id)
+readiness = PeerKeyReadiness(key_store)
 audit_store = AuditStore()
-ollama = OllamaClient(
-    base_url=cfg.ollama_url,
-    model=cfg.ollama_model,
+llm = LLMClient(
+    load_llm_settings(),
     system_prompt=SYSTEM_PROMPT,
+    json_schema=RESPONSE_SCHEMA,
 )
 
 PEER_A_URL = ""
@@ -166,7 +206,9 @@ async def lifespan(app: FastAPI):
     PEER_A_URL = os.environ.get("PEER_A_URL", f"http://localhost:{os.environ.get('AGENT_A_PORT', '8001')}")
     agent_a_id = os.environ.get("AGENT_A_ID", "agent:meddata.data-collector")
 
-    task = asyncio.create_task(exchange_keys(key_store, {agent_a_id: PEER_A_URL}))
+    peers = {agent_a_id: PEER_A_URL}
+    task = asyncio.create_task(exchange_keys(key_store, peers))
+    readiness.track(list(peers), task)
 
     logger.info("Agent C (Clinical Analyzer) ready — %s on port %s", cfg.agent_id, cfg.port)
     yield
@@ -187,14 +229,16 @@ async def get_keys():
 
 @app.get("/health")
 async def health():
-    ollama_ok = await ollama.health_check()
-    return {
+    llm_ok = await llm.health_check()
+    code, readiness_fields = readiness.report()
+    return JSONResponse(status_code=code, content={
         "agent_id": cfg.agent_id,
-        "status": "healthy",
-        "ollama_reachable": ollama_ok,
-        "ollama_model": cfg.ollama_model,
+        **readiness_fields,
+        "llm_mode": llm.mode,
+        "llm_model": llm.model,
+        "llm_reachable": llm_ok,
         "capabilities": cfg.capabilities,
-    }
+    })
 
 
 @app.post("/envelope")
@@ -242,7 +286,7 @@ async def receive_envelope(request: Request):
         payload_type="org.arsiaprotocol.health/interpret.result",
         result=llm_result,
         explanation={
-            "model": cfg.ollama_model,
+            "model": llm.model,
             "reasoning": (
                 f"Clinical interpretation based on lab values against "
                 f"standard reference ranges (ATP III for lipids, ADA 2024 "
@@ -326,7 +370,7 @@ async def _analyze(args: dict[str, Any]) -> dict[str, Any]:
             except Exception:
                 pass
 
-        result = await ollama.chat_json_stream(prompt, on_token=on_token)
+        result = await llm.chat_json_stream(prompt, on_token=on_token)
         if isinstance(result, dict) and "diagnosis" in result:
             result.setdefault("anonymization_token", token)
             return result

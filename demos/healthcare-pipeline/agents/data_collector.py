@@ -51,10 +51,10 @@ from arsia_protocol import (
 )
 
 from audit_store import AuditStore
-from config import load_agent_config
+from config import load_agent_config, load_llm_settings
 from flow_state import FlowState, PipelineStatus
-from keys import KeyStore, exchange_keys
-from ollama_client import OllamaClient
+from keys import KeyStore, PeerKeyReadiness, exchange_keys
+from llm_client import LLMClient
 from transport import send_envelope
 
 logger = logging.getLogger(__name__)
@@ -145,23 +145,74 @@ requires clinician review before clinical action."
 }
 """
 
+
+# The reply structure SYSTEM_PROMPT asks for, as a JSON schema. Sent to Anthropic,
+# whose JSON output requires one (every object closed with additionalProperties),
+# and to Gemini, whose JSON mode without one can return malformed JSON.
+RESPONSE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "report_title",
+        "patient",
+        "summary",
+        "risk_level",
+        "findings",
+        "recommendations",
+        "report_date",
+        "disclaimer",
+    ],
+    "properties": {
+        "report_title": {"type": "string"},
+        "patient": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["name", "date_of_birth", "health_number"],
+            "properties": {
+                "name": {"type": "string"},
+                "date_of_birth": {"type": "string"},
+                "health_number": {"type": "string"},
+            },
+        },
+        "summary": {"type": "string"},
+        "risk_level": {"type": "string"},
+        "findings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["test", "value", "reference_range", "interpretation", "clinical_note"],
+                "properties": {
+                    "test": {"type": "string"},
+                    "value": {"type": "string"},
+                    "reference_range": {"type": "string"},
+                    "interpretation": {"type": "string", "enum": ["normal", "borderline", "abnormal", "critical"]},
+                    "clinical_note": {"type": "string"},
+                },
+            },
+        },
+        "recommendations": {"type": "array", "items": {"type": "string"}},
+        "report_date": {"type": "string"},
+        "disclaimer": {"type": "string"},
+    },
+}
+
 cfg = load_agent_config("AGENT_A", {
     "id": "agent:meddata.data-collector",
     "port": "8001",
-    "ollama_url": "http://localhost:11434",
-    "ollama_model": "gemma4:e2b",
     "capabilities": "patient.collect,patient.result",
 })
 
 key_store = KeyStore(cfg.agent_id)
+readiness = PeerKeyReadiness(key_store)
 intake_keys = KeyStore("agent:meddata.intake-system")
 clinician_keys = KeyStore("agent:meddata.clinician")
 audit_store = AuditStore()
 flow = FlowState()
-ollama = OllamaClient(
-    base_url=cfg.ollama_url,
-    model=cfg.ollama_model,
+llm = LLMClient(
+    load_llm_settings(),
     system_prompt=SYSTEM_PROMPT,
+    json_schema=RESPONSE_SCHEMA,
 )
 
 PEER_B_URL = ""
@@ -210,10 +261,9 @@ async def lifespan(app: FastAPI):
     PEER_B_URL = os.environ.get("PEER_B_URL", f"http://localhost:{os.environ.get('AGENT_B_PORT', '8002')}")
     PEER_C_URL = os.environ.get("PEER_C_URL", f"http://localhost:{os.environ.get('AGENT_C_PORT', '8003')}")
 
-    task = asyncio.create_task(exchange_keys(key_store, {
-        AGENT_B_ID: PEER_B_URL,
-        AGENT_C_ID: PEER_C_URL,
-    }))
+    peers = {AGENT_B_ID: PEER_B_URL, AGENT_C_ID: PEER_C_URL}
+    task = asyncio.create_task(exchange_keys(key_store, peers))
+    readiness.track(list(peers), task)
 
     logger.info("Agent A (Data Collector) ready — %s on port %s", cfg.agent_id, cfg.port)
     yield
@@ -240,12 +290,13 @@ async def get_keys():
 
 @app.get("/health")
 async def health():
-    return {
+    code, readiness_fields = readiness.report()
+    return JSONResponse(status_code=code, content={
         "agent_id": cfg.agent_id,
-        "status": "healthy",
+        **readiness_fields,
         "pipeline_status": flow.status.value,
         "capabilities": cfg.capabilities,
-    }
+    })
 
 
 @app.get("/state")
@@ -289,7 +340,10 @@ async def receive_llm_stream(request: Request):
 
 @app.post("/trigger")
 async def trigger_pipeline(request: Request, demo_denial: bool = False):
-    if flow.status not in (PipelineStatus.IDLE, PipelineStatus.COMPLETED, PipelineStatus.ERROR):
+    # A denied pipeline has ended, like a completed one: a new run may start.
+    if flow.status not in (
+        PipelineStatus.IDLE, PipelineStatus.COMPLETED, PipelineStatus.DENIED, PipelineStatus.ERROR,
+    ):
         return JSONResponse(
             status_code=409,
             content={"error": f"Pipeline already active (status={flow.status.value})"},
@@ -647,8 +701,12 @@ async def _reassociate(
     anon_token: str,
 ) -> dict[str, Any]:
     """Reassociate diagnosis with patient identity. LLM formats the report."""
+    # The report date is set here, never taken from the LLM, which does not
+    # know the current date.
+    report_date = format_timestamp()
     prompt = (
         f"Format a clinical lab report reassociating these results.\n\n"
+        f"Report date: {report_date}\n"
         f"Patient: {patient_data.get('patient_name', 'Unknown')}\n"
         f"DOB: {patient_data.get('date_of_birth', 'Unknown')}\n"
         f"Health Number: {patient_data.get('health_number', 'Unknown')}\n"
@@ -671,11 +729,12 @@ async def _reassociate(
         })
 
     try:
-        result = await ollama.chat_json_stream(prompt, on_token=on_token)
+        result = await llm.chat_json_stream(prompt, on_token=on_token)
         await flow.broadcast_llm_event({
             "agent": cfg.agent_id, "event": "end",
         })
         if isinstance(result, dict) and "patient" in result:
+            result["report_date"] = report_date
             return result
     except Exception as exc:
         await flow.broadcast_llm_event({

@@ -1,86 +1,22 @@
+# Docker mode: the agents and the dashboard run in containers; the LLM runs
+# outside Docker. By default the agents use the Ollama on this machine,
+# reached as host.docker.internal. To use OpenAI, Anthropic, Gemini or no
+# LLM, add docker-compose.<mode>.yml with a second -f option; this file is
+# never edited (see the README).
 services:
-  # ── Ollama instances ─────────────────────────────────────
-  ollama-a:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-a-data:/root/.ollama
-    # GPU passthrough (uncomment for NVIDIA):
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 30s
-    networks:
-      - arsia-healthcare
-
-  ollama-b:
-    image: ollama/ollama:latest
-    ports:
-      - "11435:11434"
-    volumes:
-      - ollama-b-data:/root/.ollama
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 30s
-    networks:
-      - arsia-healthcare
-
-  ollama-c:
-    image: ollama/ollama:latest
-    ports:
-      - "11436:11434"
-    volumes:
-      - ollama-c-data:/root/.ollama
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 30s
-    networks:
-      - arsia-healthcare
-
   # ── Agent services ───────────────────────────────────────
   agent-a:
     build:
       context: .
-      args:
-        SDK_PATH: /sdk
     command: ["python", "-m", "uvicorn", "agents.data_collector:app", "--host", "0.0.0.0", "--port", "8001"]
     ports:
       - "8001:8001"
     environment:
       AGENT_A_ID: agent:meddata.data-collector
       AGENT_A_PORT: "8001"
-      AGENT_A_OLLAMA_URL: http://ollama-a:11434
-      AGENT_A_OLLAMA_MODEL: gemma4:e2b
+      DEMO_LLM: ollama
+      DEMO_LLM_MODEL: ${DEMO_LLM_MODEL:-}
+      DEMO_OLLAMA_URL: ${DEMO_OLLAMA_URL:-http://host.docker.internal:11434}
       AGENT_A_CAPABILITIES: patient.collect,patient.result
       AGENT_B_ID: agent:meddata.anonymizer
       AGENT_B_PORT: "8002"
@@ -89,61 +25,71 @@ services:
       PEER_B_URL: http://agent-b:8002
       PEER_C_URL: http://agent-c:8003
       DASHBOARD_URL: http://dashboard:3000
-    volumes:
-      - ../../python:/sdk:ro
-    depends_on:
-      ollama-a:
-        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=3)"]
+      interval: 30s
+      start_interval: 2s
+      start_period: 90s
+      timeout: 5s
+      retries: 3
+    extra_hosts:
+      - host.docker.internal:host-gateway
     networks:
       - arsia-healthcare
 
   agent-b:
     build:
       context: .
-      args:
-        SDK_PATH: /sdk
     command: ["python", "-m", "uvicorn", "agents.anonymizer:app", "--host", "0.0.0.0", "--port", "8002"]
     ports:
       - "8002:8002"
     environment:
       AGENT_B_ID: agent:meddata.anonymizer
       AGENT_B_PORT: "8002"
-      AGENT_B_OLLAMA_URL: http://ollama-b:11434
-      AGENT_B_OLLAMA_MODEL: gemma4:e2b
+      DEMO_LLM: ollama
+      DEMO_LLM_MODEL: ${DEMO_LLM_MODEL:-}
+      DEMO_OLLAMA_URL: ${DEMO_OLLAMA_URL:-http://host.docker.internal:11434}
       AGENT_B_CAPABILITIES: pii.strip
       AGENT_A_ID: agent:meddata.data-collector
       AGENT_A_PORT: "8001"
       PEER_A_URL: http://agent-a:8001
-    volumes:
-      - ../../python:/sdk:ro
-    depends_on:
-      ollama-b:
-        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health', timeout=3)"]
+      interval: 30s
+      start_interval: 2s
+      start_period: 90s
+      timeout: 5s
+      retries: 3
+    extra_hosts:
+      - host.docker.internal:host-gateway
     networks:
       - arsia-healthcare
 
   agent-c:
     build:
       context: .
-      args:
-        SDK_PATH: /sdk
     command: ["python", "-m", "uvicorn", "agents.clinical_analyzer:app", "--host", "0.0.0.0", "--port", "8003"]
     ports:
       - "8003:8003"
     environment:
       AGENT_C_ID: agent:meddata.clinical-analyzer
       AGENT_C_PORT: "8003"
-      AGENT_C_OLLAMA_URL: http://ollama-c:11434
-      AGENT_C_OLLAMA_MODEL: gemma4:e2b
+      DEMO_LLM: ollama
+      DEMO_LLM_MODEL: ${DEMO_LLM_MODEL:-}
+      DEMO_OLLAMA_URL: ${DEMO_OLLAMA_URL:-http://host.docker.internal:11434}
       AGENT_C_CAPABILITIES: analysis.interpret
       AGENT_A_ID: agent:meddata.data-collector
       AGENT_A_PORT: "8001"
       PEER_A_URL: http://agent-a:8001
-    volumes:
-      - ../../python:/sdk:ro
-    depends_on:
-      ollama-c:
-        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health', timeout=3)"]
+      interval: 30s
+      start_interval: 2s
+      start_period: 90s
+      timeout: 5s
+      retries: 3
+    extra_hosts:
+      - host.docker.internal:host-gateway
     networks:
       - arsia-healthcare
 
@@ -151,25 +97,28 @@ services:
   dashboard:
     build:
       context: .
-      args:
-        SDK_PATH: /sdk
     command: ["python", "-m", "uvicorn", "dashboard.app:app", "--host", "0.0.0.0", "--port", "3000"]
     ports:
       - "3000:3000"
     environment:
       DASHBOARD_PORT: "3000"
       DASHBOARD_AGENT_A_URL: http://agent-a:8001
-    volumes:
-      - ../../python:/sdk:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/health', timeout=3)"]
+      interval: 30s
+      start_interval: 2s
+      start_period: 90s
+      timeout: 5s
+      retries: 3
     depends_on:
-      - agent-a
+      agent-a:
+        condition: service_healthy
+      agent-b:
+        condition: service_healthy
+      agent-c:
+        condition: service_healthy
     networks:
       - arsia-healthcare
-
-volumes:
-  ollama-a-data:
-  ollama-b-data:
-  ollama-c-data:
 
 networks:
   arsia-healthcare:

@@ -1,0 +1,10 @@
+# No-LLM mode: the agents make no LLM call and use their deterministic
+# fallback responses. Use it with:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.no-llm.yml up --build -d --wait
+services:
+  agent-b:
+    environment: &llm-environment
+      DEMO_LLM: none
+  agent-c:
+    environment: *llm-environment

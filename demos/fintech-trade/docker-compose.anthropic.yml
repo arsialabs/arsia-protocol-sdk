@@ -1,0 +1,18 @@
+# Anthropic mode: the agents call Anthropic with your own API key, read from
+# ANTHROPIC_API_KEY (in the environment, or in this folder's .env). Use it with:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.anthropic.yml up --build -d --wait
+#
+# Without ANTHROPIC_API_KEY set, Compose stops before building or starting anything.
+# The key is passed only to the agents that call the LLM; like any
+# container setting, it is visible to `docker inspect` and
+# `docker compose config` on this machine. DEMO_LLM_BASE_URL is for testing.
+services:
+  agent-b:
+    environment: &llm-environment
+      DEMO_LLM: anthropic
+      DEMO_LLM_MODEL: ${DEMO_LLM_MODEL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY to your Anthropic API key}
+      DEMO_LLM_BASE_URL: ${DEMO_LLM_BASE_URL:-}
+  agent-c:
+    environment: *llm-environment

@@ -3,56 +3,76 @@
 # Copyright 2025-2026 Arsia Labs (Arsia Tecnologia Unipessoal Lda)
 #
 # Start the healthcare pipeline demo locally (without Docker).
-# Usage: ./run.sh [--no-ollama]
+# Usage: ./run.sh [--llm MODE | --no-llm]
 
 set -euo pipefail
 
 # ── Configuration ─────────────────────────────────────────
 DEMO_DIR="$(cd "$(dirname "$0")" && pwd)"
-SDK_DIR="$(cd "$DEMO_DIR/../../python" && pwd)"
 
 AGENT_A_PORT="${AGENT_A_PORT:-8001}"
 AGENT_B_PORT="${AGENT_B_PORT:-8002}"
 AGENT_C_PORT="${AGENT_C_PORT:-8003}"
 DASHBOARD_PORT="${DASHBOARD_PORT:-3000}"
 
-OLLAMA_URL="${AGENT_A_OLLAMA_URL:-http://localhost:11434}"
-MODEL_A="${AGENT_A_OLLAMA_MODEL:-gemma4:e2b}"
-MODEL_B="${AGENT_B_OLLAMA_MODEL:-gemma4:e2b}"
-MODEL_C="${AGENT_C_OLLAMA_MODEL:-gemma4:e2b}"
-
-NO_OLLAMA=false
+LLM_FLAG=""
 PIDS=()
 
+usage() {
+    echo "Usage: ./run.sh [--llm MODE | --no-llm]"
+    echo ""
+    echo "Starts the ARSIA healthcare pipeline demo locally."
+    echo ""
+    echo "Options:"
+    echo "  --llm MODE    The LLM for all agents: ollama (default), openai, anthropic,"
+    echo "                gemini or none. Overrides DEMO_LLM."
+    echo "  --no-llm      Same as --llm none: no LLM calls; agents use deterministic"
+    echo "                fallback responses. --no-ollama does the same."
+    echo ""
+    echo "Provider modes need their API key — OPENAI_API_KEY, ANTHROPIC_API_KEY or"
+    echo "GEMINI_API_KEY — in the environment or in .env. Other variables: see .env.example"
+}
+
 # ── Parse arguments ───────────────────────────────────────
-for arg in "$@"; do
-    case "$arg" in
-        --no-ollama) NO_OLLAMA=true ;;
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --llm)
+            if [ $# -lt 2 ]; then
+                echo "--llm needs a mode: ollama, openai, anthropic, gemini or none"
+                exit 1
+            fi
+            LLM_FLAG="$2"
+            shift
+            ;;
+        --llm=*) LLM_FLAG="${1#--llm=}" ;;
+        --no-llm) LLM_FLAG=none ;;
+        --no-ollama)
+            LLM_FLAG=none
+            echo "Note: --no-ollama is now --no-llm; it works the same way."
+            ;;
         --help|-h)
-            echo "Usage: ./run.sh [--no-ollama]"
-            echo ""
-            echo "Starts the ARSIA healthcare pipeline demo locally."
-            echo ""
-            echo "Options:"
-            echo "  --no-ollama   Skip Ollama checks and model pulls."
-            echo "                Agents will use deterministic fallback responses."
-            echo ""
-            echo "Environment variables: see .env.example"
+            usage
             exit 0
             ;;
         *)
-            echo "Unknown argument: $arg"
-            echo "Usage: ./run.sh [--no-ollama]"
+            echo "Unknown argument: $1"
+            echo "Usage: ./run.sh [--llm MODE | --no-llm]"
             exit 1
             ;;
     esac
+    shift
 done
 
 # ── Cleanup handler ───────────────────────────────────────
+# Runs once, on exit. Ctrl+C or a termination signal ends the script (and
+# with it any start-up still in progress) before the cleanup runs.
 cleanup() {
+    trap - EXIT INT TERM
     echo ""
     echo "Shutting down..."
-    for pid in "${PIDS[@]}"; do
+    # The array may still be empty when stopped during start-up; this form
+    # is safe under `set -u` on every bash version.
+    for pid in ${PIDS[@]+"${PIDS[@]}"}; do
         if kill -0 "$pid" 2>/dev/null; then
             kill "$pid" 2>/dev/null || true
         fi
@@ -60,7 +80,9 @@ cleanup() {
     wait 2>/dev/null || true
     echo "All services stopped."
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # ── Colour helpers ────────────────────────────────────────
 if [ -t 1 ]; then
@@ -100,7 +122,7 @@ ok "Python $PY_VERSION"
 # arsia-protocol SDK
 if ! python3 -c "import arsia_protocol" 2>/dev/null; then
     fail "arsia-protocol SDK not installed."
-    echo "  Run: cd $SDK_DIR && pip install -e '.[dev]'"
+    echo "  Run: pip install -r $DEMO_DIR/requirements.txt"
     exit 1
 fi
 ok "arsia-protocol SDK installed"
@@ -112,48 +134,125 @@ if ! python3 -c "import uvicorn" 2>/dev/null; then
 fi
 ok "uvicorn installed"
 
-# Ollama (unless --no-ollama)
-if [ "$NO_OLLAMA" = false ]; then
-    if ! command -v ollama &>/dev/null; then
-        warn "ollama command not found. Install from https://ollama.com"
-        warn "Continuing anyway — agents will use deterministic fallbacks if Ollama is unreachable."
-    else
-        ok "ollama installed"
+# ── LLM selection ─────────────────────────────────────────
+# One LLM for the whole demo, read exactly as the agents read it: the
+# environment first, then .env. A --llm flag overrides DEMO_LLM. The check
+# runs before any service starts; it names a missing variable and never
+# prints a value.
+if [ -n "$LLM_FLAG" ]; then
+    export DEMO_LLM="$LLM_FLAG"
+fi
+if ! LLM_INFO="$(cd "$DEMO_DIR" && python3 - <<'EOF'
+import sys
 
-        # Check Ollama is running
-        if curl -sf "$OLLAMA_URL/api/tags" >/dev/null 2>&1; then
-            ok "Ollama reachable at $OLLAMA_URL"
+from config import API_KEY_VARS, LLMConfigError, load_llm_settings
 
-            # Pull models if missing
-            for model in "$MODEL_A" "$MODEL_B" "$MODEL_C"; do
-                if ollama list 2>/dev/null | grep -q "^${model}"; then
-                    ok "Model $model available"
+try:
+    s = load_llm_settings()
+except LLMConfigError as exc:
+    print(exc)
+    sys.exit(1)
+print(s.mode)
+print(s.model)
+print(s.base_url if s.mode == "ollama" else "")
+print(API_KEY_VARS.get(s.mode, ""))
+print("yes" if s.base_url_overridden else "no")
+EOF
+)"; then
+    fail "$LLM_INFO"
+    echo "  The LLM settings are read from the environment or from .env; see .env.example."
+    exit 1
+fi
+{ read -r LLM_MODE; read -r LLM_MODEL; read -r LLM_OLLAMA_URL; read -r LLM_KEY_VAR; read -r LLM_BASE_OVERRIDDEN; } <<< "$LLM_INFO"
+export DEMO_LLM="$LLM_MODE"
+
+# Print "local:<port>" when a URL points at this machine, or "other" when
+# it does not or cannot be read. With "cli", the argument is OLLAMA_HOST,
+# read the way the ollama command reads it: it is the Ollama that
+# `ollama list` and `ollama pull` act on.
+llm_endpoint() {
+    python3 - "$1" "$2" <<'EOF'
+import ipaddress
+import sys
+from urllib.parse import urlsplit
+
+value, kind = sys.argv[1].strip(), sys.argv[2]
+scheme, sep, rest = value.partition("://")
+if not sep:
+    scheme, rest = "http", value
+default_port = {"http": 80, "https": 443}.get(scheme)
+if kind == "cli" and not sep:
+    default_port = 11434
+try:
+    parts = urlsplit(f"{scheme}://{rest}")
+    port = parts.port or default_port
+    host = (parts.hostname or "").lower()
+    local = host in ("", "localhost") or ipaddress.ip_address(host).is_loopback \
+        or ipaddress.ip_address(host).is_unspecified
+except ValueError:
+    local = False
+print(f"local:{port}" if local and port else "other")
+EOF
+}
+
+case "$LLM_MODE" in
+    none)
+        info "LLM disabled — agents use deterministic fallback responses."
+        ;;
+    ollama)
+        info "LLM: the host's Ollama, model $LLM_MODEL"
+        # The model is checked and pulled only when DEMO_OLLAMA_URL is the
+        # Ollama that the ollama command acts on.
+        HOST_OLLAMA="$(llm_endpoint "${OLLAMA_HOST:-}" cli)"
+        if [ "$HOST_OLLAMA" = other ] || [ "$(llm_endpoint "$LLM_OLLAMA_URL" url)" != "$HOST_OLLAMA" ]; then
+            info "DEMO_OLLAMA_URL is not the Ollama that the ollama command uses; the model is not checked or pulled here."
+        elif ! command -v ollama &>/dev/null; then
+            warn "ollama command not found. Install from https://ollama.com"
+            warn "Continuing anyway — agents will use deterministic fallbacks if Ollama is unreachable."
+        else
+            ok "ollama installed"
+
+            # Check Ollama is running
+            if curl -sf "$LLM_OLLAMA_URL/api/tags" >/dev/null 2>&1; then
+                ok "Ollama reachable at $LLM_OLLAMA_URL"
+
+                # Pull the model if missing. Read the model list once and in
+                # full: stopping early on a match closes the pipe under
+                # pipefail and makes a present model look absent.
+                AVAILABLE_MODELS="$(ollama list 2>/dev/null | awk 'NR > 1 { print $1 }' || true)"
+                # A name without a tag means ":latest", which is how
+                # `ollama list` shows it.
+                model_ref="$LLM_MODEL"
+                case "${LLM_MODEL##*/}" in
+                    *:*) ;;
+                    *) model_ref="${LLM_MODEL}:latest" ;;
+                esac
+                if grep -qxF -- "$model_ref" <<< "$AVAILABLE_MODELS"; then
+                    ok "Model $LLM_MODEL available"
                 else
-                    info "Pulling model $model (this may take a while)..."
-                    if ollama pull "$model" 2>/dev/null; then
-                        ok "Model $model pulled"
+                    info "Pulling model $LLM_MODEL (this may take a while)..."
+                    if ollama pull "$LLM_MODEL" 2>/dev/null; then
+                        ok "Model $LLM_MODEL pulled"
                     else
-                        warn "Failed to pull $model — agent will use fallback"
+                        warn "Failed to pull $LLM_MODEL — agents will use fallback"
                     fi
                 fi
-            done
-        else
-            warn "Ollama not running at $OLLAMA_URL"
-            warn "Start it with: ollama serve"
-            warn "Continuing — agents will use deterministic fallbacks."
+            else
+                warn "Ollama not running at $LLM_OLLAMA_URL"
+                warn "Start it with: ollama serve"
+                warn "Continuing — agents will use deterministic fallbacks."
+            fi
         fi
-    fi
-else
-    info "Skipping Ollama checks (--no-ollama)"
-fi
+        ;;
+    *)
+        info "LLM: $LLM_MODE, model $LLM_MODEL (API key from $LLM_KEY_VAR)"
+        if [ "$LLM_BASE_OVERRIDDEN" = yes ]; then
+            warn "DEMO_LLM_BASE_URL is set: $LLM_MODE requests go to that address instead of the provider (for testing only)."
+        fi
+        ;;
+esac
 
 echo ""
-
-# ── Point all agents at one Ollama for local mode ─────────
-# In local mode, there's typically one Ollama instance on :11434.
-export AGENT_A_OLLAMA_URL="${AGENT_A_OLLAMA_URL:-$OLLAMA_URL}"
-export AGENT_B_OLLAMA_URL="${AGENT_B_OLLAMA_URL:-$OLLAMA_URL}"
-export AGENT_C_OLLAMA_URL="${AGENT_C_OLLAMA_URL:-$OLLAMA_URL}"
 
 export AGENT_A_PORT AGENT_B_PORT AGENT_C_PORT DASHBOARD_PORT
 export PEER_B_URL="http://localhost:$AGENT_B_PORT"
@@ -202,6 +301,7 @@ wait_healthy() {
         elapsed=$((elapsed + 1))
     done
     fail "$name did not become healthy within ${max_wait}s"
+    echo "  Last health response: $(curl -s "$url/health" 2>/dev/null || echo "no response")"
     return 1
 }
 
